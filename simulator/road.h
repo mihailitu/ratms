@@ -4,6 +4,8 @@
 
 class road
 {
+    // road max speed - if any or city speed limit
+    int max_speed;
 public:
     road();
 };

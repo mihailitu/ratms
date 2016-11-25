@@ -15,6 +15,10 @@ class vehicle
      *      in a regular city, sedans (or shorter should be more probable than trucks, etc
      */
     int length;
+    int current_speed;
+
+    // pos on the road. It will be updated through IDM
+    int x_pos;
 public:
     vehicle();
 };
