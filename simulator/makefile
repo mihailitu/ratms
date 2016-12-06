@@ -1,5 +1,5 @@
 CC := g++
-CO := -c -ggdb -O0 -pipe -ansi -W -Wall -Wextra -pedantic -std=c++11 -Wno-non-virtual-dtor -Wwrite-strings -Wno-unknown-pragmas -fPIC -fno-strict-aliasing
+CO := -c -ggdb -std=c++1z -O0 -W -Wall -Wextra -pedantic -Wno-unknown-pragmas -fPIC -fno-strict-aliasing
 
 LN := g++
 LO =

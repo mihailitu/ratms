@@ -17,6 +17,10 @@ class vehicle
     int length;
     int current_speed;
 
+
+    /* desired velocity */
+    int v0;
+
     // pos on the road. It will be updated through IDM
     int x_pos;
 public:
