@@ -1,5 +1,9 @@
 #include "simulator.h"
 
+#include "iostream"
+
+#include "logger.h"
+
 Simulator::Simulator()
 {
     // Default model parameters, from wikipedia IDM
@@ -22,3 +26,14 @@ Simulator::Simulator( double _v0, double _T, double _a, double _b, double _delta
 
 }
 
+
+void Simulator::run()
+{
+    log_info("Running the simulator with model params: \n"
+             "Desired velocity:      %.2f m/s\n"
+             "Safe time headway:     %.2f s\n"
+             "Maximum acceleration:  %.2f m/s^2\n"
+             "Desired deleration:    %.2f m/s^2\n"
+             "Acceleration exponent: %.2f\n"
+             "Minimum distance:      %.2f m", v0, T, a, b, delta, s0);
+}
