@@ -38,5 +38,5 @@ void Simulator::run()
              "Acceleration exponent: %.2f\n"
              "Minimum distance:      %.2f m", v0, T, a, b, delta, s0);
 
-    Road r;
+    Road r( 123, 1500, std::make_pair<float, float>(1.1, 1.2), std::make_pair<float, float>(2.1, 2.1));
 }

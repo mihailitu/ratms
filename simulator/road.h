@@ -27,17 +27,19 @@ class Road
 
     // road ID - OMS related.
     // TODO - this ID could be duplicated in the case of two way roads. Maybe we should have two id's: OMS id and internal ID
-    unsigned long id;
+    typedef unsigned long roadID;
+    roadID id;
 
     // length of the road in meters
     int length;
     // x_pos of vechicle is the meter on the road
 
+    typedef std::pair<float, float> roadPos;
     // start position of the road - lat/lon - from OMS or something
-    std::pair<float, float> startPos; // lat/lon
+    roadPos startPos; // lat/lon
 
     // end position of the road - lat/lon
-    std::pair<float, float> endPos; // lat/lon
+    roadPos endPos; // lat/lon
     // the traffic will flow from startPos to endPos
 
     // this road's connections - id's of other roads.
@@ -58,7 +60,8 @@ class Road
     std::vector<Vehicle> vehicles;
 
 public:
-    Road();
+    Road() = delete;
+    Road( roadID id, int length, roadPos startPos, roadPos endpos );
 };
 
 #endif // ROAD_H
