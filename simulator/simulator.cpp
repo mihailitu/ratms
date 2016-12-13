@@ -1,8 +1,9 @@
 #include "simulator.h"
 
-#include "iostream"
+#include <iostream>
 
 #include "logger.h"
+#include "road.h"
 
 Simulator::Simulator()
 {
@@ -36,4 +37,6 @@ void Simulator::run()
              "Desired deleration:    %.2f m/s^2\n"
              "Acceleration exponent: %.2f\n"
              "Minimum distance:      %.2f m", v0, T, a, b, delta, s0);
+
+    Road r;
 }

@@ -37,7 +37,7 @@ class Road
     std::pair<float, float> startPos; // lat/lon
 
     // end position of the road - lat/lon
-    std::pair<floar, float> endPos; // lat/lon
+    std::pair<float, float> endPos; // lat/lon
     // the traffic will flow from startPos to endPos
 
     // this road's connections - id's of other roads.
