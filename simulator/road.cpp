@@ -1,6 +1,6 @@
 #include "road.h"
 
-road::road()
+Road::Road()
 {
 
 }

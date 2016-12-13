@@ -2,12 +2,12 @@
 #define ROAD_H
 
 
-class road
+class Road
 {
     // road max speed - if any or city speed limit
     int max_speed;
 public:
-    road();
+    Road();
 };
 
 #endif // ROAD_H

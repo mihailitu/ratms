@@ -8,10 +8,14 @@
 #pragma GCC system_header
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
+#define DEBUG_INFO
+#define DEBUG_ERROR
+#define DEBUG_WARNING
+#define DEBUG_MESSAGE
 
 #define log_info(fmt, ...) \
     do { \
-        if ( 1 ) \
+        if ( DEBUG_INFO ) \
             fprintf(stderr, "%s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
        } while(0)
 
