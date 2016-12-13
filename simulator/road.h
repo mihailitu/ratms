@@ -2,6 +2,7 @@
 #define ROAD_H
 
 #include <utility>
+#include <vector>
 
 class Road
 {
@@ -32,19 +33,25 @@ class Road
     // x_pos of vechicle is
 
     // start position of the road - lat/lon
-    float startLat;
-    float startLon;
+    std::pair<float, float> startPos; // lat/lon
 
     // end position of the road - lat/lon
-    float endLat;
-    float endLon;
+    std::pair<floar, float> endPos; // lat/lon
     // the traffic will flow from startPos to endPos
 
     // the number of lanes
     int lanes;
 
-    // road max speed - if any or city speed limit
+    // road max speed - if any or city speed limit - this doesn't have to strictly conformed by drivers
     int max_speed;
+
+    // this road's connections - id's of other roads.
+    // TODO - maybe us some reference to other roads instead of ids so we can access quicker?
+    std::vector<float> connections;
+
+    // the preference probability for this road - how much it is used.
+    // when a car passes the intersection, it will use this probability to choose the next road.
+    float prefence;
 
 public:
     Road();
