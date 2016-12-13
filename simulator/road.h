@@ -31,7 +31,7 @@ class Road
 
     // length of the road in meters
     int length;
-    // x_pos of vechicle is
+    // x_pos of vechicle is the meter on the road
 
     // start position of the road - lat/lon - from OMS or something
     std::pair<float, float> startPos; // lat/lon
