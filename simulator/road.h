@@ -3,6 +3,7 @@
 
 #include <utility>
 #include <vector>
+#include "vehicle.h"
 
 class Road
 {
@@ -32,18 +33,12 @@ class Road
     int length;
     // x_pos of vechicle is
 
-    // start position of the road - lat/lon
+    // start position of the road - lat/lon - from OMS or something
     std::pair<float, float> startPos; // lat/lon
 
     // end position of the road - lat/lon
     std::pair<floar, float> endPos; // lat/lon
     // the traffic will flow from startPos to endPos
-
-    // the number of lanes
-    int lanes;
-
-    // road max speed - if any or city speed limit - this doesn't have to strictly conformed by drivers
-    int max_speed;
 
     // this road's connections - id's of other roads.
     // TODO - maybe us some reference to other roads instead of ids so we can access quicker?
@@ -51,7 +46,16 @@ class Road
 
     // the preference probability for this road - how much it is used.
     // when a car passes the intersection, it will use this probability to choose the next road.
-    float prefence;
+    float usageProb;
+
+    // the number of lanes
+    int lanes;
+
+    // road max speed - if any or city speed limit - this doesn't have to strictly conformed by drivers
+    int max_speed;
+
+    // vehicles on this road
+    std::vector<Vehicle> vehicles;
 
 public:
     Road();
