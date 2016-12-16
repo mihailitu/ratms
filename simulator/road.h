@@ -54,7 +54,7 @@ class Road
     int lanes;
 
     // road max speed - if any or city speed limit - this doesn't have to strictly conformed by drivers
-    int max_speed;
+    int maxSpeed;
 
     // vehicles on this road
     std::vector<Vehicle> vehicles;
@@ -62,6 +62,7 @@ class Road
 public:
     Road() = delete;
     Road( roadID id, int length, roadPos startPos, roadPos endpos );
+    Road(roadID id, int length, int lanes, int maxSpeed );
 };
 
 #endif // ROAD_H
