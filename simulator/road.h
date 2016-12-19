@@ -47,7 +47,7 @@ private:
 
     // this road's connections - id's of other roads.
     // TODO - maybe us some reference to other roads instead of ids so we can access quicker?
-    std::vector<float> connections;
+    std::vector<roadID> connections;
 
     // the preference probability for this road - how much it is used.
     // when a car passes the intersection, it will use this probability to choose the next road.
