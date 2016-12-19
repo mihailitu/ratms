@@ -11,18 +11,18 @@ class Road
      * A road is the one-way section between two semaphores. If a real road (from OMS or else) determines that
      * a road has two ways, we will tread those separately.
      *
-     * It's length is expressed in meters and it will behave like x-axis for vechicle position
+     * It's length is expressed in meters and it will behave like x-axis for vechicle position. Vehicles only moves forward.
      *
      * It is characterized by GPS coordinates: start - end coordinates show us the direction of the traffic flow.
      * These coordinates will be also used to represent the road on a map (GUI, etc).
      *
      * A road has connections to other roads: where the traffic can go from this road.
-     * Each connection will have a probability that a car should choose it taken from an external and real statistic.
+     * Each road will have a probability that a car should choose it taken from an external and real statistic.
      * Busier roads will have a higher probability that a car will choose that road.
      *
      * Also, based on real statistics, cars might appear/disappear from roads, to temper with real city traffic statistics.
      * The point is: while we only know the number of cars at the sempahore points, the inner roads (residential roads, smaller entrances) will not be monitored.
-     * Some cars might be leaving home (enter this road), some might go home/work/shop etc. (exiting this road)
+     * Some cars might be heading home (enter this road), some might go home/work/shop etc. (exiting this road)
      */
 
     // road ID - OMS related.
@@ -69,6 +69,7 @@ public:
 
     void addVehicle(Vehicle car);
     void addConnection(roadID connection);
+
     roadID getId() {
         return id;
     }
