@@ -39,7 +39,15 @@ void Simulator::run()
              "Minimum distance:      %.2f m", v0, T, a, b, delta, s0);
 
     Road r1(1, 1000, 2, 50 );
-    Road r2(2, 750, 1, 50 );
+    Road r2(2, 750, 1, 50 );    
     Road r3(3, 1450, 3, 50 );
+
+    r1.addConnection(r2.getId());
+    r1.addConnection(r3.getId());
+
+    cityMap[r1.getId()] = r1;
+    cityMap[r2.getId()] = r2;
+    cityMap[r3.getId()] = r3;
+
 
 }

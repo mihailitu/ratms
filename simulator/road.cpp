@@ -1,6 +1,11 @@
 #include "road.h"
 #include "logger.h"
 
+Road::Road()
+{
+
+}
+
 Road::Road( roadID id, int length, roadPos startPos, roadPos endpos ) :
     id (id), length(length), startPos(startPos), endPos(endpos)
 {
@@ -22,4 +27,16 @@ Road::Road( roadID id, int length, int lanes, int maxSpeed ) :
              "\t lanes: %d \n"
              "\t max_speed: %d km/h \n",
              id, length, lanes, maxSpeed);
+}
+
+//TODO: should vehicles be added from outside Road class or
+// a road should maintain it's vehicle pool internally based on statistics?
+void Road::addVehicle(Vehicle car)
+{
+    vehicles.push_back(car);
+}
+
+void Road::addConnection(roadID connection)
+{
+    connections.push_back(connection);
 }

@@ -1,7 +1,9 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
+#include <map>
 
+#include "road.h"
 class Simulator
 {
     /***
@@ -18,6 +20,8 @@ class Simulator
     double b;       // Desired deceleration
     double delta;   // Acceleration exponent
     double s0;      // Minimum distance
+
+    std::map<Road::roadID, Road> cityMap;
 public:
     Simulator();
     Simulator( double _v0, double _T, double _a, double _b, double _delta, double s0 );
