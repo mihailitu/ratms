@@ -48,6 +48,4 @@ void Simulator::run()
     cityMap[r1.getId()] = r1;
     cityMap[r2.getId()] = r2;
     cityMap[r3.getId()] = r3;
-
-
 }
