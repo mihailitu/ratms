@@ -19,7 +19,8 @@ Road::Road( roadID id, int length, roadPos startPos, roadPos endpos ) :
 }
 
 Road::Road( roadID id, int length, int lanes, int maxSpeed ) :
-    id (id), length(length), lanes(lanes), maxSpeed(maxSpeed)
+    id (id), length(length), lanes(lanes), maxSpeed(maxSpeed),
+    usageProb(0)
 {
     log_info("New road added: \n"
              "\t ID: %u \n"
@@ -39,4 +40,26 @@ void Road::addVehicle(Vehicle car)
 void Road::addConnection(roadID connection)
 {
     connections.push_back(connection);
+}
+
+void Road::printRoad() const
+{
+    std::string connections_str = "";
+    for( unsigned i = 0; i < connections.size(); ++i ) {
+        connections_str += std::to_string(connections[i]);
+        if ( connections.size() != i+1 )
+            connections_str += ", ";
+    }
+
+    log_info("\nID:           %u\n"
+             "Length:       %d\n"
+             "Lanes:        %d\n"
+             "Max speed:    %d\n"
+             "Usage:        %.2f\n"
+             "Vehicle No.:  %d\n"
+             "Start:        (%f, %f)\n"
+             "End:          (%f, %f)\n"
+             "Connections:  %s\n",
+             id, length, lanes, maxSpeed, usageProb, vehicles.size(),
+             startPos.first, startPos.second, endPos.first, endPos.second, connections_str.c_str());
 }

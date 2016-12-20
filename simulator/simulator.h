@@ -20,8 +20,9 @@ class Simulator
     double b;       // Desired deceleration
     double delta;   // Acceleration exponent
     double s0;      // Minimum distance
-
-    std::map<Road::roadID, Road> cityMap;
+public:
+    typedef std::map<Road::roadID, Road> CityMap;
+    CityMap cityMap;
 public:
     Simulator();
     Simulator( double _v0, double _T, double _a, double _b, double _delta, double s0 );

@@ -29,7 +29,7 @@ class Road
     // TODO - this ID could be duplicated in the case of two way roads. Maybe we should have two id's: OMS id and internal ID
 public:
     typedef unsigned long roadID;
-
+    typedef std::pair<float, float> roadPos;
 private:
     roadID id;
 
@@ -37,7 +37,6 @@ private:
     int length;
     // x_pos of vechicle is the meter on the road
 
-    typedef std::pair<float, float> roadPos;
     // start position of the road - lat/lon - from OMS or something
     roadPos startPos; // lat/lon
 
@@ -70,9 +69,11 @@ public:
     void addVehicle(Vehicle car);
     void addConnection(roadID connection);
 
-    roadID getId() {
+    roadID getId() const{
         return id;
     }
+
+    void printRoad() const;
 };
 
 #endif // ROAD_H
