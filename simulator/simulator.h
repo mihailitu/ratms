@@ -27,7 +27,8 @@ public:
     Simulator();
     Simulator( double _v0, double _T, double _a, double _b, double _delta, double s0 );
 
-    void run();
+    void runSimulator();
+    void addRoadToMap(const Road &r);
 };
 
 #endif // SIMULATOR_H

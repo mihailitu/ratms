@@ -27,8 +27,12 @@ Simulator::Simulator( double _v0, double _T, double _a, double _b, double _delta
 
 }
 
+void Simulator::addRoadToMap(const Road &r)
+{
+    cityMap[r.getId()] = r;
+}
 
-void Simulator::run()
+void Simulator::runSimulator()
 {
     log_info("Running the simulator with model params: \n"
              "Desired velocity:      %.2f m/s\n"
@@ -37,17 +41,6 @@ void Simulator::run()
              "Desired deleration:    %.2f m/s^2\n"
              "Acceleration exponent: %.2f\n"
              "Minimum distance:      %.2f m", v0, T, a, b, delta, s0);
-
-    Road r1(1, 1000, 2, 50 );
-    Road r2(2, 750, 1, 50 );    
-    Road r3(3, 1450, 3, 50 );
-
-    r1.addConnection(r2.getId());
-    r1.addConnection(r3.getId());
-
-    cityMap[r1.getId()] = r1;
-    cityMap[r2.getId()] = r2;
-    cityMap[r3.getId()] = r3;
 
     for(CityMap::const_iterator it = cityMap.begin(); it != cityMap.end(); ++it)
         it->second.printRoad();
