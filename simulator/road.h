@@ -68,6 +68,9 @@ public:
 
     void addVehicle(Vehicle car);
     void addConnection(roadID connection);
+    void addConnection(Road connection);
+    void addConnections(std::vector<roadID> rconnections);
+    void addConnections(std::vector<Road> rconnections);
 
     roadID getId() const{
         return id;

@@ -42,6 +42,23 @@ void Road::addConnection(roadID connection)
     connections.push_back(connection);
 }
 
+void Road::addConnection(Road connection)
+{
+    connections.push_back(connection.getId());
+}
+
+void Road::addConnections(std::vector<roadID> rconnections)
+{
+    for( auto it = rconnections.begin(); it != rconnections.end(); ++it)
+        connections.push_back(*it);
+}
+
+void Road::addConnections(std::vector<Road> rconnections)
+{
+    for( auto it = rconnections.begin(); it != rconnections.end(); ++it)
+        connections.push_back((*it).getId());
+}
+
 void Road::printRoad() const
 {
     std::string connections_str = "";

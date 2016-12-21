@@ -4,8 +4,16 @@
 
 /*
  * Construct a simple road network:
+ * r1 -> r2
+ * r2 -> r3, r7
  *
- *      <-r2-><-r3->
+ *      *--r2-->*--r3-->*
+ *      ^       ^       |
+ *      |       |       |
+ *      r1      r7      r4
+ *      |       r8      |
+ *      |       \/     \/
+ *      *<--r6--*<--r5--*
  *
  *
  */
@@ -23,16 +31,14 @@ int main( )
     Road r7(7, 1500, 1, 70);
     Road r8(8, 1500, 1, 70);
 
-    r1.addConnection(r2.getId());
-    r2.addConnection(r3.getId());
-    r2.addConnection(r8.getId());
-    r3.addConnection(r4.getId());
-    r4.addConnection(r5.getId());
-    r5.addConnection(r6.getId());
-    r5.addConnection(r7.getId());
-    r6.addConnection(r1.getId());
-    r7.addConnection(r3.getId());
-    r8.addConnection(r6.getId());
+    r1.addConnection( r2 );
+    r2.addConnections( { r3, r8 } );
+    r3.addConnection( r4 );
+    r4.addConnection( r5 );
+    r5.addConnections( { r6, r7 } );
+    r6.addConnection( r1 );
+    r7.addConnection( r3);
+    r8.addConnection(r6 );
 
     simulator.addRoadToMap(r1);
     simulator.addRoadToMap(r2);
