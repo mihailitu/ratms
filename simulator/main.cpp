@@ -32,13 +32,13 @@ int main( )
     Road r8(8, 1500, 1, 70);
 
     r1.addConnection( r2 );
-    r2.addConnections( { r3, r8 } );
+    r2.addConnections({ r3, r8 });
     r3.addConnection( r4 );
     r4.addConnection( r5 );
-    r5.addConnections( { r6, r7 } );
+    r5.addConnections({ r6, r7 });
     r6.addConnection( r1 );
     r7.addConnection( r3);
-    r8.addConnection(r6 );
+    r8.addConnection( r6 );
 
     simulator.addRoadToMap(r1);
     simulator.addRoadToMap(r2);
