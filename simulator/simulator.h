@@ -29,6 +29,7 @@ public:
 
     void runSimulator();
     void addRoadToMap(const Road &r);
+    void addRoadNetToMap(std::vector<Road> &roadNet);
 };
 
 #endif // SIMULATOR_H

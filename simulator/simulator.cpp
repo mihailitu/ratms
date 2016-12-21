@@ -32,6 +32,12 @@ void Simulator::addRoadToMap(const Road &r)
     cityMap[r.getId()] = r;
 }
 
+void Simulator::addRoadNetToMap(std::vector<Road> &roadNet)
+{
+    for(auto it = roadNet.begin(); it != roadNet.end(); ++it )
+        cityMap[(*it).getId()] = (*it);
+}
+
 void Simulator::runSimulator()
 {
     log_info("Running the simulator with model params: \n"

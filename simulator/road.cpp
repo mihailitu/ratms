@@ -7,7 +7,8 @@ Road::Road()
 }
 
 Road::Road( roadID id, int length, roadPos startPos, roadPos endpos ) :
-    id (id), length(length), startPos(startPos), endPos(endpos)
+    id (id), length(length), startPos(startPos), endPos(endpos),
+    usageProb(0.5)
 {
     log_info("New road added: \n"
              "\t ID: %u \n"
@@ -19,7 +20,7 @@ Road::Road( roadID id, int length, roadPos startPos, roadPos endpos ) :
 }
 
 Road::Road( roadID id, int length, int lanes, int maxSpeed ) :
-    id (id), length(length), lanes(lanes), maxSpeed(maxSpeed)
+    id (id), length(length), usageProb(0.5), lanes(lanes), maxSpeed(maxSpeed)
 {
     log_info("New road added: \n"
              "\t ID: %u \n"

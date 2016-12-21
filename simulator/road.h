@@ -64,7 +64,7 @@ private:
 public:
     Road();
     Road( roadID id, int length, roadPos startPos, roadPos endpos );
-    Road(roadID id, int length, int lanes, int maxSpeed );
+    Road( roadID id, int length, int lanes, int maxSpeed );
 
     void addVehicle(Vehicle car);
     void addConnection(roadID connection);
