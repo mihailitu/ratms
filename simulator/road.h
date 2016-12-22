@@ -25,12 +25,12 @@ class Road
      * Some cars might be heading home (enter this road), some might go home/work/shop etc. (exiting this road)
      */
 
-    // road ID - OMS related.
-    // TODO - this ID could be duplicated in the case of two way roads. Maybe we should have two id's: OMS id and internal ID
 public:
     typedef unsigned long roadID;
     typedef std::pair<float, float> roadPos;
 private:
+    // road ID - OMS related.
+    // TODO - this ID could be duplicated in the case of two way roads. Maybe we should have two id's: OMS id and internal ID
     roadID id;
 
     // length of the road in meters
@@ -53,6 +53,7 @@ private:
     float usageProb;
 
     // the number of lanes
+    // TODO: assign vehicles to lanes on the road!!!
     int lanes;
 
     // road max speed - if any or city speed limit - this doesn't have to strictly conformed by drivers
