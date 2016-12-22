@@ -49,14 +49,14 @@ void Road::addConnection(Road connection)
 
 void Road::addConnections(std::vector<roadID> rconnections)
 {
-    for( auto it = rconnections.begin(); it != rconnections.end(); ++it)
-        connections.push_back(*it);
+    for( roadID road : rconnections )
+        connections.push_back(road);
 }
 
 void Road::addConnections(std::vector<Road> rconnections)
 {
-    for( auto it = rconnections.begin(); it != rconnections.end(); ++it)
-        connections.push_back((*it).getId());
+    for( Road r : rconnections )
+        connections.push_back(r.getId());
 }
 
 void Road::printRoad() const

@@ -38,5 +38,8 @@ std::vector<Road> getTestMap()
     cmap[6].addConnection( cmap[2]);
     cmap[7].addConnection( cmap[5] );
 
+    /* Add some hardcoded cars on the road, so we test equations */
+
+
     return cmap;
 }

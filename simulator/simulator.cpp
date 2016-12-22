@@ -34,8 +34,8 @@ void Simulator::addRoadToMap(const Road &r)
 
 void Simulator::addRoadNetToMap(std::vector<Road> &roadNet)
 {
-    for(auto it = roadNet.begin(); it != roadNet.end(); ++it )
-        cityMap[(*it).getId()] = (*it);
+    for( Road r : roadNet )
+        cityMap[r.getId()] = r;
 }
 
 void Simulator::runSimulator()
@@ -48,7 +48,7 @@ void Simulator::runSimulator()
              "Acceleration exponent: %.2f\n"
              "Minimum distance:      %.2f m", v0, T, a, b, delta, s0);
 
-    for(CityMap::const_iterator it = cityMap.begin(); it != cityMap.end(); ++it)
-        it->second.printRoad();
+    for( auto mapEl : cityMap )
+        mapEl.second.printRoad();
 
 }
