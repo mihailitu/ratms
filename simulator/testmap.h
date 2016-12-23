@@ -6,6 +6,7 @@
 
 #include "vector"
 
+std::vector<Road> getSimpleTestMap();
 std::vector<Road> getTestMap();
 
 #endif // TESTMAP_H

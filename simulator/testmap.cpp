@@ -44,3 +44,17 @@ std::vector<Road> getTestMap()
 
     return cmap;
 }
+
+/*
+ * Add a simple road to test the basic equations on free and busy road.
+ */
+std::vector<Road> getSimpleTestMap()
+{
+    std::vector<Road> smap = {
+        Road(0, 2000, 1, 70)
+    };
+
+
+
+    return smap;
+}
