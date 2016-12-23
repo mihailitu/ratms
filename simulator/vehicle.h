@@ -19,10 +19,12 @@ class Vehicle
     int length;     // vechile length
     int velocity;   // current velocity. It will be update through IDM
     int x_pos;      // current position on the road. It will be updated through IDM
-    bool free_road; // if the distance to the vechicle on front is large,
+    bool freeRoad;  // if the distance to the vechicle on front is large,
                     // we will not consider other vechicles to update current velocity and current position
 public:
     Vehicle( int _length, int _x_orig );
+
+    void printVehicle() const;
 };
 
 #endif // VEHICLE_H

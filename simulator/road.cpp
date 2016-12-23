@@ -68,7 +68,7 @@ void Road::printRoad() const
             connections_str += ", ";
     }
 
-    log_info("\nID:           %u\n"
+    log_info("\nRoad ID:    %u\n"
              "Length:       %d\n"
              "Lanes:        %d\n"
              "Max speed:    %d\n"
@@ -79,4 +79,7 @@ void Road::printRoad() const
              "Connections:  %s\n",
              id, length, lanes, maxSpeed, usageProb, vehicles.size(),
              startPos.first, startPos.second, endPos.first, endPos.second, connections_str.c_str());
+
+    for(auto v : vehicles )
+        v.printVehicle();
 }
