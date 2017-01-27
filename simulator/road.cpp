@@ -37,6 +37,11 @@ void Road::addVehicle(Vehicle car)
     vehicles.push_back(car);
 }
 
+std::vector<Vehicle>& Road::getVehicles()
+{
+    return vehicles;
+}
+
 void Road::addConnection(roadID connection)
 {
     connections.push_back(connection);

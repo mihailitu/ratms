@@ -77,6 +77,8 @@ public:
         return id;
     }
 
+    std::vector<Vehicle>& getVehicles();
+
     void printRoad() const;
 };
 

@@ -13,8 +13,6 @@ int main( )
     std::vector<Road> roadMap = getSimpleTestMap();
     simulator.addRoadNetToMap( roadMap );
 
-    std::cout << typeid(simulator).name() << std::endl;
-
     simulator.runSimulator();
 
     return 0;
