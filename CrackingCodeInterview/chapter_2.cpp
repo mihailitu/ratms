@@ -6,21 +6,21 @@ template<class T>
 class LinkedList {
     struct Node {
         Node *next;
-        T *data;
+        T data;
     };
 
     Node *root;
 
 public:
-    LinkedList(T *root) {
+    LinkedList() {
 
     }
 
-    void insert(T *data) {
+    void insert(T data) {
 
     }
 
-    void remove(T *data) {
+    void remove(T data) {
 
     }
 };
@@ -60,5 +60,7 @@ public:
 
 void run_chapter_2()
 {
+    LinkedList<int> ll;
 
+    ll.insert(5);
 }
