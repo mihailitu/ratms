@@ -38,6 +38,24 @@ void Simulator::addRoadNetToMap(std::vector<Road> &roadNet)
         cityMap[r.getId()] = r;
 }
 
+void Simulator::runTestSimulator()
+{
+    log_info("Running the simulator with model params: \n"
+             "Desired velocity:      %.2f m/s\n"
+             "Safe time headway:     %.2f s\n"
+             "Maximum acceleration:  %.2f m/s^2\n"
+             "Desired deleration:    %.2f m/s^2\n"
+             "Acceleration exponent: %.2f\n"
+             "Minimum distance:      %.2f m\n", v0, T, a, b, delta, s0);
+
+    for( auto mapEl : cityMap ) {
+        mapEl.second.printRoad();
+        auto vehicles = mapEl.second.getVehicles();
+        for( auto vehicle : vehicles ) {
+        }
+    }
+}
+
 void Simulator::runSimulator()
 {
     log_info("Running the simulator with model params: \n"
@@ -55,5 +73,4 @@ void Simulator::runSimulator()
 
         }
     }
-
 }

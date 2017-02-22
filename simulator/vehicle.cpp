@@ -2,11 +2,30 @@
 #include "logger.h"
 
 Vehicle::Vehicle( int _x_orig, int _length ) :
-    x_orig(_x_orig), length(_length),
+    length(_length), x_orig(_x_orig),
     velocity(0), freeRoad(false)
 {
 
 }
+
+bool Vehicle::onFreeRoad() const
+{
+    return freeRoad;
+}
+
+void Vehicle::freeRoadOn()
+{
+    freeRoad = true;
+}
+
+void Vehicle::freeRoadOff()
+{
+    freeRoad = false;
+}
+
+void freeRoadOn(); // toggle free road on
+void freeRoadOff(); // toggle free road off
+
 
 void Vehicle::printVehicle() const
 {

@@ -28,6 +28,7 @@ public:
     Simulator( double _v0, double _T, double _a, double _b, double _delta, double s0 );
 
     void runSimulator();
+    void runTestSimulator();
     void addRoadToMap(const Road &r);
     void addRoadNetToMap(std::vector<Road> &roadNet);
 };
