@@ -7,13 +7,7 @@
 
 Simulator::Simulator()
 {
-    // Default model parameters, from wikipedia IDM
-    v0 = 30;    // 30 m/s       - Desired velocity
-    T  = 1.5;   // 1.5 s        - Safe time headway
-    a  = 1.00;  // 1.00 m/s^2   - Maximum acceleration
-    b  = 3.00;  // 3.00 m/s^2   - Desired deceleration
-    delta  = 4; // 4            - Acceleration exponent
-    s0 = 2;     // 2 m          - Minimum distance
+    initSimulatorTestState();
 }
 
 Simulator::Simulator( double _v0, double _T, double _a, double _b, double _delta, double _s0 ) :
@@ -25,6 +19,17 @@ Simulator::Simulator( double _v0, double _T, double _a, double _b, double _delta
     s0(_s0)
 {
 
+}
+
+void Simulator::initSimulatorTestState()
+{
+    // Default model parameters, from wikipedia IDM
+    v0 = 30;    // 30 m/s (180km/h) - Desired velocity
+    T  = 1.5;   // 1.5 s            - Safe time headway
+    a  = 1.00;  // 1.00 m/s^2       - Maximum acceleration
+    b  = 3.00;  // 3.00 m/s^2       - Desired deceleration
+    delta  = 4; // 4                - Acceleration exponent
+    s0 = 2;     // 2 m              - Minimum distance
 }
 
 void Simulator::addRoadToMap(const Road &r)
@@ -40,7 +45,7 @@ void Simulator::addRoadNetToMap(std::vector<Road> &roadNet)
 
 void Simulator::runTestSimulator()
 {
-    log_info("Running the simulator with model params: \n"
+    log_info("Running test simulator with model params: \n"
              "Desired velocity:      %.2f m/s\n"
              "Safe time headway:     %.2f s\n"
              "Maximum acceleration:  %.2f m/s^2\n"
@@ -66,11 +71,4 @@ void Simulator::runSimulator()
              "Acceleration exponent: %.2f\n"
              "Minimum distance:      %.2f m\n", v0, T, a, b, delta, s0);
 
-    for( auto mapEl : cityMap ) {
-        mapEl.second.printRoad();
-        auto vehicles = mapEl.second.getVehicles();
-        for( auto vehicle : vehicles ) {
-
-        }
-    }
 }

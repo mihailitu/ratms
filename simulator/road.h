@@ -35,7 +35,7 @@ private:
 
     // length of the road in meters
     int length;
-    // x_pos of vechicle is the meter on the road
+    // xPos of vechicle is the meter on the road
 
     // start position of the road - lat/lon - from OMS or something
     roadPos startPos; // lat/lon

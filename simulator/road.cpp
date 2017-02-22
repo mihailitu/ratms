@@ -73,7 +73,7 @@ void Road::printRoad() const
             connections_str += ", ";
     }
 
-    log_info("\nRoad ID:    %u\n"
+    log_info("Road ID:    %u\n"
              "Length:       %d\n"
              "Lanes:        %d\n"
              "Max speed:    %d\n"

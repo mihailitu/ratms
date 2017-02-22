@@ -1,7 +1,6 @@
 #ifndef VEHICLE_H
 #define VEHICLE_H
 
-
 class Vehicle
 {
     /* the length of the car.
@@ -15,14 +14,16 @@ class Vehicle
      *      in a regular city, sedans (or shorter should be more probable than trucks, etc
      */
     int length;     // vechile length - see above
-    int x_orig;     // when a vechicle is created, it has to start(appear) somewhere
+    int xOrig;     // when a vechicle is created, it has to start(appear) somewhere
     int velocity;   // current velocity. It will be update through IDM
-    int x_pos;      // current position on the road. It will be updated through IDM
+    int xPos;      // current position on the road. It will be updated through IDM
     bool freeRoad;  // if the distance to the vechicle on front is large,
                     // we will not consider other vechicles to update current velocity and current position
 
 public:
     Vehicle( int _x_orig, int _length );
+
+    void advance(int distance); // move forward
 
     bool onFreeRoad() const;
     void freeRoadOn(); // toggle free road on

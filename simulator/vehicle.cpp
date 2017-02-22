@@ -2,10 +2,15 @@
 #include "logger.h"
 
 Vehicle::Vehicle( int _x_orig, int _length ) :
-    length(_length), x_orig(_x_orig),
-    velocity(0), freeRoad(false)
+    length(_length), xOrig(_x_orig),
+    velocity(0), xPos(_x_orig), freeRoad(false)
 {
 
+}
+
+void Vehicle::advance(int distance)
+{
+    xPos += distance;
 }
 
 bool Vehicle::onFreeRoad() const
@@ -23,18 +28,14 @@ void Vehicle::freeRoadOff()
     freeRoad = false;
 }
 
-void freeRoadOn(); // toggle free road on
-void freeRoadOff(); // toggle free road off
-
-
 void Vehicle::printVehicle() const
 {
-    log_info("\nVehicle:\n"
+    log_info("Vehicle:\n"
              "Originated: %d\n"
              "Position:   %d m\n"
              "Length:     %d m\n"
              "Velocity:   %d m/s\n"
              "Free road:  %s\n",
-             x_orig, x_pos, length, velocity,
+             xOrig, xPos, length, velocity,
              freeRoad ? "yes" : "no" );
 }
