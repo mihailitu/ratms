@@ -58,7 +58,9 @@ std::vector<Road> getSimpleTestMap()
     int vLength = 4; // medium
     int vPos = 10;
 
-    smap[0].addVehicle(Vehicle(vPos, vLength));
+    Vehicle v(vPos, vLength);
+    v.freeRoadOn();
+    smap[0].addVehicle(v);
 
     return smap;
 }
