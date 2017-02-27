@@ -22,6 +22,7 @@ class Vehicle
     int  s;         // net distance to vehicle in front of this one (0 = accident, -1 = no vehicle in front
                     // for large values of net distance, we should enter in free road mode
 
+
 public:
     Vehicle( int _x_orig, int _length );
 

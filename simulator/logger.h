@@ -13,12 +13,21 @@
 #define DEBUG_WARNING
 #define DEBUG_MESSAGE
 
+// with date, time, file:line
 #define log_info(fmt, ...) \
     do { \
             if ( DEBUG_INFO) { \
                 fprintf( stderr, "%s %s %s:%d: \n" fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
             } \
        } while(0)
+
+//#define log_info(fmt, ...) \
+//    do { \
+//            if ( DEBUG_INFO) { \
+//                fprintf( stderr, fmt "\n", ##__VA_ARGS__ ); \
+//            } \
+//       } while(0)
+
 
 class Logger
 {
