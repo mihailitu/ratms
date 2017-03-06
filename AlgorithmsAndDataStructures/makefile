@@ -17,7 +17,7 @@ $(TARGET): $(OBJS)
 	$(LN) $(LO) -o $@ $^ #-lpthread  -lboost_system
 
 obj/%.o: %.cpp
-	$(CC) $(CO) -o $@ $<
+	$(CC) $(CO) -c -o $@ $<
 
 clean:
 	rm -f $(OBJS) $(TARGET)

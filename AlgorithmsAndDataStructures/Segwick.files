@@ -4,3 +4,10 @@ include/bag.h
 src/bag.cpp
 main.cpp
 makefile
+src/my_queue.cpp
+src/myqueue.cpp
+src/mybag.cpp
+include/mybag.h
+include/myqueue.h
+src/mystack.cpp
+include/mystack.h
