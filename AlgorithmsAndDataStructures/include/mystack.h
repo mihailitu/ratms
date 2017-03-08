@@ -5,8 +5,17 @@ template<typename T>
 class mystack
 {
     static int const capacity = 1024;
-    int pos;
+    unsigned pos;
     T *a;
+
+    void resize() {
+        T *temp = new T[pos + capacity];
+        for(unsigned i = 0; i < pos; ++i)
+            temp[i] = a[i];
+        delete[] a;
+        a = temp;
+    }
+
 public:
     mystack() {
         a = new T[capacity];
@@ -17,6 +26,8 @@ public:
     }
 
     void push(T item) {
+        if (pos == capacity)
+            resize();
         a[pos++] = item;
     }
 
