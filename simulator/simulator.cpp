@@ -57,7 +57,7 @@ void Simulator::runTestSimulator()
         mapEl.second.printRoad();
         auto vehicles = mapEl.second.getVehicles();
         for( auto vehicle : vehicles ) {
-
+            vehicle.printVehicle();
         }
     }
 }

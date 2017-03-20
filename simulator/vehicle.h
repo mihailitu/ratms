@@ -13,14 +13,14 @@ class Vehicle
      *      there should be some statistics with vehicle type distribution to a city - from the Cityhall
      *      in a regular city, sedans (or shorter should be more probable than trucks, etc
      */
-    int  length;    // vechile length - see above
-    int  xOrig;     // when a vechicle is created, it has to start(appear) somewhere
-    int  velocity;  // current velocity. It will be update through IDM
-    int  xPos;      // current position on the road. It will be updated through IDM
-    bool freeRoad;  // if the distance to the vechicle on front is large,
-                    // we will not consider other vechicles to update current velocity and current position
-    int  s;         // net distance to vehicle in front of this one (0 = accident, -1 = no vehicle in front
-                    // for large values of net distance, we should enter in free road mode
+    int  length;               // vechile length - see above
+    int  xOrig;                // when a vechicle is created, it has to start(appear) somewhere
+    int  velocity = { 0 };     // current velocity. It will be update through IDM
+    int  xPos;                 // current position on the road. It will be updated through IDM
+    bool freeRoad = { false }; // if the distance to the vechicle on front is large,
+                               // we will not consider other vechicles to update current velocity and current position
+    int  s = { 0 };            // net distance to vehicle in front of this one (0 = accident, -1 = no vehicle in front
+                               // for large values of net distance, we should enter in free road mode
 
 
 public:
@@ -29,8 +29,9 @@ public:
     void advance(int distance); // move forward
 
     bool onFreeRoad() const;
-    void freeRoadOn(); // toggle free road on
-    void freeRoadOff(); // toggle free road off
+    void freeRoadOn();          // toggle free road on
+    void freeRoadOff();         // toggle free road off
+
     void printVehicle() const;
 };
 

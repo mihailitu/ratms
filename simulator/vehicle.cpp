@@ -2,8 +2,7 @@
 #include "logger.h"
 
 Vehicle::Vehicle( int _x_orig, int _length ) :
-    length(_length), xOrig(_x_orig),
-    velocity(0), xPos(_x_orig), freeRoad(false)
+    length(_length), xOrig(_x_orig), xPos(_x_orig)
 {
 
 }

@@ -14,12 +14,13 @@ class Simulator
     // TODO: maybe convert all parameters to int by multiplying with 10 or 100?
     /* model parameters */
 
-    double v0;      // Desired velocity
+    double v0;      // Desired velocity - TODO: move this into Vehicle class, as some drivers would want to go above speed limit,
+                    //                    while others will want to go lower than speed limit, determined by statistics
     double T;       // Safe time headway
     double a;       // Maximum acceleration
     double b;       // Desired deceleration
     double delta;   // Acceleration exponent
-    double s0;      // Minimum distance
+    double s0;      // Minimum distance - TODO: move this into Vehicle class, as some drivers are more agressive, while others are less agressive
 
     void initSimulatorTestState();
 
