@@ -36,7 +36,12 @@ public:
     void addRoadToMap(const Road &r);
     void addRoadNetToMap(std::vector<Road> &roadNet);
 
-
+    double getModelVelocity() const { return v0; }
+    double getModelTimeHeadway() const { return T; }
+    double getModelAcceleration() const { return a; }
+    double getModelDeceleration() const {return b; }
+    double getModelDelta() const { return delta; }
+    double getModelMinimumDistance() const { return s0; }
 };
 
 #endif // SIMULATOR_H
