@@ -24,17 +24,29 @@ class Vehicle
     int  s = { -1 };            // net distance to vehicle in front of this one (0 = accident, -1 = no vehicle in front
                                // for large values of net distance, we should enter in free road mode
 
+    std::shared_ptr<Vehicle> follwing = { nullptr }; // vehicle in front. nullptr for free road
+
+    /* Model parameters are here, as we make most of it dependent on this driver's aggressivity */
     double aggressivity = { 1.0 };  // aggressivity factor of this driver.
                                     // 1.0 - normal driver
                                     // < 1.0 altruist/prudent driver
                                     // > 1.0 aggressive/selfish driver
 
-    std::shared_ptr<Vehicle> follwing = { nullptr }; // vehicle in front. nullptr for free road
+    double v0;          // Desired velocity - initialize to road's max speed
+                        // Adjust depending on aggressivity - some drivers would want to go above speed limit,
+                        //                                    while others will want to go lower than speed limit, determined by statistics
+    double T = { 1.5 }; // Safe time headway - aggressivity dependent
+    double a = { 1.0 }; // Maximum acceleration - linked to agressivity
+    double b = { 1.0 }; // Desired deceleration - linked to agressivity
+    double s0 = { 0.5 };// Minimum distance - Some drivers are more agressive, while others are less agressive
+    double delta = { 4.0 };   // Acceleration exponent
+
 
 public:
     Vehicle( int _x_orig, int _length );
 
     void advance(int distance); // move forward
+    void update(double dt, Vehicle &nextVehicle); // update position and velocity
 
     bool onFreeRoad() const;
     void freeRoadOn();          // toggle free road on
