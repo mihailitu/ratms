@@ -18,7 +18,7 @@ class Simulator
                     //                    while others will want to go lower than speed limit, determined by statistics
     double T;       // Safe time headway -
     double a;       // Maximum acceleration - TODO: move this into Vehicle class, linked to agressivity
-    double b;       // Desired deceleration
+    double b;       // Desired deceleration - TODO: move this into Vehicle class, linked to agressivity
     double delta;   // Acceleration exponent
     double s0;      // Minimum distance - TODO: move this into Vehicle class, as some drivers are more agressive, while others are less agressive
 
@@ -35,6 +35,8 @@ public:
     void runTestSimulator();
     void addRoadToMap(const Road &r);
     void addRoadNetToMap(std::vector<Road> &roadNet);
+
+
 };
 
 #endif // SIMULATOR_H
