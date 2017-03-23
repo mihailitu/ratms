@@ -73,9 +73,7 @@ public:
     void addConnections(std::vector<roadID> rconnections);
     void addConnections(std::vector<Road> rconnections);
 
-    roadID getId() const{
-        return id;
-    }
+    roadID getId() const;
 
     std::vector<Vehicle>& getVehicles();
 

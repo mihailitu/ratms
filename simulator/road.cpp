@@ -1,4 +1,5 @@
 #include "road.h"
+
 #include "logger.h"
 
 Road::Road()
@@ -62,6 +63,11 @@ void Road::addConnections(std::vector<Road> rconnections)
 {
     for( Road r : rconnections )
         connections.push_back(r.getId());
+}
+
+Road::roadID Road::getId() const
+{
+        return id;
 }
 
 void Road::printRoad() const

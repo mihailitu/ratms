@@ -24,8 +24,6 @@ class Vehicle
     int  s = { -1 };            // net distance to vehicle in front of this one (0 = accident, -1 = no vehicle in front
                                // for large values of net distance, we should enter in free road mode
 
-    std::shared_ptr<Vehicle> follwing = { nullptr }; // vehicle in front. nullptr for free road
-
     /* Model parameters are here, as we make most of it dependent on this driver's aggressivity */
     double aggressivity = { 1.0 };  // aggressivity factor of this driver.
                                     // 1.0 - normal driver
@@ -40,7 +38,8 @@ class Vehicle
     double b = { 1.0 }; // Desired deceleration - linked to agressivity
     double s0 = { 0.5 };// Minimum distance - Some drivers are more agressive, while others are less agressive
     double delta = { 4.0 };   // Acceleration exponent
-
+    std::shared_ptr<Vehicle> follwing = { nullptr }; // vehicle in front. nullptr for free road.
+                                                     // Might also be traffic light or another obstacle
 
 public:
     Vehicle( int _x_orig, int _length );
