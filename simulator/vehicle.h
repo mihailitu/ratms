@@ -38,14 +38,12 @@ class Vehicle
     double b = { 1.0 }; // Desired deceleration - linked to agressivity
     double s0 = { 0.5 };// Minimum distance - Some drivers are more agressive, while others are less agressive
     double delta = { 4.0 };   // Acceleration exponent
-    std::shared_ptr<Vehicle> follwing = { nullptr }; // vehicle in front. nullptr for free road.
-                                                     // Might also be traffic light or another obstacle
 
 public:
     Vehicle( int _x_orig, int _length );
 
     void advance(int distance); // move forward
-    void update(double dt, Vehicle &nextVehicle); // update position and velocity
+    void update(double dt, const Vehicle &nextVehicle); // update position and velocity
 
     bool onFreeRoad() const;
     void freeRoadOn();          // toggle free road on

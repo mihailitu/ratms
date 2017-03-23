@@ -14,7 +14,7 @@ void Vehicle::advance(int distance)
     xPos += distance;
 }
 
-void Vehicle::update(double dt, Vehicle &nextVehicle)
+void Vehicle::update(double dt, const Vehicle &nextVehicle)
 {
     // ODE here
     // s alfa - net distance to vehicle directly on front
