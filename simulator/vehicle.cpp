@@ -9,11 +9,6 @@ Vehicle::Vehicle( int _x_orig, int _length ) :
 
 }
 
-void Vehicle::advance(int distance)
-{
-    xPos += distance;
-}
-
 void Vehicle::update(double dt, const Vehicle &nextVehicle)
 {
     // ODE here
@@ -30,6 +25,12 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
     double acceleration = a * (1 -
                                std::pow(velocity/v0, delta) -
                                freeRoad ? 0 : std::pow(Sstar/netDistance,2));
+
+    // advance forward
+    xPos += velocity * dt + (acceleration * std::pow(dt, 2)) / 2;
+
+    // increase/decrease velocity
+    velocity += acceleration * dt;
 }
 
 bool Vehicle::onFreeRoad() const

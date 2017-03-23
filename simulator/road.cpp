@@ -2,6 +2,8 @@
 
 #include "logger.h"
 
+const Vehicle Road::noVehicle(-1, -1);
+
 Road::Road()
 {
 

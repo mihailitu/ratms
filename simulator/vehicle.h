@@ -42,7 +42,6 @@ class Vehicle
 public:
     Vehicle( int _x_orig, int _length );
 
-    void advance(int distance); // move forward
     void update(double dt, const Vehicle &nextVehicle); // update position and velocity
 
     bool onFreeRoad() const;
