@@ -28,8 +28,8 @@ void Vehicle::update(double dt, Vehicle &nextVehicle)
 
     // calculate acceleration
     double acceleration = a * (1 -
-                               std::pow(velocity/v0, delta -
-                               std::pow(Sstar/netDistance,2)));
+                               std::pow(velocity/v0, delta) -
+                               std::pow(Sstar/netDistance,2));
 }
 
 bool Vehicle::onFreeRoad() const
