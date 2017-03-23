@@ -24,12 +24,12 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
     double delta_v = velocity - nextVehicle.velocity;
 
     // S* - equation parameter
-    double Sstar = s0 + velocity * T + (velocity*delta_v)/std::sqrt(a*b);
+    double Sstar = s0 + std::max(0.0, velocity * T + (velocity*delta_v)/(2*std::sqrt(a*b)));
 
     // calculate acceleration
     double acceleration = a * (1 -
                                std::pow(velocity/v0, delta) -
-                               std::pow(Sstar/netDistance,2));
+                               freeRoad ? 0 : std::pow(Sstar/netDistance,2));
 }
 
 bool Vehicle::onFreeRoad() const
@@ -57,4 +57,12 @@ void Vehicle::printVehicle() const
              "Free road:  %s\n",
              xOrig, xPos, length, velocity,
              freeRoad ? "yes" : "no" );
+
+    log_info("Vehicle model params: \n"
+             "Desired velocity:      %.2f m/s\n"
+             "Safe time headway:     %.2f s\n"
+             "Maximum acceleration:  %.2f m/s^2\n"
+             "Desired deleration:    %.2f m/s^2\n"
+             "Acceleration exponent: %.2f\n"
+             "Minimum distance:      %.2f m\n", v0, T, a, b, delta, s0);
 }
