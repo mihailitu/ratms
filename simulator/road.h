@@ -62,6 +62,8 @@ private:
     // vehicles on this road
     std::vector<Vehicle> vehicles;
 
+    static const Vehicle noVehicle; // we use this when no vehicle is on front - free road
+
 public:
     Road();
     Road( roadID id, int length, roadPos startPos, roadPos endpos );
@@ -73,9 +75,7 @@ public:
     void addConnections(std::vector<roadID> rconnections);
     void addConnections(std::vector<Road> rconnections);
 
-    roadID getId() const{
-        return id;
-    }
+    roadID getId() const;
 
     std::vector<Vehicle>& getVehicles();
 
