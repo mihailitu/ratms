@@ -34,7 +34,7 @@ private:
     roadID id;
 
     // length of the road in meters
-    int length;
+    unsigned length;
     // xPos of vechicle is the meter on the road
 
     // start position of the road - lat/lon - from OMS or something
@@ -54,22 +54,22 @@ private:
 
     // the number of lanes
     // TODO: assign vehicles to lanes on the road!!!
-    int lanes;
+    unsigned lanesNo = { 1 };
 
     // road max speed - if any or city speed limit - this doesn't have to strictly conformed by drivers
-    int maxSpeed;
+    unsigned maxSpeed;
 
     // vehicles on this road, assigned to lanes
-    std::vector<std::vector<Vehicle>> vehicles;
+    std::vector<std::vector<Vehicle>> vehicles = {std::vector<Vehicle>()};
 
     static const Vehicle noVehicle; // we use this when no vehicle is on front - free road
 
 public:
     Road();
-    Road( roadID id, int length, roadPos startPos, roadPos endpos );
-    Road( roadID id, int length, int lanes, int maxSpeed );
+    Road( roadID id, unsigned length, roadPos startPos, roadPos endpos );
+    Road( roadID id, unsigned length, unsigned lanes, unsigned maxSpeed );
 
-    void addVehicle(Vehicle car, int lane);
+    void addVehicle(Vehicle car, unsigned lane);
     void addConnection(roadID connection);
     void addConnection(Road connection);
     void addConnections(std::vector<roadID> rconnections);

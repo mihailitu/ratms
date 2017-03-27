@@ -8,7 +8,7 @@ Road::Road()
 {
 }
 
-Road::Road( roadID id, int length, roadPos startPos, roadPos endpos ) :
+Road::Road( roadID id, unsigned length, roadPos startPos, roadPos endpos ) :
     id (id), length(length), startPos(startPos), endPos(endpos),
     usageProb(0.5)
 {
@@ -21,23 +21,25 @@ Road::Road( roadID id, int length, roadPos startPos, roadPos endpos ) :
              id, length, startPos.first, startPos.second, endPos.first, endPos.second);
 }
 
-Road::Road( roadID id, int length, int lanes, int maxSpeed ) :
-    id (id), length(length), usageProb(0.5), lanes(lanes), maxSpeed(maxSpeed)
+Road::Road( roadID id, unsigned length, unsigned lanes, unsigned maxSpeed ) :
+    id (id), length(length), usageProb(0.5), lanesNo(lanes), maxSpeed(maxSpeed)
 {
     log_info("New road added: \n"
              "\t ID: %u \n"
              "\t length: %d m\n"
              "\t lanes: %d \n"
              "\t max_speed: %d km/h \n",
-             id, length, lanes, maxSpeed);
+             id, length, lanesNo, maxSpeed);
+    for(unsigned i = 1; i < lanesNo; ++i)
+        vehicles.push_back(std::vector<Vehicle>());
 }
 
 //TODO: should vehicles be added from outside Road class or
 // a road should maintain it's vehicle pool internally based on statistics?
-void Road::addVehicle(Vehicle car, int lane)
+void Road::addVehicle(Vehicle car, unsigned lane)
 {
-    if(lane >= lanes) {
-        log_warning("Assigned vehicle to road %u on lane %d, where the road has only %d lanes.", id, lane, lanes);
+    if(lane >= lanesNo) {
+        log_warning("Assigned vehicle to road %u on lane %d, where the road has only %d lanes.", id, lane, lanesNo);
         lane = 0; //TODO: throw exception?
     }
     vehicles[lane].push_back(car);
@@ -101,7 +103,7 @@ void Road::printRoad() const
              "Start:        (%f, %f)\n"
              "End:          (%f, %f)\n"
              "Connections:  %s\n",
-             id, length, lanes, maxSpeed, usageProb, vehicles.size(),
+             id, length, lanesNo, maxSpeed, usageProb, vehicles.size(),
              startPos.first, startPos.second, endPos.first, endPos.second, connections_str.c_str());
 
     for(auto lane : vehicles )
