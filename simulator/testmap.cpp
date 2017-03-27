@@ -60,7 +60,7 @@ std::vector<Road> getSimpleTestMap()
 
     Vehicle v(vPos, vLength);
     v.freeRoadOn();
-    smap[0].addVehicle(v);
+    smap[0].addVehicle(v, 0);
 
     return smap;
 }

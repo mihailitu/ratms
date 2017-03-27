@@ -59,8 +59,8 @@ private:
     // road max speed - if any or city speed limit - this doesn't have to strictly conformed by drivers
     int maxSpeed;
 
-    // vehicles on this road
-    std::vector<Vehicle> vehicles;
+    // vehicles on this road, assigned to lanes
+    std::vector<std::vector<Vehicle>> vehicles;
 
     static const Vehicle noVehicle; // we use this when no vehicle is on front - free road
 
@@ -69,7 +69,7 @@ public:
     Road( roadID id, int length, roadPos startPos, roadPos endpos );
     Road( roadID id, int length, int lanes, int maxSpeed );
 
-    void addVehicle(Vehicle car);
+    void addVehicle(Vehicle car, int lane);
     void addConnection(roadID connection);
     void addConnection(Road connection);
     void addConnections(std::vector<roadID> rconnections);
@@ -77,7 +77,12 @@ public:
 
     roadID getId() const;
 
-    std::vector<Vehicle>& getVehicles();
+    // We need to sort vehicles on the road based on their position/lane
+    // We need to to this every time before updating vehicle position,
+    // because some vehicles might change lanes, some might arrive at their destination,
+    // some may enter the road.
+    void indexRoad();
+    void update(double dt);
 
     void printRoad() const;
 };

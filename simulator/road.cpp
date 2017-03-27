@@ -6,7 +6,6 @@ const Vehicle Road::noVehicle(-1, -1);
 
 Road::Road()
 {
-
 }
 
 Road::Road( roadID id, int length, roadPos startPos, roadPos endpos ) :
@@ -35,14 +34,13 @@ Road::Road( roadID id, int length, int lanes, int maxSpeed ) :
 
 //TODO: should vehicles be added from outside Road class or
 // a road should maintain it's vehicle pool internally based on statistics?
-void Road::addVehicle(Vehicle car)
+void Road::addVehicle(Vehicle car, int lane)
 {
-    vehicles.push_back(car);
-}
-
-std::vector<Vehicle>& Road::getVehicles()
-{
-    return vehicles;
+    if(lane >= lanes) {
+        log_warning("Assigned vehicle to road %u on lane %d, where the road has only %d lanes.", id, lane, lanes);
+        lane = 0; //TODO: throw exception?
+    }
+    vehicles[lane].push_back(car);
 }
 
 void Road::addConnection(roadID connection)
@@ -72,6 +70,19 @@ Road::roadID Road::getId() const
         return id;
 }
 
+void Road::indexRoad()
+{
+
+}
+
+void Road::update(double dt)
+{
+    indexRoad();
+    for(auto lane : vehicles)
+        for(auto vehicle : lane)
+            vehicle.update(dt, noVehicle);
+}
+
 void Road::printRoad() const
 {
     std::string connections_str = "";
@@ -93,6 +104,7 @@ void Road::printRoad() const
              id, length, lanes, maxSpeed, usageProb, vehicles.size(),
              startPos.first, startPos.second, endPos.first, endPos.second, connections_str.c_str());
 
-    for(auto v : vehicles )
-        v.printVehicle();
+    for(auto lane : vehicles )
+        for(auto v : lane)
+            v.printVehicle();
 }
