@@ -80,8 +80,8 @@ void Road::indexRoad()
 void Road::update(double dt)
 {
     indexRoad();
-    for(auto lane : vehicles)
-        for(auto vehicle : lane)
+    for(auto &lane : vehicles)
+        for(auto &vehicle : lane)
             vehicle.update(dt, noVehicle);
 }
 

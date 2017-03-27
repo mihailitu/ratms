@@ -28,8 +28,10 @@ void Simulator::addRoadNetToMap(std::vector<Road> &roadNet)
 void Simulator::runTestSimulator()
 {
     double dt = 0.5;
-    while (!terminate) {
-        for( auto mapEl : cityMap ) {
+    int iter = 0;
+    while (!terminate && iter < 10) {
+        ++iter;
+        for( auto &mapEl : cityMap ) {
             mapEl.second.update(dt);
         }
     }

@@ -54,7 +54,7 @@ std::vector<Road> getSimpleTestMap()
     int vLength = 4; // medium
     int vPos = 10;
 
-    Vehicle v(vPos, vLength);
+    Vehicle v(vPos, vLength, 70);
     v.freeRoadOn();
 
     Road r(0, 2000, 1, 70);

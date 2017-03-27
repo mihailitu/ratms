@@ -3,8 +3,8 @@
 
 #include <cmath>
 
-Vehicle::Vehicle( int _x_orig, int _length ) :
-    length(_length), xOrig(_x_orig), xPos(_x_orig)
+Vehicle::Vehicle( double _x_orig, double _length, double maxV ) :
+    length(_length), xOrig(_x_orig), xPos(_x_orig), v0(maxV)
 {
 
 }
@@ -31,6 +31,7 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
 
     // increase/decrease velocity
     velocity += acceleration * dt;
+    log_info("pos: %.5f v: %.5f", xPos, velocity);
 }
 
 bool Vehicle::onFreeRoad() const
@@ -51,10 +52,10 @@ void Vehicle::freeRoadOff()
 void Vehicle::printVehicle() const
 {
     log_info("Vehicle:\n"
-             "Originated: %d\n"
-             "Position:   %d m\n"
-             "Length:     %d m\n"
-             "Velocity:   %d m/s\n"
+             "Originated: %.2f\n"
+             "Position:   %.2f m\n"
+             "Length:     %.2f m\n"
+             "Velocity:   %.2f m/s\n"
              "Free road:  %s\n",
              xOrig, xPos, length, velocity,
              freeRoad ? "yes" : "no" );
