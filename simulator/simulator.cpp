@@ -27,7 +27,7 @@ void Simulator::addRoadNetToMap(std::vector<Road> &roadNet)
 
 void Simulator::runTestSimulator()
 {
-    double dt = 1.0;
+    double dt = 0.5;
     int iter = 0;
     while (!terminate && iter < 10) {
         ++iter;

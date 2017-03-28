@@ -51,10 +51,10 @@ std::vector<Road> getTestMap()
 std::vector<Road> getSimpleTestMap()
 {
     // add one vehicle at the beginning of the road for free road tests
-    int vLength = 4; // medium
-    int vPos = 10;
+    double vLength = 5.0; // medium
+    double vPos = 0.0;
 
-    Vehicle v(vPos, vLength, 70);
+    Vehicle v(vPos, vLength, 20.0);
     v.freeRoadOn();
 
     Road r(0, 2000, 1, 70);

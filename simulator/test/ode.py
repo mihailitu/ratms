@@ -20,4 +20,4 @@ for i in range(0, 10):
   
   x = x + v * dt + (acc * dt * dt)/2
   v = v + acc * dt
-  print acc, x, v
+  print x, v, acc
