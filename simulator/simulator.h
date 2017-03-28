@@ -12,6 +12,8 @@ class Simulator
      */
     void initSimulatorTestState();
 
+    bool terminate = {false};
+
 public:
     typedef std::map<Road::roadID, Road> CityMap;
     CityMap cityMap;
