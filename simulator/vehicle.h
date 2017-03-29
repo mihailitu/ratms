@@ -30,7 +30,7 @@ class Vehicle
                                     // < 1.0 altruist/prudent driver
                                     // > 1.0 aggressive/selfish driver
 
-    double v0 = { 20.0 };     // Desired velocity - initialize to road's max speed
+    double v0 = { 20.0 };   // Desired velocity - initialize to road's max speed
                             // Adjust depending on aggressivity - some drivers would want to go above speed limit,
                             //                                    while others will want to go lower than speed limit, determined by statistics
     double T = { 1.5 };     // Safe time headway - aggressivity dependent
@@ -38,6 +38,8 @@ class Vehicle
     double b = { 1.0 };     // Desired deceleration - linked to agressivity
     double s0 = { 1.5 };    // Minimum distance - Some drivers are more agressive, while others are less agressive
     double delta = { 4.0 }; // Acceleration exponent
+
+    double freeRoadDistance = { 100.0 }; // if net distance to vehicle ahead is larger, turn free road on
 
 public:
     Vehicle( double _x_orig, double _length, double maxV );

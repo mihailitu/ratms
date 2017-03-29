@@ -56,7 +56,7 @@ private:
     // TODO: assign vehicles to lanes on the road!!!
     unsigned lanesNo = { 1 };
 
-    // road max speed - if any or city speed limit - this doesn't have to strictly conformed by drivers
+    // road max speed m/s - if any or city speed limit - this doesn't have to be strictly conformed by drivers
     unsigned maxSpeed;
 
     // vehicles on this road, assigned to lanes
@@ -67,7 +67,7 @@ private:
 public:
     Road();
     Road( roadID id, unsigned length, roadPos startPos, roadPos endpos );
-    Road( roadID id, unsigned length, unsigned lanes, unsigned maxSpeed );
+    Road( roadID id, unsigned length, unsigned lanes, unsigned maxSpeed_mps );
 
     void addVehicle(Vehicle car, unsigned lane);
     void addConnection(roadID connection);

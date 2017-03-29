@@ -6,7 +6,7 @@
 Vehicle::Vehicle( double _x_orig, double _length, double maxV ) :
     length(_length), xOrig(_x_orig), xPos(_x_orig), v0(maxV)
 {
-
+    log_info("New vehicle: Pos: %2.f V: %.2f L: %.2f", xOrig, v0, length);
 }
 
 void Vehicle::update(double dt, const Vehicle &nextVehicle)
@@ -14,8 +14,14 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
     // ODE here
     // s alfa - net distance to vehicle directly on front
     double netDistance = nextVehicle.xPos - xPos - nextVehicle.length;
+
+    // toggle free road
     if (netDistance <= 0)
         freeRoad = true;
+    else if (netDistance >= freeRoadDistance)
+        freeRoad = true;
+    else
+        freeRoad = false;
 
     // delta v - approaching rate
     double deltaV = velocity - nextVehicle.velocity;
@@ -29,7 +35,6 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
     // advance forward
     xPos += velocity * dt + (acceleration * std::pow(dt, 2)) / 2;
 
-    // log_info("Net distance: %.2f deltav: %.2f Sstar: %.2f", netDistance, deltaV, sStar);
     // increase/decrease velocity
     velocity += acceleration * dt;
     log_info("pos: %.2f v: %.2f acc: %.2f", xPos, velocity, acceleration);

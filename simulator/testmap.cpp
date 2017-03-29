@@ -46,18 +46,36 @@ std::vector<Road> getTestMap()
 }
 
 /*
- * Add a simple road to test the basic equations on free and busy road.
+ * Add a simple road to test the basic equations on free.
  */
-std::vector<Road> getSimpleTestMap()
+std::vector<Road> getSigleVehicleTestMap()
 {
     // add one vehicle at the beginning of the road for free road tests
-    double vLength = 5.0; // medium
+    double vLength = 5.0; // medium sedane
     double vPos = 0.0;
 
     Vehicle v(vPos, vLength, 20.0);
     v.freeRoadOn();
 
     Road r(0, 2000, 1, 70);
+    r.addVehicle(v, 0);
+    std::vector<Road> smap = {
+        r
+    };
+    return smap;
+}
+
+/*
+ * Add a simple road to test the basic equations on free and busy road.
+ */
+std::vector<Road> getFollowingVehicleTestMap()
+{
+    Vehicle v(0.0, 5.0, 20.0);
+
+    Vehicle v1(20.0, 5.0, 15.0);
+
+    Road r(0, 2000, 1, 20);
+    r.addVehicle(v1, 0);
     r.addVehicle(v, 0);
     std::vector<Road> smap = {
         r

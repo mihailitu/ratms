@@ -21,8 +21,8 @@ Road::Road( roadID id, unsigned length, roadPos startPos, roadPos endpos ) :
              id, length, startPos.first, startPos.second, endPos.first, endPos.second);
 }
 
-Road::Road( roadID id, unsigned length, unsigned lanes, unsigned maxSpeed ) :
-    id (id), length(length), usageProb(0.5), lanesNo(lanes), maxSpeed(maxSpeed)
+Road::Road( roadID id, unsigned length, unsigned lanes, unsigned maxSpeed_mps ) :
+    id (id), length(length), usageProb(0.5), lanesNo(lanes), maxSpeed(maxSpeed_mps)
 {
     log_info("New road added: \n"
              "\t ID: %u \n"
