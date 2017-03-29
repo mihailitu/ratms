@@ -17,7 +17,7 @@
 #define log_info(fmt, ...) \
     do { \
             if ( DEBUG_INFO) { \
-                fprintf( stderr, "INFO: %s %s %s:%d: \n" fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
+                fprintf( stderr, "INFO: %s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
             } \
        } while(0)
 
@@ -25,14 +25,14 @@
 #define log_error(fmt, ...) \
     do { \
             if ( DEBUG_ERROR) { \
-                fprintf( stderr, "ERROR: %s %s %s:%d: \n" fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
+                fprintf( stderr, "ERROR: %s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
             } \
        } while(0)
 
 #define log_warning(fmt, ...) \
     do { \
             if ( DEBUG_WARNING) { \
-                fprintf( stderr, "WARNING: %s %s %s:%d: \n" fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
+                fprintf( stderr, "WARNING: %s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
             } \
        } while(0)
 
