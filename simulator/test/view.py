@@ -1,205 +1,173 @@
-"""
-Produces a map showing London Underground station locations with high
-resolution background imagery provided by OpenStreetMap.
-
-"""
-from matplotlib.path import Path
+import sys
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.animation as animation
 import numpy as np
 
-import cartopy.crs as ccrs
-import cartopy
-from cartopy.io.img_tiles import OSM
+saveAnim = False;
+
+if len(sys.argv) <= 1:
+    data = np.loadtxt("cars_test.dat")
+else:
+    data = np.loadtxt(sys.argv[1])
+    dataLight = np.loadtxt(sys.argv[1] + "_lights.dat")
+    print dataLight
+    dataOb = np.loadtxt(sys.argv[1] + "_obstacles.dat")
+    print dataOb
+    if len(sys.argv) == 3:
+        saveAnim = (sys.argv[2] == "save")
+
+n = (len(data[0]) - 1) // 2
+tt = data[:, 0]
+xx = data[:, 1:n + 1]
+vv = data[:, n + 1:-1]
+throughput = data[:, -1]
+
+nLights = int(dataLight[0, 0])
+xxLights = dataLight[:, 1::2]
+onLights = dataLight[:, 2::2]
+
+nObstacles = int(dataOb[0, 0])
+startOb = dataOb[0, 1::2]
+endOb = dataOb[0, 2::2]
+
+# traveled distance of car0;
+distanceX0 = 0
+oldDistance = 0
+loops = 0
+
+road_length = np.max(xx);
+
+# First set up the figure, the axis, and the plot element we want to animate
+fig = plt.figure()
+ax = plt.axes()
+plt.axis('equal')
+scat = ax.scatter(xx[0, :], np.zeros_like(xx[0, :]))
+ax.hold(False)
+old_data = xx[0, :];
 
 
-def tube_locations():
-    """
-    Returns an (n, 2) array of selected London Tube locations in Ordnance
-    Survey GB coordinates.
-
-    Source: http://www.doogal.co.uk/london_stations.php
-
-    """
-    return np.array([[531738., 180890.], [532379., 179734.],
-                     [531096., 181642.], [530234., 180492.],
-                     [531688., 181150.], [530242., 180982.],
-                     [531940., 179144.], [530406., 180380.],
-                     [529012., 180283.], [530553., 181488.],
-                     [531165., 179489.], [529987., 180812.],
-                     [532347., 180962.], [529102., 181227.],
-                     [529612., 180625.], [531566., 180025.],
-                     [529629., 179503.], [532105., 181261.],
-                     [530995., 180810.], [529774., 181354.],
-                     [528941., 179131.], [531050., 179933.],
-                     [530240., 179718.]])
+def drawProgressBar(percent, barLen=50):
+    sys.stdout.write("\r")
+    progress = ""
+    for i in range(barLen):
+        if i < int(barLen * percent):
+            progress += "="
+        else:
+            progress += " "
+    sys.stdout.write("[ %s ] %.2f%%" % (progress, percent * 100))
+    sys.stdout.flush()
 
 
-def london():
-    imagery = OSM()
+def arc_patch(r1, r2, start, end, road_length, axx=None, resolution=50, **kwargs):
+    # make sure ax is not empty
+    if axx is None:
+        axx = plt.gca()
 
-    ax = plt.axes(projection=imagery.crs)
-    ax.set_extent((-0.14, -0.1, 51.495, 51.515))
+    # calculate theta1 and theta2
+    theta1 = start / road_length * 2 * np.pi
+    theta2 = end / road_length * 2 * np.pi
+    # generate the points
+    theta = np.linspace(theta1, theta2, resolution)
 
-    # Construct concentric circles and a rectangle,
-    # suitable for a London Underground logo.
-    theta = np.linspace(0, 2 * np.pi, 100)
-    circle_verts = np.vstack([np.sin(theta), np.cos(theta)]).T
-    concentric_circle = Path.make_compound_path(Path(circle_verts[::-1]),
-                                                Path(circle_verts * 0.6))
+    points = np.vstack((np.hstack((r2 * np.cos(theta), r1 * np.cos(theta[::-1]))),
+                        np.hstack((r2 * np.sin(theta), r1 * np.sin(theta[::-1])))))
+    # build the polygon and add it to the axes
+    poly = mpatches.Polygon(points.T, closed=True, **kwargs)
+    axx.add_patch(poly)
+    return poly
 
-    rectangle = Path([[-1.1, -0.2], [1, -0.2], [1, 0.3], [-1.1, 0.3]])
 
-    # Add the imagery to the map.
-    ax.add_image(imagery, 14)
+# initialization function: plot the background of each frame
+def init():
+    ax.hold(False)
+    ax.set_xlim([-road_length / 4, road_length / 4])
+    ax.set_ylim([-road_length / 4, road_length / 4])
+    return ax,
 
-    # Plot the locations twice, first with the red concentric circles,
-    # then with the blue rectangle.
-    xs, ys = tube_locations().T
-    plt.plot(xs, ys, transform=ccrs.OSGB(),
-             marker=concentric_circle, color='red', markersize=9,
-             linestyle='')
-    plt.plot(xs, ys, transform=ccrs.OSGB(),
-             marker=rectangle, color='blue', markersize=11,
-             linestyle='')
 
-    plt.title('London underground locations')
+# animation function.  This is called sequentially
+def animate(i):
+    drawProgressBar(float(i) / len(tt))
+    x = road_length / (2 * np.pi) * np.cos(2 * np.pi * xx[i, :] / road_length)
+    y = road_length / (2 * np.pi) * np.sin(2 * np.pi * xx[i, :] / road_length)
+
+    # add the cars
+    scat = ax.scatter(x, y)
+    ax.hold(True)
+
+    # add the obstacles
+    if nObstacles > 0:
+        # inner radius and outer radius
+        r1 = 0.95 * road_length / (2 * np.pi)
+        r2 = 1.05 * road_length / (2 * np.pi)
+        for ob in range(nObstacles):
+            arc_patch(r1, r2, startOb[ob], endOb[ob], road_length,
+                      axx=ax, fill=True, alpha=0.5, color='red')
+
+            # calculate the time in minutes, hours and second
+
+    scat = ax.scatter(x[0], y[0], marker="o", color='k', s=110)
+    scat = ax.scatter(x[0], y[0], marker="o", color='w', s=70)
+    scat = ax.scatter(x[0], y[0], marker="+", color='k', s=80)
+    # add the traffic lights
+    if nLights > 0:
+        xl = 1.1 * road_length / (2 * np.pi) * np.cos(2 * np.pi * xxLights[i, :] / road_length)
+        yl = 1.1 * road_length / (2 * np.pi) * np.sin(2 * np.pi * xxLights[i, :] / road_length)
+        for l in range(nLights):
+            if (onLights[i, l] == 1):
+                scat = ax.scatter(xl[l], yl[l], marker="s", color='r', s=50)
+            else:
+                scat = ax.scatter(xl[l], yl[l], marker="^", color='g', s=50)
+
+    ax.hold(False)
+    ax.set_xlim([-road_length / 4, road_length / 4])
+    ax.set_ylim([-road_length / 4, road_length / 4])
+    plt.xlabel('x[m]')
+    plt.ylabel('y[m]')
+    m, s = divmod(tt[i], 60)
+    h, m = divmod(m, 60)
+
+    ## ADD text informations
+    vskip = road_length / 6 - road_length / 7;
+    # time informations
+    ax.text(road_length / 7, road_length / 6, r"$Time:$ $%d:%02d:%02d$" % (h, m, s))
+
+    # add velocity information of the red car
+    ax.text(road_length / 7, road_length / 6 - vskip, r"$v:$      $%d [km/h]$" % int(vv[i, 0] * 3.6))
+
+    global oldDistance
+    global distanceX0
+    global loops
+
+    distanceX0 = xx[i, 0] + loops * road_length;
+    if distanceX0 < loops * road_length + road_length / 2 and oldDistance > loops * road_length + road_length / 2:  # if the car completed a loop
+        loops += 1
+        distanceX0 += road_length
+
+    oldDistance = distanceX0
+
+    ax.text(road_length / 7, road_length / 6 - 1.7 * vskip, r"$d:$      $%d [m]$" % int(distanceX0))
+
+    # add velocity information of the simulation
+    ax.text(road_length / 7, road_length / 6 - 2.7 * vskip, r"$avg_v:$ $%d [km/h]$" % int(np.mean(vv[i, :]) * 3.6))
+
+    return scat,
+
+
+# call the animator.  blit=True means only re-draw the parts that have changed.
+anim = animation.FuncAnimation(fig, animate, init_func=init,
+                               frames=len(tt), interval=1, blit=False)
+
+if saveAnim:
+    anim.save('basic_animation.mp4', fps=30, extra_args=['-vcodec', 'libx264'])
+else:
     plt.show()
 
-
-def simple():
-    ax = plt.axes(projection=ccrs.PlateCarree())
-    ax.coastlines()
-    plt.show()
-
-
-def flight():
-    ax = plt.axes(projection=ccrs.PlateCarree())
-    ax.stock_img()
-
-    ny_lon, ny_lat = -75, 43
-    delhi_lon, delhi_lat = 77.23, 28.61
-
-    plt.plot([ny_lon, delhi_lon], [ny_lat, delhi_lat],
-             color='blue', linewidth=2, marker='o',
-             transform=ccrs.Geodetic(),
-             )
-
-    plt.plot([ny_lon, delhi_lon], [ny_lat, delhi_lat],
-             color='gray', linestyle='--',
-             transform=ccrs.PlateCarree(),
-             )
-
-    plt.text(ny_lon - 3, ny_lat - 12, 'New York',
-             horizontalalignment='right',
-             transform=ccrs.Geodetic())
-
-    plt.text(delhi_lon + 3, delhi_lat - 12, 'Delhi',
-             horizontalalignment='left',
-             transform=ccrs.Geodetic())
-
-    plt.show()
+# save the animation as an mp4.  This requires ffmpeg or mencoder to be
+# installed.  The extra_args ensure that the x264 codec is used, so that
+# the video can be embedded in html5.  You may need to adjust this for
+# your system: for more information, see
+# http://matplotlib.sourceforge.net/api/animation_api.html
 
 
-def carto():
-    import cartopy.io.shapereader as shpreader
-    import shapely
-    # Downloaded from http://biogeo.ucdavis.edu/data/gadm2/shp/DEU_adm.zip
-    fname = 'ned_1arcsec_g.shp'
-    adm1_shapes = list(shpreader.Reader(fname).geometries())
-
-    mpl1 = shapely.geometry.multipolygon.MultiPolygon([(-171, - 14), (-170, - 14), (-170, - 15), (-171, - 15), (-171, - 14)])
-    print mpl1
-
-    # adm1_shapes = list((
-    #     shapely.geometry.multipolygon.MultiPolygon((-171 -14, -170 -14, -170 -15, -171 -15, -171 -14)),
-    #     shapely.geometry.multipolygon.MultiPolygon((-170 -14, -169 -14, -169 -15, -170 -15, -170 -14)))
-    # )
-
-    print adm1_shapes
-    for sh in adm1_shapes:
-        print sh
-
-    ax = plt.axes(projection=ccrs.PlateCarree())
-
-    plt.title('Deutschland')
-
-    ax.add_geometries(adm1_shapes, ccrs.PlateCarree(),
-                      edgecolor='black', facecolor='gray', alpha=0.5)
-
-    ax.set_extent([4, 16, 47, 56], ccrs.PlateCarree())
-
-    plt.show()
-
-
-def cartopy_ex():
-    from matplotlib import pyplot
-    from shapely.geometry import MultiPolygon
-    from descartes.patch import PolygonPatch
-
-    #from figures import SIZE
-
-    COLOR = {
-        True: '#6699cc',
-        False: '#ff3333'
-    }
-
-    def v_color(ob):
-        return COLOR[ob.is_valid]
-
-    def plot_coords(ax, ob):
-        x, y = ob.xy
-        ax.plot(x, y, 'o', color='#999999', zorder=1)
-
-    fig = pyplot.figure(1, figsize=(10, 10), dpi=90)
-
-    # 1: valid multi-polygon
-    ax = fig.add_subplot(121)
-
-    a = [(0, 0), (0, 1), (1, 1), (1, 0), (0, 0)]
-    b = [(1, 1), (1, 2), (2, 2), (2, 1), (1, 1)]
-
-    multi1 = MultiPolygon([[a, []], [b, []]])
-
-    for polygon in multi1:
-        print polygon
-        plot_coords(ax, polygon.exterior)
-        patch = PolygonPatch(polygon, facecolor=v_color(multi1), edgecolor=v_color(multi1), alpha=0.5, zorder=2)
-        ax.add_patch(patch)
-
-    ax.set_title('a) valid')
-
-    xrange = [-1, 3]
-    yrange = [-1, 3]
-    ax.set_xlim(*xrange)
-    ax.set_xticks(range(*xrange) + [xrange[-1]])
-    ax.set_ylim(*yrange)
-    ax.set_yticks(range(*yrange) + [yrange[-1]])
-    ax.set_aspect(1)
-
-    # 2: invalid self-touching ring
-    ax = fig.add_subplot(122)
-
-    c = [(0, 0), (0, 11), (1, 1.5), (1, 0), (0, 0)]
-    d = [(1, 0.5), (1, 2), (2, 2), (2, 0.5), (1, 0.5)]
-
-    multi2 = MultiPolygon([[c, []], [d, []]])
-
-    for polygon in multi2:
-        plot_coords(ax, polygon.exterior)
-        patch = PolygonPatch(polygon, facecolor=v_color(multi2), edgecolor=v_color(multi2), alpha=0.5, zorder=2)
-        ax.add_patch(patch)
-
-    ax.set_title('b) invalid')
-
-    xrange = [-1, 3]
-    yrange = [-1, 3]
-    ax.set_xlim(*xrange)
-    ax.set_xticks(range(*xrange) + [xrange[-1]])
-    ax.set_ylim(*yrange)
-    ax.set_yticks(range(*yrange) + [yrange[-1]])
-    ax.set_aspect(1)
-
-    pyplot.show()
-
-if __name__ == '__main__':
-    cartopy_ex()
