@@ -36,7 +36,7 @@ distanceX0 = 0
 oldDistance = 0
 loops = 0
 
-road_length = np.max(xx);
+road_length = np.max(xx)
 
 # First set up the figure, the axis, and the plot element we want to animate
 fig = plt.figure()
