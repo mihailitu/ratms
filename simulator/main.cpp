@@ -1,7 +1,5 @@
 #include <iostream>
 
-#include <typeinfo>
-
 #include "simulator.h"
 #include "testmap.h"
 
