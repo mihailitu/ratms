@@ -4,15 +4,15 @@ import matplotlib.patches as mpatches
 import matplotlib.animation as animation
 import numpy as np
 
-saveAnim = False;
-
-if len(sys.argv) <= 1:
+saveAnim = False
+ffile = "cars_light_test.dat"
+if False: #len(sys.argv) <= 1:
     data = np.loadtxt("cars_test.dat")
 else:
-    data = np.loadtxt(sys.argv[1])
-    dataLight = np.loadtxt(sys.argv[1] + "_lights.dat")
+    data = np.loadtxt(ffile)
+    dataLight = np.loadtxt(ffile + "_lights.dat")
     print dataLight
-    dataOb = np.loadtxt(sys.argv[1] + "_obstacles.dat")
+    dataOb = np.loadtxt(ffile + "_obstacles.dat")
     print dataOb
     if len(sys.argv) == 3:
         saveAnim = (sys.argv[2] == "save")

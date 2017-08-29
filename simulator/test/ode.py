@@ -17,7 +17,7 @@ for i in range(0, 10):
   deltaV = v - 0
   sStar = s0 + v*T +(v*deltaV)/(2*math.sqrt(a*b))
   acc = a * ( 1 - (v/v0)**delta) # - (sStar/netDistance)**2)
-  
+
   x = x + v * dt + (acc * dt * dt)/2
   v = v + acc * dt
   print x, v, acc
