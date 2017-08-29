@@ -44,7 +44,7 @@ ax = plt.axes()
 plt.axis('equal')
 scat = ax.scatter(xx[0, :], np.zeros_like(xx[0, :]))
 ax.hold(False)
-old_data = xx[0, :];
+old_data = xx[0, :]
 
 
 def drawProgressBar(percent, barLen=50):
@@ -115,7 +115,7 @@ def animate(i):
         xl = 1.1 * road_length / (2 * np.pi) * np.cos(2 * np.pi * xxLights[i, :] / road_length)
         yl = 1.1 * road_length / (2 * np.pi) * np.sin(2 * np.pi * xxLights[i, :] / road_length)
         for l in range(nLights):
-            if (onLights[i, l] == 1):
+            if onLights[i, l] == 1:
                 scat = ax.scatter(xl[l], yl[l], marker="s", color='r', s=50)
             else:
                 scat = ax.scatter(xl[l], yl[l], marker="^", color='g', s=50)
