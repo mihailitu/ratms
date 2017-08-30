@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-## TODO: see https://matplotlib.org/examples/animation/rain.html for scatter plots
+# TODO: see https://matplotlib.org/examples/animation/rain.html for scatter plots
 
 # no of cars
 N = 2
@@ -25,13 +25,12 @@ scat = plt.scatter(cars['position'][:, 0], cars['position'][:, 1])
 
 
 def update(frame_no):
-    print 'update ' + str(frame_no)
     cars['position'][0][0] += 10
     cars['position'][1][0] += (frame_no % 2) * 10
 
     scat.set_offsets(cars['position'])
 
 
-animation = animation.FuncAnimation(fig, update, interval=500)
+animation = animation.FuncAnimation(fig, update, interval=10)
 
 plt.show()
