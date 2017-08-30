@@ -1,7 +1,7 @@
 #ifndef VEHICLE_H
 #define VEHICLE_H
 
-#include <memory>
+#include <vector>
 
 class Vehicle
 {
@@ -40,6 +40,11 @@ class Vehicle
     double delta = { 4.0 }; // Acceleration exponent
 
     double freeRoadDistance = { 100.0 }; // if net distance to vehicle ahead is larger, turn free road on
+
+    /* Keep some stats about this vehicle.
+     * We can compare itineraries and travel time between vehicles for performance measures */
+    std::vector<unsigned long> itinerary; // itinerary of this vehicle.
+    double roadTime; // time spent in traffic by this car
 
 public:
     Vehicle( double _x_orig, double _length, double maxV );
