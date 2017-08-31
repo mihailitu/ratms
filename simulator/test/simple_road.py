@@ -23,13 +23,17 @@ fig = plt.figure(figsize=(15, 3))
 ax = plt.axes(xlim=(0, road_length), ylim=(-1, 1))
 scat = plt.scatter(cars['position'][:, 0], cars['position'][:, 1])
 
+#
+info = plt.text(0, 1, 'Some \n text', size=10)
+
 
 def update(frame_no):
     cars['position'][0][0] += 10
     cars['position'][1][0] += (frame_no % 2) * 10
 
     scat.set_offsets(cars['position'])
-
+    info.set_text('Frame: $%3d$ \nSpeed: ' % frame_no)
+    fig.canvas.draw()
 
 animation = animation.FuncAnimation(fig, update, interval=10)
 
