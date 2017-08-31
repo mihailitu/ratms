@@ -3,6 +3,7 @@
 #include "simulator.h"
 #include "testmap.h"
 
+using namespace simulator;
 
 int main( )
 {

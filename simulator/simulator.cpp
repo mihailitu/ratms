@@ -5,6 +5,9 @@
 #include "logger.h"
 #include "road.h"
 
+namespace simulator
+{
+
 Simulator::Simulator()
 {
     initSimulatorTestState();
@@ -41,3 +44,5 @@ void Simulator::runSimulator()
 {
     log_info("Running the simulator");
 }
+
+} // namespace simulator

@@ -5,6 +5,9 @@
 #include <vector>
 #include "vehicle.h"
 
+namespace simulator
+{
+
 class Road
 {
     /***
@@ -86,5 +89,7 @@ public:
 
     void printRoad() const;
 };
+
+} // namespae simulator
 
 #endif // ROAD_H

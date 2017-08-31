@@ -2,6 +2,8 @@
 #include "logger.h"
 
 #include <cmath>
+namespace simulator
+{
 
 Vehicle::Vehicle( double _x_orig, double _length, double maxV ) :
     length(_length), xOrig(_x_orig), xPos(_x_orig), v0(maxV)
@@ -75,3 +77,5 @@ void Vehicle::printVehicle() const
              "Acceleration exponent: %.2f\n"
              "Minimum distance:      %.2f m\n", v0, T, a, b, delta, s0);
 }
+
+} // namespace simulator

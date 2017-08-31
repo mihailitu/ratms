@@ -2,6 +2,9 @@
 
 #include "logger.h"
 
+namespace simulator
+{
+
 const Vehicle Road::noVehicle(0.0, 0.0, 0.0);
 
 Road::Road()
@@ -110,3 +113,5 @@ void Road::printRoad() const
         for(auto v : lane)
             v.printVehicle();
 }
+
+} // namespace simulator

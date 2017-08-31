@@ -3,6 +3,9 @@
 
 #include <vector>
 
+namespace simulator
+{
+
 class Vehicle
 {
     /* the length of the car.
@@ -57,5 +60,7 @@ public:
 
     void printVehicle() const;
 };
+
+} // simulator
 
 #endif // VEHICLE_H

@@ -16,6 +16,9 @@
  *
  */
 
+namespace simulator
+{
+
 std::vector<Road> getTestMap()
 {
     std::vector<Road> cmap = {
@@ -82,3 +85,5 @@ std::vector<Road> getFollowingVehicleTestMap()
     };
     return smap;
 }
+
+} // namespace simulator

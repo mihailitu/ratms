@@ -4,6 +4,10 @@
 #include <map>
 
 #include "road.h"
+
+namespace simulator
+{
+
 class Simulator
 {
     /***
@@ -25,5 +29,7 @@ public:
     void addRoadToMap(const Road &r);
     void addRoadNetToMap(std::vector<Road> &roadNet);
 };
+
+} // namespace simulator
 
 #endif // SIMULATOR_H
