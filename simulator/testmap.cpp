@@ -1,5 +1,8 @@
 #include "testmap.h"
 
+namespace simulator
+{
+
 /*
  * Construct a simple road network for dev and testing purposes:
  * r1 -> r2
@@ -15,10 +18,6 @@
  *
  *
  */
-
-namespace simulator
-{
-
 std::vector<Road> getTestMap()
 {
     std::vector<Road> cmap = {
@@ -49,7 +48,10 @@ std::vector<Road> getTestMap()
 }
 
 /*
- * Add a simple road to test the basic equations on free.
+ * Add a simple road to test the basic equations on free road.
+ * Road:
+ *      - length: 2000 m
+ *      - max speed: 20 meters/second (app. 70 km/h)
  */
 std::vector<Road> getSigleVehicleTestMap()
 {
@@ -60,7 +62,7 @@ std::vector<Road> getSigleVehicleTestMap()
     Vehicle v(vPos, vLength, 20.0);
     v.freeRoadOn();
 
-    Road r(0, 1000, 1, 70);
+    Road r(0, 1000, 1, 20);
     r.addVehicle(v, 0);
     std::vector<Road> smap = {
         r

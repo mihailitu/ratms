@@ -2,11 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-# TODO: see https://matplotlib.org/examples/animation/rain.html for scatter plots
+# Single road with one lane and one vehicle
+# This is a view for testmap.cpp : getSigleVehicleTestMap() test
+# Enter values manually
 
 # no of cars
 N = 2
-road_length = 5000
+road_length = 2000
 # update interval same as dt from simulation ODE = 0.5 sec
 interval = 500
 # vehicles data
