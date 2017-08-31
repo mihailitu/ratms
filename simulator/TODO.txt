@@ -1,1 +1,8 @@
+08.31
+    - have simulator data into some text format so python views can handle it
+    - collect simple road test output from testmap.cpp into a file and feed it into simple_road.py for testing.
+        Then continue with 2, 3 and more cars on a single lane road
+
+        
+
 Road - find a way to connect a vehicle to a lane, when multiple lanes are on a section of the road.

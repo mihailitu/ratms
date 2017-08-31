@@ -8,7 +8,7 @@ int main( )
 {
     Simulator simulator;
 
-    std::vector<Road> roadMap = getFollowingVehicleTestMap();// getSigleVehicleTestMap();
+    std::vector<Road> roadMap = getSigleVehicleTestMap(); // getFollowingVehicleTestMap();
     simulator.addRoadNetToMap( roadMap );
 
     simulator.runTestSimulator();
