@@ -18,6 +18,9 @@ class Simulator
 
     bool terminate = {false};
 
+    // simulator run time
+    float runTime = {0};
+
 public:
     typedef std::map<Road::roadID, Road> CityMap;
     CityMap cityMap;

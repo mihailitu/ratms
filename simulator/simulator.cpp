@@ -37,6 +37,7 @@ void Simulator::runTestSimulator()
         for( auto &mapEl : cityMap ) {
             mapEl.second.update(dt);
         }
+        runTime += dt;
     }
 }
 
