@@ -19,10 +19,10 @@ class Simulator
     bool terminate = {false};
 
     // simulator run time
-    float runTime = {0};
+    double runTime = {0};
 
 public:
-    typedef std::map<Road::roadID, Road> CityMap;
+    typedef std::map<roadID, Road> CityMap;
     CityMap cityMap;
 public:
     Simulator();
@@ -31,6 +31,9 @@ public:
     void runTestSimulator();
     void addRoadToMap(const Road &r);
     void addRoadNetToMap(std::vector<Road> &roadNet);
+
+    // output the current layout of this road
+    void serialize(double time);
 };
 
 } // namespace simulator

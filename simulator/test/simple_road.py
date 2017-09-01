@@ -29,7 +29,7 @@ scat = plt.scatter(cars['position'][:, 0], cars['position'][:, 1])
 
 # construct the info text: frame number, running time, velocity, acceleration and lane of vehicle
 def info_text(frame, time, velocity, acc, lane):
-    text = 'Frame: $%04d$\n' \
+    text = 'Frame: $%4d$\n' \
           'Time: $%', frame
     return text
 
@@ -42,7 +42,7 @@ def update(frame_no):
     cars['position'][1][0] += (frame_no % 2) * 10
 
     scat.set_offsets(cars['position'])
-    info.set_text('Frame: $%03d$\n'
+    info.set_text('Frame: $%3d$\n'
                   'Speed: ' % frame_no)
     fig.canvas.draw()
 

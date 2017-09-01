@@ -2,6 +2,7 @@
 #define VEHICLE_H
 
 #include <vector>
+#include "defs.h"
 
 namespace simulator
 {
@@ -46,7 +47,7 @@ class Vehicle
 
     /* Keep some stats about this vehicle.
      * We can compare itineraries and travel time between vehicles for performance measures */
-    std::vector<unsigned long> itinerary; // itinerary of this vehicle.
+    std::vector<roadID> itinerary; // itinerary of this vehicle.
     double roadTime; // time spent in traffic by this car
 
 public:

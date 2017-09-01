@@ -70,19 +70,20 @@ void Road::addConnections(std::vector<Road> rconnections)
         connections.push_back(r.getId());
 }
 
-Road::roadID Road::getId() const
+roadID Road::getId() const
 {
         return id;
 }
 
 void Road::indexRoad()
 {
-
+    // TODO
 }
 
 void Road::update(double dt)
 {
     indexRoad();
+
     for(auto &lane : vehicles)
         for(auto &vehicle : lane)
             vehicle.update(dt, noVehicle);

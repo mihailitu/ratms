@@ -1,7 +1,6 @@
-#include "simulator.h"
-
 #include <iostream>
 
+#include "simulator.h"
 #include "logger.h"
 #include "road.h"
 
@@ -38,7 +37,20 @@ void Simulator::runTestSimulator()
             mapEl.second.update(dt);
         }
         runTime += dt;
+
+        serialize(runTime);
+
     }
+}
+
+void Simulator::serialize(double time)
+{
+    /* let other services know this road's layout (version 1, compatible with simple_road.py test:
+     * the function will output a line composed of:
+     *                |          | vehicle 0  | vehicle 1 | ...... | vehicle n |
+     * time | roadID0 | maxSpeed |  x | v | a | x | v | a | .......| x | v | a |
+     * time | roadID1 | maxSpeed |  x | v | a | x | v | a | .......| x | v | a |
+     */
 }
 
 void Simulator::runSimulator()

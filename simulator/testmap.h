@@ -1,10 +1,10 @@
 #ifndef TESTMAP_H
 #define TESTMAP_H
 
+#include <vector>
+
 #include "road.h"
 #include "vehicle.h"
-
-#include "vector"
 
 namespace simulator
 {
