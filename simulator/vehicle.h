@@ -61,9 +61,9 @@ public:
     void freeRoadOn();          // toggle free road on
     void freeRoadOff();         // toggle free road off
 
-    void serialize(std::ostream &out);
+    void serialize(std::ostream &out) const;
 
-    void serialize_v1(std::ostream &out);
+    void serialize_v1(std::ostream &out) const;
 
     void printVehicle() const;
 };

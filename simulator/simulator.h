@@ -36,10 +36,10 @@ public:
      * Keep all versions so we can run older python tests at later times
      * !! Final serialization version should be implemented using sockets
      */
-    void serialize_v1(double time);
+    void serialize_v1(double time, std::ostream &output);
 
     // output the current layout of this road - version 1
-    void serialize(double time);
+    void serialize(double time, std::ostream &output);
 };
 
 } // namespace simulator

@@ -32,6 +32,9 @@ void Simulator::runTestSimulator()
 {
     double dt = 0.5;
     int iter = 0;
+
+    std::ofstream output("xx.dat"); // todo: add file name v1 to config file
+
     while (!terminate && iter < 10) {
         ++iter;
         for( auto &mapEl : cityMap ) {
@@ -39,13 +42,14 @@ void Simulator::runTestSimulator()
         }
         runTime += dt;
 
-        serialize_v1(runTime);
+        serialize_v1(runTime, output);
     }
+    output.close();
 }
 
-void Simulator::serialize(double time)
+void Simulator::serialize(double time, std::ostream &output)
 {
-    serialize_v1(time);
+    serialize_v1(time, output);
 }
 
 /* let other services know this road's layout (version 1, compatible with simple_road.py test:
@@ -59,17 +63,16 @@ void Simulator::serialize(double time)
  * !!! Roads have different number of vehicles.
  * Same road can also have different number of vehicles at different times
  */
-void Simulator::serialize_v1(double time)
+void Simulator::serialize_v1(double time, std::ostream &output)
 {
-    std::ofstream output("xx.dat"); // todo: add file name v1 to config file
     for(auto &roadElement : cityMap) {
         Road& road = roadElement.second;
-        output << time << " " << road.getId() << " " << road.maxSpeed;
+        output << time << " " << road.getId() << " " << road.getMaxSpeed() << " ";
         for(auto &lane : road.getVehicles())
-            for(Vehicle &vehicle : lane)
+            for(auto &vehicle : lane)
                 vehicle.serialize(output);
     }
-    output.close();
+    output << "\n";
 }
 
 void Simulator::runSimulator()

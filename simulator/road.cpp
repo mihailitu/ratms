@@ -80,7 +80,7 @@ unsigned Road::getMaxSpeed() const
     return maxSpeed;
 }
 
-const std::vector<std::vector<Vehicle>>& getVehicles() const
+const std::vector<std::vector<Vehicle>>& Road::getVehicles() const
 {
     return vehicles;
 }

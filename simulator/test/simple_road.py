@@ -6,13 +6,15 @@ import matplotlib.animation as animation
 # This is a view for testmap.cpp : getSigleVehicleTestMap() test
 # Enter values manually
 
+
+
 # no of cars
 N = 2
 road_length = 2000
 # update interval same as dt from simulation ODE = 0.5 sec
 interval = 500
 # vehicles data
-cars = np.zeros(N, dtype=[('position', float, 2),
+cars = np.zeros(2, dtype=[('position', float, 2),
                           ('time', float, 1),
                           ('velocity', float, 1),
                           ('acceleration', float, 1),

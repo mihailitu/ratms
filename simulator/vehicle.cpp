@@ -59,13 +59,13 @@ void Vehicle::freeRoadOff()
     freeRoad = false;
 }
 
-void Vehicle::serialize(std::ostream &out)
+void Vehicle::serialize(std::ostream &out) const
 {
     serialize_v1(out);
 }
 
 // version 1:
-void Vehicle::serialize_v1(std::ostream &out)
+void Vehicle::serialize_v1(std::ostream &out) const
 {
     out << xPos << " " <<
            velocity << " " <<
