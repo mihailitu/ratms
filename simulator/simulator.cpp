@@ -40,7 +40,6 @@ void Simulator::runTestSimulator()
         runTime += dt;
 
         serialize_v1(runTime);
-
     }
 }
 
@@ -62,7 +61,7 @@ void Simulator::serialize(double time)
  */
 void Simulator::serialize_v1(double time)
 {
-    std::ofstream output("xx.dat");
+    std::ofstream output("xx.dat"); // todo: add file name v1 to config file
     for(auto &roadElement : cityMap) {
         Road& road = roadElement.second;
         output << time << " " << road.getId() << " " << road.maxSpeed;
