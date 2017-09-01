@@ -75,6 +75,17 @@ roadID Road::getId() const
         return id;
 }
 
+unsigned Road::getMaxSpeed() const
+{
+    return maxSpeed;
+}
+
+const std::vector<std::vector<Vehicle>>& getVehicles() const
+{
+    return vehicles;
+}
+
+
 void Road::indexRoad()
 {
     // TODO

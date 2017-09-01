@@ -1,6 +1,7 @@
 #ifndef VEHICLE_H
 #define VEHICLE_H
 
+#include <ostream>
 #include <vector>
 #include "defs.h"
 
@@ -27,6 +28,7 @@ class Vehicle
                                 // we will not consider other vechicles to update current velocity and current position
     double  s = { -1.0 };       // net distance to vehicle in front of this one (0 = accident, -1 = no vehicle in front
                                 // for large values of net distance, we should enter in free road mode
+    double acceleration = { 0 };// vehicle acceleration (meters per second)
 
     /* Model parameters are here, as we make most of it dependent on this driver's aggressivity */
     double aggressivity = { 1.0 };  // aggressivity factor of this driver.
@@ -58,6 +60,10 @@ public:
     bool onFreeRoad() const;
     void freeRoadOn();          // toggle free road on
     void freeRoadOff();         // toggle free road off
+
+    void serialize(std::ostream &out);
+
+    void serialize_v1(std::ostream &out);
 
     void printVehicle() const;
 };

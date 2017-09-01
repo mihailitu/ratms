@@ -34,7 +34,7 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
     double sStar = s0 + std::max(0.0, velocity * T + (velocity*deltaV)/(2*std::sqrt(a*b)));
 
     // calculate acceleration
-    double acceleration = a * (1.0 - std::pow(velocity/v0, delta) - (freeRoad ? 0 : std::pow(sStar/netDistance,2)));
+    acceleration = a * (1.0 - std::pow(velocity/v0, delta) - (freeRoad ? 0 : std::pow(sStar/netDistance,2)));
 
     // advance forward
     xPos += velocity * dt + (acceleration * std::pow(dt, 2)) / 2;
@@ -57,6 +57,20 @@ void Vehicle::freeRoadOn()
 void Vehicle::freeRoadOff()
 {
     freeRoad = false;
+}
+
+void Vehicle::serialize(std::ostream &out)
+{
+    serialize_v1(out);
+}
+
+// version 1:
+void Vehicle::serialize_v1(std::ostream &out)
+{
+    out << xPos << " " <<
+           velocity << " " <<
+           acceleration << " ";
+
 }
 
 void Vehicle::printVehicle() const

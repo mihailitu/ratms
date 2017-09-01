@@ -78,6 +78,8 @@ public:
     void addConnections(std::vector<Road> rconnections);
 
     roadID getId() const;
+    unsigned getMaxSpeed() const;
+    const std::vector<std::vector<Vehicle>>& getVehicles() const;
 
     // We need to sort vehicles on the road based on their position/lane
     // We need to to this every time before updating vehicle position,
