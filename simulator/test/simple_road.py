@@ -2,11 +2,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+#
+#
+# *                 |          | vehicle 0  | vehicle 1 | ...... | vehicle n | vehicle n+1 |
+# * time0 | roadID0 | maxSpeed |  x | v | a | x | v | a | .......|
+# * time0 | roadID1 | maxSpeed |  x | v | a | x | v | a | .......| x | v | a |
+# * time1 | roadID0 | maxSpeed |  x | v | a | x | v | a | .......| x | v | a |
+# * time1 | roadID1 | maxSpeed |  x | v | a | x | v | a | .......| x | v | a |
+
+data = np.loadtxt("xx.dat")
+
+# vehicle data for one road at one time
+vehicle_data = data[0][3:].reshape((-1,3))
+
 # Single road with one lane and one vehicle
 # This is a view for testmap.cpp : getSigleVehicleTestMap() test
 # Enter values manually
-
-
 
 # no of cars
 N = 2
