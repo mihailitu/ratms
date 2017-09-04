@@ -10,17 +10,18 @@ import matplotlib.animation as animation
 # * time1 | roadID0 | maxSpeed |  x | v | a | x | v | a | .......| x | v | a |
 # * time1 | roadID1 | maxSpeed |  x | v | a | x | v | a | .......| x | v | a |
 
-data = np.loadtxt("xx.dat")
+# only one lane on road for now
 
+data = np.loadtxt("xx.dat")
 # vehicle data for one road at one time
-vehicle_data = data[0][3:].reshape((-1,3))
+vehicle_data = data[0][3:].reshape((-1, 3))
 
 # Single road with one lane and one vehicle
 # This is a view for testmap.cpp : getSigleVehicleTestMap() test
 # Enter values manually
 
 # no of cars
-N = 2
+N = len(vehicle_data)
 road_length = 2000
 # update interval same as dt from simulation ODE = 0.5 sec
 interval = 500

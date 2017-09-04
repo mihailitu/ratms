@@ -62,7 +62,7 @@ std::vector<Road> getSigleVehicleTestMap()
     Vehicle v(vPos, vLength, 20.0);
     v.freeRoadOn();
 
-    Road r(0, 1000, 1, 20);
+    Road r(0, 2000, 1, 20);
     r.addVehicle(v, 0);
     std::vector<Road> smap = {
         r

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 
 #include "simulator.h"
 #include "logger.h"
@@ -35,7 +36,7 @@ void Simulator::runTestSimulator()
 
     std::ofstream output("xx.dat"); // todo: add file name v1 to config file
 
-    while (!terminate && iter < 10) {
+    while (!terminate && iter < 120) {
         ++iter;
         for( auto &mapEl : cityMap ) {
             mapEl.second.update(dt);
@@ -65,6 +66,7 @@ void Simulator::serialize(double time, std::ostream &output)
  */
 void Simulator::serialize_v1(double time, std::ostream &output)
 {
+    std::showpoint(output);
     for(auto &roadElement : cityMap) {
         Road& road = roadElement.second;
         output << time << " " << road.getId() << " " << road.getMaxSpeed() << " ";
