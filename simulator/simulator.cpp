@@ -5,6 +5,7 @@
 #include "simulator.h"
 #include "logger.h"
 #include "road.h"
+#include "config.h"
 
 namespace simulator
 {
@@ -31,12 +32,12 @@ void Simulator::addRoadNetToMap(std::vector<Road> &roadNet)
 
 void Simulator::runTestSimulator()
 {
-    double dt = 0.5;
+    double dt = Config::DT;
     int iter = 0;
 
-    std::ofstream output("xx.dat"); // todo: add file name v1 to config file
+    std::ofstream output(Config::singleVehicleTestFName); // todo: add file name v1 to config file
 
-    while (!terminate && iter < 360) {
+    while (!terminate && iter < Config::simulationTime) {
         ++iter;
         for( auto &mapEl : cityMap ) {
             mapEl.second.update(dt);

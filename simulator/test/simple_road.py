@@ -12,7 +12,7 @@ import matplotlib.animation as animation
 
 # only one lane on road for now
 
-data = np.loadtxt("xx.dat")
+data = np.loadtxt("v1test.dat")
 # vehicle data for first road at one time (0.0)
 vehicle_data = data[0][4:].reshape((-1, 3))
 
@@ -31,8 +31,12 @@ cars = np.zeros(N, dtype=[('position', float, 2),
                           ('time', float, 1),
                           ('velocity', float, 1),
                           ('acceleration', float, 1),
-                          ('lane', int, 1)])
+                          ('lane', int, 1),
+                          # if this vehicle is selected for data info,
+                          # change it's color
+                          ('color', int, 1)])
 
+cars['color'] = np.full((1, N), 255)
 # index of the vehicle we want to see data for (speed, acc, etc)
 watch_vehicle = 0
 
@@ -57,7 +61,7 @@ def mps_to_kmph(mps):
 
 
 def update(frame_no):
-    global vehicle_data, N, cars
+    global vehicle_data, N, cars, scat
 
     # update vehicle data for current time frame
     vehicle_data = data[frame_no][4:].reshape((-1, 3))
@@ -67,7 +71,8 @@ def update(frame_no):
                               ('time', float, 1),
                               ('velocity', float, 1),
                               ('acceleration', float, 1),
-                              ('lane', int, 1)])
+                              ('lane', int, 1),
+                              ('color', int, 1)])
 
     # get the x pos of all cars at a time frame
     cars['position'][:, 0] = vehicle_data[:, 0]
@@ -76,9 +81,10 @@ def update(frame_no):
 
     scat.set_offsets(cars['position'])
 
+    # scat = plt.scatter(cars['position'][watch_vehicle][0], cars['position'][watch_vehicle][1], c='r')
+
     speed = vehicle_data[watch_vehicle][1]
     acc = vehicle_data[watch_vehicle][2]
-    print(acc)
     info.set_text('Frame:  $%3d$\n'
                   'Length: $%d$ m\n'
                   'Max v:  $%d$ km/h\n'
@@ -87,6 +93,8 @@ def update(frame_no):
                   'Speed: $%d$ km/h\n'
                   'Acc:   $%f$\n'
                   % (frame_no, road_length, mps_to_kmph(max_speed), mps_to_kmph(speed), acc))
+
+    return scat
 
 
 animation = animation.FuncAnimation(fig, update, interval=10)

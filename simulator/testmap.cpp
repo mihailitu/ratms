@@ -77,7 +77,7 @@ std::vector<Road> getFollowingVehicleTestMap()
 {
     Vehicle v(0.0, 5.0, 20.0);
 
-    Vehicle v1(20.0, 5.0, 15.0);
+    Vehicle v1(150.0, 5.0, 15.0);
 
     Road r(0, 2000, 1, 20);
     r.addVehicle(v1, 0);
