@@ -4,17 +4,17 @@ import matplotlib.animation as animation
 
 #
 #
-# *                 |          | vehicle 0  | vehicle 1 | ...... | vehicle n | vehicle n+1 |
-# * time0 | roadID0 | maxSpeed |  x | v | a | x | v | a | .......|
-# * time0 | roadID1 | maxSpeed |  x | v | a | x | v | a | .......| x | v | a |
-# * time1 | roadID0 | maxSpeed |  x | v | a | x | v | a | .......| x | v | a |
-# * time1 | roadID1 | maxSpeed |  x | v | a | x | v | a | .......| x | v | a |
+# *                 |                    | vehicle 0  | vehicle 1 | ...... | vehicle n | vehicle n+1 |
+# * time0 | roadID0 | roadlen | maxSpeed |  x | v | a | x | v | a | .......|
+# * time0 | roadID1 | roadlen | maxSpeed |  x | v | a | x | v | a | .......| x | v | a |
+# * time1 | roadID0 | roadlen | maxSpeed |  x | v | a | x | v | a | .......| x | v | a |
+# * time1 | roadID1 | roadlen | maxSpeed |  x | v | a | x | v | a | .......| x | v | a |
 
 # only one lane on road for now
 
 data = np.loadtxt("xx.dat")
-# vehicle data for one road at one time
-vehicle_data = data[0][3:].reshape((-1, 3))
+# vehicle data for first road at one time (0.0)
+vehicle_data = data[0][4:].reshape((-1, 3))
 
 # Single road with one lane and one vehicle
 # This is a view for testmap.cpp : getSigleVehicleTestMap() test
@@ -22,18 +22,19 @@ vehicle_data = data[0][3:].reshape((-1, 3))
 
 # no of cars
 N = len(vehicle_data)
-road_length = 2000
+road_length = data[0][2]
+max_speed = data[0][3]
 # update interval same as dt from simulation ODE = 0.5 sec
 interval = 500
 # vehicles data
-cars = np.zeros(2, dtype=[('position', float, 2),
+cars = np.zeros(N, dtype=[('position', float, 2),
                           ('time', float, 1),
                           ('velocity', float, 1),
                           ('acceleration', float, 1),
                           ('lane', int, 1)])
 
-# don't update y pos for single lane - single road sim
-cars['position'][:, 1] = np.full((1, N), 0)
+# index of the vehicle we want to see data for (speed, acc, etc)
+watch_vehicle = 0
 
 # setup view
 fig = plt.figure(figsize=(15, 3))
@@ -48,17 +49,45 @@ def info_text(frame, time, velocity, acc, lane):
     return text
 
 #
-info = plt.text(2000, 0.5, 'Some \n text', size=10)
+info = plt.text(road_length, 0.0, 'Some \n text', size=10)
+
+
+def mps_to_kmph(mps):
+    return mps * 3.6
 
 
 def update(frame_no):
-    cars['position'][0][0] += 10
-    cars['position'][1][0] += (frame_no % 2) * 10
+    global vehicle_data, N, cars
+
+    # update vehicle data for current time frame
+    vehicle_data = data[frame_no][4:].reshape((-1, 3))
+    N = len(vehicle_data)
+
+    cars = np.zeros(N, dtype=[('position', float, 2),
+                              ('time', float, 1),
+                              ('velocity', float, 1),
+                              ('acceleration', float, 1),
+                              ('lane', int, 1)])
+
+    # get the x pos of all cars at a time frame
+    cars['position'][:, 0] = vehicle_data[:, 0]
+    # don't update y pos for single lane - single road test simulation
+    cars['position'][:, 1] = np.full((1, N), 0)
 
     scat.set_offsets(cars['position'])
-    info.set_text('Frame: $%3d$\n'
-                  'Speed: ' % frame_no)
-    fig.canvas.draw()
+
+    speed = vehicle_data[watch_vehicle][1]
+    acc = vehicle_data[watch_vehicle][2]
+    print(acc)
+    info.set_text('Frame:  $%3d$\n'
+                  'Length: $%d$ m\n'
+                  'Max v:  $%d$ km/h\n'
+                  '\n'
+                  '\n'
+                  'Speed: $%d$ km/h\n'
+                  'Acc:   $%f$\n'
+                  % (frame_no, road_length, mps_to_kmph(max_speed), mps_to_kmph(speed), acc))
+
 
 animation = animation.FuncAnimation(fig, update, interval=10)
 

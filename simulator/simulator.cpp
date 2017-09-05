@@ -36,7 +36,7 @@ void Simulator::runTestSimulator()
 
     std::ofstream output("xx.dat"); // todo: add file name v1 to config file
 
-    while (!terminate && iter < 120) {
+    while (!terminate && iter < 360) {
         ++iter;
         for( auto &mapEl : cityMap ) {
             mapEl.second.update(dt);
@@ -69,7 +69,7 @@ void Simulator::serialize_v1(double time, std::ostream &output)
     std::showpoint(output);
     for(auto &roadElement : cityMap) {
         Road& road = roadElement.second;
-        output << time << " " << road.getId() << " " << road.getMaxSpeed() << " ";
+        output << time << " " << road.getId() << " " << road.getLength() << " " << road.getMaxSpeed() << " ";
         for(auto &lane : road.getVehicles())
             for(auto &vehicle : lane)
                 vehicle.serialize(output);
