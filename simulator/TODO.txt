@@ -1,8 +1,12 @@
 Road - find a way to connect a vehicle to a lane, when multiple lanes are on a section of the road.
 
-09.05 - Add 2 or more vehicles to a road
+09.04 - Don't let vehicles pass through each other (decelerate when another vehicle is in front and passing over is not possible)
+      - Make some sort of vehicle selection in python view. When a vehicle is selected by a mouse click, show it's info
 
-08.31
+09.05 - Done 
+      - Add 2 or more vehicles to a road
+
+08.31 - Done
     - have simulator data into some text format so python views can handle it
     - collect simple road test output from testmap.cpp into a file and feed it into simple_road.py for testing.
         Then continue with 2, 3 and more cars on a single lane road
