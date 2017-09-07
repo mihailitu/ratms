@@ -106,8 +106,8 @@ void Road::update(double dt)
     indexRoad();
 
     for(auto &lane : vehicles)
-        for(unsigned i = 0; i < lane.size(); ++i)
-            if (i == 0 ) // first vehicle
+        for(unsigned i = 0; i < lane.size(); ++i) // see indexRoad() comments for clarification
+            if (i == 0 ) // first vehicle (highest xPos) has no leading vehicle
                 lane[i].update(dt, noVehicle);
             else
                 lane[i].update(dt, lane[i-1]);
