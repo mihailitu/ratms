@@ -1,9 +1,10 @@
 #ifndef VEHICLE_H
 #define VEHICLE_H
 
+#include "defs.h"
+
 #include <ostream>
 #include <vector>
-#include "defs.h"
 
 namespace simulator
 {
@@ -57,6 +58,7 @@ public:
 
     void update(double dt, const Vehicle &nextVehicle); // update position and velocity
 
+    double getPos() const;
     bool onFreeRoad() const;
     void freeRoadOn();          // toggle free road on
     void freeRoadOff();         // toggle free road off

@@ -1,10 +1,11 @@
 #ifndef ROAD_H
 #define ROAD_H
 
-#include <utility>
-#include <vector>
 #include "vehicle.h"
 #include "defs.h"
+
+#include <utility>
+#include <vector>
 
 namespace simulator
 {
@@ -90,6 +91,9 @@ public:
     void update(double dt);
 
     void printRoad() const;
+
+private:
+
 };
 
 } // namespae simulator

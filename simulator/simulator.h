@@ -1,9 +1,9 @@
 #ifndef SIMULATOR_H
 #define SIMULATOR_H
 
-#include <map>
-
 #include "road.h"
+
+#include <map>
 
 namespace simulator
 {

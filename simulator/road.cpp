@@ -1,6 +1,7 @@
 #include "road.h"
-
 #include "logger.h"
+
+#include <algorithm>
 
 namespace simulator
 {
@@ -93,7 +94,10 @@ const std::vector<std::vector<Vehicle>>& Road::getVehicles() const
 
 void Road::indexRoad()
 {
-    // TODO
+    for(auto &lane : vehicles)
+        std::sort(lane.begin(), lane.end(),
+                  [](const auto& lhs, const auto& rhs)
+                        {return lhs.getPos() < rhs.getPos();});
 }
 
 void Road::update(double dt)
@@ -101,8 +105,11 @@ void Road::update(double dt)
     indexRoad();
 
     for(auto &lane : vehicles)
-        for(auto &vehicle : lane)
-            vehicle.update(dt, noVehicle);
+        for(unsigned i = 0; i < lane.size(); ++i)
+            if (i + 1 == lane.size()) // find the next vehicle
+                lane[i].update(dt, noVehicle);
+            else
+                lane[i].update(dt, lane[i+1]);
 }
 
 void Road::printRoad() const

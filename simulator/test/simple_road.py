@@ -38,7 +38,7 @@ cars = np.zeros(N, dtype=[('position', float, 2),
 
 cars['color'] = np.full((1, N), 255)
 # index of the vehicle we want to see data for (speed, acc, etc)
-watch_vehicle = 0
+watch_vehicle = 1
 
 # setup view
 fig = plt.figure(figsize=(15, 3))
@@ -52,7 +52,7 @@ def info_text(frame, time, velocity, acc, lane):
           'Time: $%', frame
     return text
 
-#
+
 info = plt.text(road_length, 0.0, 'Some \n text', size=10)
 
 
@@ -81,7 +81,11 @@ def update(frame_no):
 
     scat.set_offsets(cars['position'])
 
-    # scat = plt.scatter(cars['position'][watch_vehicle][0], cars['position'][watch_vehicle][1], c='r')
+    # for i in range(0, len(cars)):
+    #     if i == watch_vehicle:
+    #         scat = plt.scatter(cars['position'][watch_vehicle][0], cars['position'][watch_vehicle][1])
+    #     else:
+    #         scat = plt.scatter(cars['position'][i][0], cars['position'][i][1])
 
     speed = vehicle_data[watch_vehicle][1]
     acc = vehicle_data[watch_vehicle][2]

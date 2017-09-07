@@ -59,6 +59,11 @@ void Vehicle::freeRoadOff()
     freeRoad = false;
 }
 
+double Vehicle::getPos() const
+{
+    return xPos;
+}
+
 void Vehicle::serialize(std::ostream &out) const
 {
     serialize_v1(out);

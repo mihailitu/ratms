@@ -1,11 +1,11 @@
-#include <iostream>
-#include <fstream>
-#include <iomanip>
-
 #include "simulator.h"
 #include "logger.h"
 #include "road.h"
 #include "config.h"
+
+#include <iostream>
+#include <fstream>
+#include <iomanip>
 
 namespace simulator
 {

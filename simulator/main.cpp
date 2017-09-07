@@ -1,7 +1,7 @@
-#include <iostream>
-
 #include "simulator.h"
 #include "testmap.h"
+
+#include <iostream>
 
 using namespace simulator;
 
