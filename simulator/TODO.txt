@@ -1,8 +1,9 @@
 - Create a test with more lanes
 - Add lane change logic
 - Road - find a way to connect a vehicle to a lane, when multiple lanes are on a section of the road.
-- Make some sort of vehicle selection in python view. When a vehicle is selected by a mouse click, show it's info
 
+
+09.07 - DONE - Make some sort of vehicle selection in python view. When a vehicle is selected by a mouse click, show it's info
 
 09.04 - DONE - Don't let vehicles pass through each other (decelerate when another vehicle is in front and passing over is not possible)
 
@@ -10,7 +11,7 @@
 
 08.31 - DONE - have simulator data into some text format so python views can handle it
       - DONE - collect simple road test output from testmap.cpp into a file and feed it into simple_road.py for testing.
-        Then continue with 2, 3 and more cars on a single lane road
+        DONE - Then continue with 2, 3 and more cars on a single lane road
 
         
 
