@@ -76,10 +76,13 @@ std::vector<Road> getSigleVehicleTestMap()
 std::vector<Road> getFollowingVehicleTestMap()
 {
     Vehicle v(0.0, 5.0, 20.0);
-
-    Vehicle v1(150.0, 5.0, 15.0);
+    Vehicle v1(100.0, 5.0, 18);
+    Vehicle v2(150.0, 5.0, 15.0);
+    Vehicle v3(400, 5.0, 10);
 
     Road r(0, 2000, 1, 20);
+    r.addVehicle(v3, 0);
+    r.addVehicle(v2, 0);
     r.addVehicle(v1, 0);
     r.addVehicle(v, 0);
     std::vector<Road> smap = {

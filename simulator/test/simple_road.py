@@ -44,6 +44,17 @@ ax = plt.axes(xlim=(0, road_length), ylim=(-1, 1))
 scat = ax.scatter(cars['position'][:, 0], cars['position'][:, 1], c=colors)
 
 
+def onclick(event):
+    print('button=%d, x=%d, y=%d, xdata=%f, ydata=%f' %
+          (event.button, event.x, event.y, event.xdata, event.ydata))
+    global watch_vehicle
+    if event.button == 1:
+        watch_vehicle = (np.abs(cars['position'][:, 0]-event.xdata)).argmin()
+
+
+cid = fig.canvas.mpl_connect('button_press_event', onclick)
+
+
 # construct the info text: frame number, running time, velocity, acceleration and lane of vehicle
 def info_text(frame, time, velocity, acc, lane):
     text = 'Frame: $%4d$\n' \
