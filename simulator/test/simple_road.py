@@ -17,7 +17,7 @@ data = np.loadtxt("v1test.dat")
 vehicle_data = data[0][4:].reshape((-1, 3))
 
 # Single road with one lane and one vehicle
-# This is a view for testmap.cpp : getSigleVehicleTestMap() test
+# This is a view for testmap.cpp : getSigleVehicleTestMap()/getFolowingVehicle() test
 # Enter values manually
 
 # no of cars
@@ -31,19 +31,17 @@ cars = np.zeros(N, dtype=[('position', float, 2),
                           ('time', float, 1),
                           ('velocity', float, 1),
                           ('acceleration', float, 1),
-                          ('lane', int, 1),
-                          # if this vehicle is selected for data info,
-                          # change it's color
-                          ('color', int, 1)])
+                          ('lane', int, 1)])
 
-cars['color'] = np.full((1, N), 255)
+colors = ['blue' for x in range(N)]
+
 # index of the vehicle we want to see data for (speed, acc, etc)
 watch_vehicle = 1
 
 # setup view
 fig = plt.figure(figsize=(15, 3))
 ax = plt.axes(xlim=(0, road_length), ylim=(-1, 1))
-scat = plt.scatter(cars['position'][:, 0], cars['position'][:, 1])
+scat = ax.scatter(cars['position'][:, 0], cars['position'][:, 1], c=colors)
 
 
 # construct the info text: frame number, running time, velocity, acceleration and lane of vehicle
@@ -61,7 +59,7 @@ def mps_to_kmph(mps):
 
 
 def update(frame_no):
-    global vehicle_data, N, cars, scat
+    global vehicle_data, N, cars, colors
 
     # update vehicle data for current time frame
     vehicle_data = data[frame_no][4:].reshape((-1, 3))
@@ -71,8 +69,7 @@ def update(frame_no):
                               ('time', float, 1),
                               ('velocity', float, 1),
                               ('acceleration', float, 1),
-                              ('lane', int, 1),
-                              ('color', int, 1)])
+                              ('lane', int, 1)])
 
     # get the x pos of all cars at a time frame
     cars['position'][:, 0] = vehicle_data[:, 0]
@@ -81,11 +78,9 @@ def update(frame_no):
 
     scat.set_offsets(cars['position'])
 
-    # for i in range(0, len(cars)):
-    #     if i == watch_vehicle:
-    #         scat = plt.scatter(cars['position'][watch_vehicle][0], cars['position'][watch_vehicle][1])
-    #     else:
-    #         scat = plt.scatter(cars['position'][i][0], cars['position'][i][1])
+    colors = ['blue' for x in range(N)]
+    colors[watch_vehicle] = 'red'
+    scat.set_facecolor(colors)
 
     speed = vehicle_data[watch_vehicle][1]
     acc = vehicle_data[watch_vehicle][2]
