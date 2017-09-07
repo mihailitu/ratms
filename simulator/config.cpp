@@ -5,8 +5,8 @@ namespace simulator
 
 const double Config::DT = 0.5; // simulator will update at 0.5 seconds.
 
-const std::string Config::singleVehicleTestFName = "v1test.dat";
-
-const std::string Config::simulatorOuput = Config::singleVehicleTestFName;
+const std::string Config::simpleRoadTestFName = "simple_road.dat";
+const std::string Config::twoLaneRoadTestFName = "two_lanes.dat";
+std::string Config::simulatorOuput = "output.dat";
 
 }

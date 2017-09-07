@@ -81,6 +81,11 @@ unsigned Road::getMaxSpeed() const
     return maxSpeed;
 }
 
+unsigned Road::getLanesNo() const
+{
+    return lanesNo;
+}
+
 unsigned Road::getLength() const
 {
     return length;

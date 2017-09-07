@@ -1,4 +1,5 @@
 #include "testmap.h"
+#include "config.h"
 
 namespace simulator
 {
@@ -48,6 +49,54 @@ std::vector<Road> getTestMap()
 }
 
 /*
+ * Create a two lane test road.
+ * Road:
+ *      - length: 2000 m
+ *      - max speed: 20 meters/second (app. 70 km/h)
+ */
+std::vector<Road> getTwoLanesTestMap()
+{
+    Config::simulatorOuput = Config::twoLaneRoadTestFName;
+    Vehicle v(0.0, 5.0, 20.0);
+    Vehicle v1(100.0, 5.0, 18);
+    Vehicle v2(150.0, 5.0, 15.0);
+    Vehicle v3(400, 5.0, 10);
+
+    Road r(0, 2000, 2, 20); // two lanes
+    r.addVehicle(v3, 0);
+    r.addVehicle(v2, 0);
+    r.addVehicle(v1, 0);
+    r.addVehicle(v, 0);
+    std::vector<Road> smap = {
+        r
+    };
+    return smap;
+}
+
+
+/* TODO:
+ * Add random number of vehicles with random positions and random speeds
+ */
+std::vector<Road> getManyRandomVehicleTestMap()
+{
+    Config::simulatorOuput = Config::simpleRoadTestFName;
+    Vehicle v(0.0, 5.0, 20.0);
+    Vehicle v1(100.0, 5.0, 18);
+    Vehicle v2(150.0, 5.0, 15.0);
+    Vehicle v3(400, 5.0, 10);
+
+    Road r(0, 2000, 1, 20);
+    r.addVehicle(v3, 0);
+    r.addVehicle(v2, 0);
+    r.addVehicle(v1, 0);
+    r.addVehicle(v, 0);
+    std::vector<Road> smap = {
+        r
+    };
+    return smap;
+}
+
+/*
  * Add a simple road to test the basic equations on free road.
  * Road:
  *      - length: 2000 m
@@ -55,6 +104,7 @@ std::vector<Road> getTestMap()
  */
 std::vector<Road> getSigleVehicleTestMap()
 {
+    Config::simulatorOuput = Config::simpleRoadTestFName;
     // add one vehicle at the beginning of the road for free road tests
     double vLength = 5.0; // medium sedane
     double vPos = 0.0;
@@ -75,6 +125,7 @@ std::vector<Road> getSigleVehicleTestMap()
  */
 std::vector<Road> getFollowingVehicleTestMap()
 {
+    Config::simulatorOuput = Config::simpleRoadTestFName;
     Vehicle v(0.0, 5.0, 20.0);
     Vehicle v1(100.0, 5.0, 18);
     Vehicle v2(150.0, 5.0, 15.0);
