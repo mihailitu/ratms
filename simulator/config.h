@@ -10,13 +10,16 @@ class Config
 {
 public:
 
-    // single vehicle - v1 serialization
-    static const std::string singleVehicleTestFName;
+    // simple road with few folowing vehicles
+    static const std::string simpleRoadTestFName;
+
+    //
+    static const std::string twoLaneRoadTestFName;// = "two_lanes.dat";
     static const int simulationTestTime = 60 * 3 * 2; //
 
     // general values
     static const int simulationTime = simulationTestTime;
-    static const std::string simulatorOuput;
+    static std::string simulatorOuput;
     static const double DT;// simulator will update at 0.5 seconds.
 };
 

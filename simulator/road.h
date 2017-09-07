@@ -81,6 +81,7 @@ public:
     roadID getId() const;
     unsigned getMaxSpeed() const;
     unsigned getLength() const;
+    unsigned getLanesNo() const;
     const std::vector<std::vector<Vehicle>>& getVehicles() const;
 
     // We need to sort vehicles on the road based on their position/lane
