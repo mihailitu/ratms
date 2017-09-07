@@ -91,13 +91,14 @@ const std::vector<std::vector<Vehicle>>& Road::getVehicles() const
     return vehicles;
 }
 
-
+// Vehicles are sorted on descenting order: first vehicle is closest to the end of the road - highest xPos
+// Vehicles on front need to be updated first.
 void Road::indexRoad()
 {
     for(auto &lane : vehicles)
         std::sort(lane.begin(), lane.end(),
                   [](const auto& lhs, const auto& rhs)
-                        {return lhs.getPos() < rhs.getPos();});
+                        {return lhs.getPos() > rhs.getPos();});
 }
 
 void Road::update(double dt)
@@ -106,10 +107,10 @@ void Road::update(double dt)
 
     for(auto &lane : vehicles)
         for(unsigned i = 0; i < lane.size(); ++i)
-            if (i + 1 == lane.size()) // find the next vehicle
+            if (i == 0 ) // first vehicle
                 lane[i].update(dt, noVehicle);
             else
-                lane[i].update(dt, lane[i+1]);
+                lane[i].update(dt, lane[i-1]);
 }
 
 void Road::printRoad() const
