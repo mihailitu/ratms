@@ -10,8 +10,6 @@ import matplotlib.animation as animation
 # * time1 | roadID0 | maxSpeed | lanes_no | x | v | a | l | x | v | a | l | .......| x | v | a | l |
 # * time1 | roadID1 | maxSpeed | lanes_no | x | v | a | l | x | v | a | l | .......| x | v | a | l |
 
-# only one lane on road for now
-
 data = np.loadtxt("simple_road.dat")
 # vehicle data for first road at one time (0.0)
 vehicle_data = data[0][5:].reshape((-1, 4))
@@ -77,12 +75,10 @@ def update(frame_no):
 
     # get the x pos of all cars at a time frame
     cars['position'][:, 0] = vehicle_data[:, 0]
-    # don't update y pos for single lane - single road test simulation
-    cars['position'][:, 1] = np.full((1, N), 0)
-    cars['position'][:, 1] = 
-    scat.set_offsets(cars['position'])
-
+    # get vehicle lanes for ypos
     cars['lane'] = vehicle_data[:, 3]
+    cars['position'][:, 1] = [x * 0.1 for x in cars['lane']]
+    scat.set_offsets(cars['position'])
 
     colors = ['blue' for x in range(N)]
     colors[watch_vehicle] = 'red'
