@@ -79,7 +79,7 @@ def update(frame_no):
     cars['position'][:, 0] = vehicle_data[:, 0]
     # don't update y pos for single lane - single road test simulation
     cars['position'][:, 1] = np.full((1, N), 0)
-    cars['position'][:, 1] = 
+    cars['position'][:, 1] =
     scat.set_offsets(cars['position'])
 
     cars['lane'] = vehicle_data[:, 3]
