@@ -8,7 +8,7 @@
 
 namespace simulator
 {
-
+std::vector<Road> getTwoLanesTestMap();
 std::vector<Road> getSigleVehicleTestMap();
 std::vector<Road> getFollowingVehicleTestMap();
 std::vector<Road> getTestMap();

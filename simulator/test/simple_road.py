@@ -79,7 +79,10 @@ def update(frame_no):
     cars['position'][:, 0] = vehicle_data[:, 0]
     # don't update y pos for single lane - single road test simulation
     cars['position'][:, 1] = np.full((1, N), 0)
+    cars['position'][:, 1] = 
     scat.set_offsets(cars['position'])
+
+    cars['lane'] = vehicle_data[:, 3]
 
     colors = ['blue' for x in range(N)]
     colors[watch_vehicle] = 'red'
@@ -87,14 +90,18 @@ def update(frame_no):
 
     speed = vehicle_data[watch_vehicle][1]
     acc = vehicle_data[watch_vehicle][2]
+
     info.set_text('Frame:  $%3d$\n'
                   'Length: $%d$ m\n'
                   'Max v:  $%d$ km/h\n'
+                  'Lanes:  $%d$\n'
                   '\n'
                   '\n'
                   'Speed: $%d$ km/h\n'
                   'Acc:   $%f$\n'
-                  % (frame_no, road_length, mps_to_kmph(max_speed), mps_to_kmph(speed), acc))
+                  'Lane:  $%d$'
+                  % (frame_no, road_length, mps_to_kmph(max_speed), lanes_no, mps_to_kmph(speed),
+                     acc, cars['lane'][watch_vehicle]))
 
     return scat
 

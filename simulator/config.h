@@ -13,8 +13,6 @@ public:
     // simple road with few folowing vehicles
     static const std::string simpleRoadTestFName;
 
-    //
-    static const std::string twoLaneRoadTestFName;// = "two_lanes.dat";
     static const int simulationTestTime = 60 * 3 * 2; //
 
     // general values
