@@ -58,8 +58,8 @@ std::vector<Road> getTwoLanesTestMap()
 {
     Config::simulatorOuput = Config::simpleRoadTestFName;
     Vehicle v(0.0, 5.0, 20.0);
-    Vehicle v1(300.0, 5.0, 18);
-    Vehicle v2(50.0, 5.0, 22);
+    Vehicle v1(100.0, 5.0, 18);
+    Vehicle v2(0.0, 5.0, 22);
 
     Road r(0, 2000, 2, 20); // two lanes
     r.addVehicle(v, 0);
