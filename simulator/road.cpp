@@ -49,27 +49,27 @@ void Road::addVehicle(Vehicle car, unsigned lane)
     vehicles[lane].push_back(car);
 }
 
-void Road::addConnection(roadID connection)
-{
-    connections.push_back(connection);
-}
+//void Road::addConnection(roadID connection)
+//{
+//    connections.push_back(connection);
+//}
 
-void Road::addConnection(Road connection)
-{
-    connections.push_back(connection.getId());
-}
+//void Road::addConnection(Road connection)
+//{
+//    connections.push_back(connection.getId());
+//}
 
-void Road::addConnections(std::vector<roadID> rconnections)
-{
-    for( roadID road : rconnections )
-        connections.push_back(road);
-}
+//void Road::addConnections(std::vector<roadID> rconnections)
+//{
+//    for( roadID road : rconnections )
+//        connections.push_back(road);
+//}
 
-void Road::addConnections(std::vector<Road> rconnections)
-{
-    for( Road r : rconnections )
-        connections.push_back(r.getId());
-}
+//void Road::addConnections(std::vector<Road> rconnections)
+//{
+//    for( Road r : rconnections )
+//        connections.push_back(r.getId());
+//}
 
 roadID Road::getId() const
 {
@@ -120,12 +120,12 @@ void Road::update(double dt)
 
 void Road::printRoad() const
 {
-    std::string connections_str = "";
-    for( unsigned i = 0; i < connections.size(); ++i ) {
-        connections_str += std::to_string(connections[i]);
-        if ( connections.size() != i+1 )
-            connections_str += ", ";
-    }
+//    std::string connections_str = "";
+//    for( unsigned i = 0; i < connections.size(); ++i ) {
+//        connections_str += std::to_string(connections[i]);
+//        if ( connections.size() != i+1 )
+//            connections_str += ", ";
+//    }
 
     log_info("Road ID:    %u\n"
              "Length:       %d\n"
@@ -137,7 +137,7 @@ void Road::printRoad() const
              "End:          (%f, %f)\n"
              "Connections:  %s\n",
              id, length, lanesNo, maxSpeed, usageProb, vehicles.size(),
-             startPos.first, startPos.second, endPos.first, endPos.second, connections_str.c_str());
+             startPos.first, startPos.second, endPos.first, endPos.second);//, connections_str.c_str());
 
     for(auto lane : vehicles )
         for(auto v : lane)

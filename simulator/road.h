@@ -26,8 +26,12 @@ class Road
      * Busier roads will have a higher probability that a car will choose that road.
      *
      * Also, based on real statistics, cars might appear/disappear from roads, to temper with real city traffic statistics.
-     * The point is: while we only know the number of cars at the sempahore points, the inner roads (residential roads, smaller entrances) will not be monitored.
+     * The point is: while we only know the number of cars at the sempahore points,
+     * inner roads (residential roads, smaller entrances) will not be monitored.
      * Some cars might be heading home (enter this road), some might go home/work/shop etc. (exiting this road)
+     *
+     * Some multi-lane roads have different semaphores for right, ahead and left.
+     * Right and ahead are usually together; also, right turn can be always green, yielding vehicles comming from left.
      */
 
 
@@ -49,7 +53,8 @@ private:
 
     // this road's connections - id's of other roads.
     // TODO - maybe us some reference to other roads instead of ids so we can access quicker?
-    std::vector<roadID> connections;
+    // each lane has a connection to a road
+    std::vector<std::vector<roadID>> connections;
 
     // the preference probability for this road - how much it is used.
     // when a car passes the intersection, it will use this probability to choose the next road.

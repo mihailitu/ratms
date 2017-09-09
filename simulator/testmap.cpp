@@ -32,14 +32,14 @@ std::vector<Road> getTestMap()
     Road(7, 1500, 1, 70)
     };
 
-    cmap[0].addConnection( cmap[1] );
-    cmap[1].addConnections({ cmap[2], cmap[7] });
-    cmap[2].addConnection( cmap[3] );
-    cmap[3].addConnection( cmap[4] );
-    cmap[4].addConnections({ cmap[5], cmap[6] });
-    cmap[5].addConnection( cmap[0] );
-    cmap[6].addConnection( cmap[2]);
-    cmap[7].addConnection( cmap[5] );
+//    cmap[0].addConnection( cmap[1] );
+//    cmap[1].addConnections({ cmap[2], cmap[7] });
+//    cmap[2].addConnection( cmap[3] );
+//    cmap[3].addConnection( cmap[4] );
+//    cmap[4].addConnections({ cmap[5], cmap[6] });
+//    cmap[5].addConnection( cmap[0] );
+//    cmap[6].addConnection( cmap[2]);
+//    cmap[7].addConnection( cmap[5] );
 
     /* Add some hardcoded cars on the road, so we test equations */
 
