@@ -8,10 +8,11 @@
 
 namespace simulator
 {
-std::vector<Road> getTwoLanesTestMap();
-std::vector<Road> getSigleVehicleTestMap();
-std::vector<Road> getFollowingVehicleTestMap();
-std::vector<Road> getTestMap();
+std::vector<Road> twoLanesTestMap();
+std::vector<Road> sigleVehicleTestMap();
+std::vector<Road> followingVehicleTestMap();
+std::vector<Road> manyRandomVehicleTestMap();
+std::vector<Road> testMap();
 
 } // namespace simulator
 #endif // TESTMAP_H

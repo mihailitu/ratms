@@ -54,7 +54,7 @@ std::vector<Road> getTestMap()
  *      - length: 2000 m
  *      - max speed: 20 meters/second (app. 70 km/h)
  */
-std::vector<Road> getTwoLanesTestMap()
+std::vector<Road> twoLanesTestMap()
 {
     Config::simulatorOuput = Config::simpleRoadTestFName;
     Vehicle v(0.0, 5.0, 20.0);
@@ -75,7 +75,7 @@ std::vector<Road> getTwoLanesTestMap()
 /* TODO:
  * Add random number of vehicles with random positions and random speeds
  */
-std::vector<Road> getManyRandomVehicleTestMap()
+std::vector<Road> manyRandomVehicleTestMap()
 {
     Config::simulatorOuput = Config::simpleRoadTestFName;
     Vehicle v(0.0, 5.0, 20.0);
@@ -100,7 +100,7 @@ std::vector<Road> getManyRandomVehicleTestMap()
  *      - length: 2000 m
  *      - max speed: 20 meters/second (app. 70 km/h)
  */
-std::vector<Road> getSigleVehicleTestMap()
+std::vector<Road> sigleVehicleTestMap()
 {
     Config::simulatorOuput = Config::simpleRoadTestFName;
     // add one vehicle at the beginning of the road for free road tests
@@ -121,15 +121,17 @@ std::vector<Road> getSigleVehicleTestMap()
 /*
  * Add a simple road to test the basic equations on free and busy road.
  */
-std::vector<Road> getFollowingVehicleTestMap()
+std::vector<Road> followingVehicleTestMap()
 {
     Config::simulatorOuput = Config::simpleRoadTestFName;
     Vehicle v(0.0, 5.0, 20.0);
     Vehicle v1(100.0, 5.0, 18);
     Vehicle v2(150.0, 5.0, 15.0);
-    Vehicle v3(400, 5.0, 10);
+    Vehicle v3(400, 5.0, 10.0);
+    Vehicle v4(1750, -1.0, 0.0);
 
     Road r(0, 2000, 1, 20);
+    r.addVehicle(v4, 0);
     r.addVehicle(v3, 0);
     r.addVehicle(v2, 0);
     r.addVehicle(v1, 0);

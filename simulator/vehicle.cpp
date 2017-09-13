@@ -15,6 +15,9 @@ Vehicle::Vehicle( double _x_orig, double _length, double maxV ) :
 void Vehicle::update(double dt, const Vehicle &nextVehicle)
 {
     roadTime += dt;
+
+    if (length <= 0) //
+        return;
     // ODE here
     // s alfa - net distance to vehicle directly on front
     double netDistance = nextVehicle.xPos - xPos - nextVehicle.length;
