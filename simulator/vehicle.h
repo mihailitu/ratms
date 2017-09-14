@@ -27,8 +27,8 @@ class Vehicle
      */
     double  length = { 5.0 };   // vechile length - see above
     double  xOrig = { 0.0 };    // when a vechicle is created, it has to start(appear) somewhere
-    double  velocity = { 0.0 }; // current velocity. It will be update through IDM
-    double  xPos = { 0.0 };     // current position on the road. It will be updated through IDM
+    double  velocity = { 0.0 }; // current velocity. It will be updated through IDM equations
+    double  xPos = { 0.0 };     // current position on the road. It will be updated through IDM equations
     bool freeRoad = { true };   // if the distance to the vechicle on front is large,
                                 // we will not consider other vechicles to update current velocity and current position
     double  s = { -1.0 };       // net distance to vehicle in front of this one (0 = accident, -1 = no vehicle in front
@@ -46,8 +46,9 @@ class Vehicle
                             //                                    while others will want to go lower than speed limit, determined by statistics
     double T = { 1.5 };     // Safe time headway - aggressivity dependent
     double a = { 1.0 };     // Maximum acceleration - linked to agressivity
-    double b = { 1.0 };     // Desired deceleration - linked to agressivity
-    double s0 = { 1.5 };    // Minimum distance - Some drivers are more agressive, while others are less agressive
+    double b = { 2.0 };     // Desired deceleration - linked to agressivity
+    double s0 = { 1.0 };    // Minimum distance - Some drivers are more agressive, while others are less agressive
+                            //
     double delta = { 4.0 }; // Acceleration exponent
 
     double freeRoadDistance = { 100.0 }; // if net distance to vehicle ahead is larger, turn free road on
@@ -63,9 +64,7 @@ public:
     void update(double dt, const Vehicle &nextVehicle); // update position and velocity
 
     double getPos() const;
-    bool onFreeRoad() const;
-    void freeRoadOn();          // toggle free road on
-    void freeRoadOff();         // toggle free road off
+    double getAcceleration() const;
 
     void serialize(std::ostream &out) const;
 

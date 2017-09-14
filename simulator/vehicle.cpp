@@ -51,19 +51,9 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
     log_info("pos: %.2f v: %.2f acc: %.2f", xPos, velocity, acceleration);
 }
 
-bool Vehicle::onFreeRoad() const
+double Vehicle::getAcceleration() const
 {
-    return freeRoad;
-}
-
-void Vehicle::freeRoadOn()
-{
-    freeRoad = true;
-}
-
-void Vehicle::freeRoadOff()
-{
-    freeRoad = false;
+    return acceleration;
 }
 
 double Vehicle::getPos() const

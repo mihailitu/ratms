@@ -108,7 +108,6 @@ std::vector<Road> sigleVehicleTestMap()
     double vPos = 0.0;
 
     Vehicle v(vPos, vLength, 20.0);
-    v.freeRoadOn();
 
     Road r(0, 2000, 1, 20);
     r.addVehicle(v, 0);
