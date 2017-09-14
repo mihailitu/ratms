@@ -44,8 +44,8 @@ class Vehicle
     double v0 = { 20.0 };   // Desired velocity - initialize to road's max speed
                             // Adjust depending on aggressivity - some drivers would want to go above speed limit,
                             //                                    while others will want to go lower than speed limit, determined by statistics
-    double T = { 1.5 };     // Safe time headway - aggressivity dependent
-    double a = { 1.0 };     // Maximum acceleration - linked to agressivity
+    double T = { 1.0 };     // Safe time headway - aggressivity dependent
+    double a = { 1.5 };     // Maximum acceleration - linked to agressivity
     double b = { 2.0 };     // Desired deceleration - linked to agressivity
     double s0 = { 1.0 };    // Minimum distance - Some drivers are more agressive, while others are less agressive
                             //
@@ -65,6 +65,7 @@ public:
 
     double getPos() const;
     double getAcceleration() const;
+    bool shouldChangeLane() const;
 
     void serialize(std::ostream &out) const;
 

@@ -41,14 +41,23 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
     double sStar = s0 + std::max(0.0, velocity * T + (velocity*deltaV)/(2*std::sqrt(a*b)));
 
     // calculate acceleration
-    acceleration = a * (1.0 - std::pow(velocity/v0, delta) - (freeRoad ? 0 : std::pow(sStar/netDistance,2)));
+    acceleration = a * (1.0 - std::pow(velocity/v0, delta) -
+                        (freeRoad ? 0 : std::pow(sStar/netDistance,2)));
 
     // advance forward
     xPos += velocity * dt + (acceleration * std::pow(dt, 2)) / 2;
 
     // increase/decrease velocity
     velocity += acceleration * dt;
-    log_info("pos: %.2f v: %.2f acc: %.2f", xPos, velocity, acceleration);
+    // log_info("pos: %.2f v: %.2f acc: %.2f", xPos, velocity, acceleration);
+}
+
+/* Consider lane changing if the vehicle is decelerating and
+ * it's current velocity can be increased */
+// TODO: implement get out of the way - if a driver is "pushed" from behind
+bool Vehicle::shouldChangeLane() const
+{
+    return (acceleration < 0) && (velocity < v0);
 }
 
 double Vehicle::getAcceleration() const
