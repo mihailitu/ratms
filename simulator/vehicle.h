@@ -65,7 +65,8 @@ public:
 
     double getPos() const;
     double getAcceleration() const;
-    bool shouldChangeLane() const;
+    double getLength() const;
+    bool isTrafficLight() const;
 
     void serialize(std::ostream &out) const;
 

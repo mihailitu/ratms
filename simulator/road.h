@@ -74,6 +74,9 @@ private:
 
     static const Vehicle noVehicle; // we use this when no vehicle is on front - free road
 
+private:
+    void changeLane(unsigned laneIndex, unsigned vehicleIndex);
+
 public:
     Road();
     Road( roadID id, unsigned length, roadPos startPos, roadPos endpos );

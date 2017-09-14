@@ -52,14 +52,6 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
     // log_info("pos: %.2f v: %.2f acc: %.2f", xPos, velocity, acceleration);
 }
 
-/* Consider lane changing if the vehicle is decelerating and
- * it's current velocity can be increased */
-// TODO: implement get out of the way - if a driver is "pushed" from behind
-bool Vehicle::shouldChangeLane() const
-{
-    return (acceleration < 0) && (velocity < v0);
-}
-
 double Vehicle::getAcceleration() const
 {
     return acceleration;
@@ -68,6 +60,16 @@ double Vehicle::getAcceleration() const
 double Vehicle::getPos() const
 {
     return xPos;
+}
+
+double Vehicle::getLength() const
+{
+    return length;
+}
+
+bool Vehicle::isTrafficLight() const
+{
+    return (length <= 0) && (velocity == 0);
 }
 
 void Vehicle::serialize(std::ostream &out) const

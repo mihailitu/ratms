@@ -106,16 +106,33 @@ void Road::indexRoad()
                         {return lhs.getPos() > rhs.getPos();});
 }
 
+void Road::changeLane(unsigned laneIndex, unsigned vehicleIndex)
+{
+    Vehicle &processedVehicle = vehicles[laneIndex][vehicleIndex];
+
+    if(processedVehicle.isTrafficLight()) // traffic light
+        return;
+
+
+
+}
+
 void Road::update(double dt)
 {
     indexRoad();
 
-    for(auto &lane : vehicles)
+    // TODO: first vehicle should always be a traffic light
+    unsigned laneIndex = 0;
+    for(auto &lane : vehicles) {
         for(unsigned i = 0; i < lane.size(); ++i) // see indexRoad() comments for clarification
             if (i == 0 ) // first vehicle (highest xPos) has no leading vehicle
                 lane[i].update(dt, noVehicle);
-            else
+            else {
+                changeLane(laneIndex, i);
                 lane[i].update(dt, lane[i-1]);
+            }
+        ++laneIndex;
+    }
 }
 
 void Road::printRoad() const
