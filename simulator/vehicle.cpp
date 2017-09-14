@@ -16,8 +16,12 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
 {
     roadTime += dt;
 
-    if (length <= 0) //
+    // treat traffic lights as standing vehicles for now.
+    // We identify traffic lights as zero length vehicles.
+    // Zero speed vehicles will affect "real" vehicles.
+    if (length <= 0)
         return;
+
     // ODE here
     // s alfa - net distance to vehicle directly on front
     double netDistance = nextVehicle.xPos - xPos - nextVehicle.length;

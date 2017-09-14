@@ -1,9 +1,10 @@
 - Create single lane test with random number of vehicles and random data (random xpos, random max speed, etc).
-- Create a test with more lanes
 - Add lane change logic
 - Road - find a way to connect a vehicle to a lane, when multiple lanes are on a section of the road.
+- use a linked list instead of vector. That way we can keep vehicles sorted and we don't have to sort the lane at each time step
 
 
+09.14 - DONE - Create a test with more lanes
 09.07 - DONE - Make some sort of vehicle selection in python view. When a vehicle is selected by a mouse click, show it's info
 
 09.04 - DONE - Don't let vehicles pass through each other (decelerate when another vehicle is in front and passing over is not possible)

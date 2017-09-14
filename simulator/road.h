@@ -53,7 +53,7 @@ private:
 
     // this road's connections - id's of other roads.
     // TODO - maybe us some reference to other roads instead of ids so we can access quicker?
-    // each lane has a connection to a road
+    // TODO - each lane has a connection to a road
     std::vector<std::vector<roadID>> connections;
 
     // the preference probability for this road - how much it is used.
@@ -68,6 +68,8 @@ private:
     unsigned maxSpeed;
 
     // vehicles on this road, assigned to lanes
+    // TODO - use a linked list instead of vector.
+    //      - That way we can keep vehicles sorted and we don't have to sort the lane at each time step
     std::vector<std::vector<Vehicle>> vehicles = {std::vector<Vehicle>()};
 
     static const Vehicle noVehicle; // we use this when no vehicle is on front - free road

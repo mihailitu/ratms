@@ -20,6 +20,10 @@ class Vehicle
      * The type of the vechicle should be determined trough statistics:
      *      there should be some statistics with vehicle type distribution to a city - from the Cityhall
      *      in a regular city, sedans (or shorter should be more probable than trucks, etc
+     *
+     * NOTE: Use Vehicle class to represent traffic lights for now.
+     *       We identify them as zero or negavice length vehicles with zero speed.
+     *
      */
     double  length = { 5.0 };   // vechile length - see above
     double  xOrig = { 0.0 };    // when a vechicle is created, it has to start(appear) somewhere
