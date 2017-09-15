@@ -36,40 +36,57 @@ class Road
 
 
 private:
-    // road ID - OMS related.
-    // TODO - this ID could be duplicated in the case of two way roads. Maybe we should have two id's: OMS id and internal ID
+    /*
+     * road ID - OMS related.
+     * TODO - this ID could be duplicated in the case of two way roads. Maybe we should have two id's: OMS id and internal ID
+     */
     roadID id;
 
-    // length of the road in meters
+    /*
+     * xPos of vechicle is the meter on the road
+     * length of the road in meters
+     */
     unsigned length;
-    // xPos of vechicle is the meter on the road
 
-    // start position of the road - lat/lon - from OMS or something
+
+    /* start position of the road - lat/lon - from OMS or something */
     roadPos startPos; // lat/lon
 
-    // end position of the road - lat/lon
+    /*
+     * the traffic will flow from startPos to endPos
+     * end position of the road - lat/lon
+     */
     roadPos endPos; // lat/lon
-    // the traffic will flow from startPos to endPos
 
-    // this road's connections - id's of other roads.
-    // TODO - maybe us some reference to other roads instead of ids so we can access quicker?
-    // TODO - each lane has a connection to a road
+
+    /*
+     * TODO - maybe us some reference to other roads instead of ids so we can access quicker?
+     * TODO - each lane has a connection to a road
+     * this road's connections - id's of other roads.
+     */
     std::vector<std::vector<roadID>> connections;
 
-    // the preference probability for this road - how much it is used.
-    // when a car passes the intersection, it will use this probability to choose the next road.
+    /*
+     * the preference probability for this road - how much it is used.
+     * when a car passes the intersection, it will use this probability to choose the next road.
+     */
     float usageProb;
 
-    // the number of lanes
-    // TODO: assign vehicles to lanes on the road!!!
+    /* TODO: assign vehicles to lanes on the road!!!
+     * the number of lanes */
     unsigned lanesNo = { 1 };
 
-    // road max speed m/s - if any or city speed limit - this doesn't have to be strictly conformed by drivers
+    /* road max speed m/s - if any or city speed limit -
+     * this doesn't have to be strictly conformed by drivers */
     unsigned maxSpeed;
 
-    // vehicles on this road, assigned to lanes
-    // TODO - use a linked list instead of vector.
-    //      - That way we can keep vehicles sorted and we don't have to sort the lane at each time step
+    /*
+     * Right side driving only for now (left side steering wheel)
+     *      lane 0 is the most right ("slow lane"), whilst lane n is the most left ("fast lane")
+     * TODO - use a linked list instead of vector.
+     *      - That way we can keep vehicles sorted and we don't have to sort the lane at each time step
+     * Vehicles on this road, assigned to lanes
+     */
     std::vector<std::vector<Vehicle>> vehicles = {std::vector<Vehicle>()};
 
     static const Vehicle noVehicle; // we use this when no vehicle is on front - free road

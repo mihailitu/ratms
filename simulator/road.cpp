@@ -73,7 +73,7 @@ void Road::addVehicle(Vehicle car, unsigned lane)
 
 roadID Road::getId() const
 {
-        return id;
+    return id;
 }
 
 unsigned Road::getMaxSpeed() const
@@ -96,24 +96,45 @@ const std::vector<std::vector<Vehicle>>& Road::getVehicles() const
     return vehicles;
 }
 
-// Vehicles are sorted on descenting order: first vehicle is closest to the end of the road - highest xPos
-// Vehicles on front need to be updated first.
+/* Vehicles are sorted on descenting order: first vehicle is closest to the end of the road - highest xPos
+ * Vehicles on front need to be updated first. */
 void Road::indexRoad()
 {
     for(auto &lane : vehicles)
         std::sort(lane.begin(), lane.end(),
-                  [](const auto& lhs, const auto& rhs)
-                        {return lhs.getPos() > rhs.getPos();});
+                  [](const auto &lhs, const auto &rhs)
+                    {return lhs.getPos() > rhs.getPos();});
 }
 
+/* get the next possible leading vehicle from lane. -1 if none */
+int getLeadingVehicleIndex(const Vehicle &current, const std::vector<Vehicle> &lane)
+{
+    auto leadingV = std::upper_bound(lane.begin(), lane.end(), current,
+                                     [](const auto &lhs, const auto &rhs)
+                                        {return lhs.getPos() < rhs.getPos();});
+
+    return (leadingV != lane.end() ? std::distance(lane.begin(), leadingV) : -1);
+}
+
+/*
+ *
+ */
 void Road::changeLane(unsigned laneIndex, unsigned vehicleIndex)
 {
     Vehicle &processedVehicle = vehicles[laneIndex][vehicleIndex];
 
+    if (lanesNo == 1) // don't evaluate lane change for one lane road
+        return;
+
     if(processedVehicle.isTrafficLight()) // traffic light
         return;
 
+    if(!(processedVehicle.getAcceleration() < 0)) // consider lane changing only when decelerating
+        return;
 
+    // prefer overtaking on the left
+    if (laneIndex + 1 < lanesNo) {
+    }
 
 }
 
@@ -137,12 +158,12 @@ void Road::update(double dt)
 
 void Road::printRoad() const
 {
-//    std::string connections_str = "";
-//    for( unsigned i = 0; i < connections.size(); ++i ) {
-//        connections_str += std::to_string(connections[i]);
-//        if ( connections.size() != i+1 )
-//            connections_str += ", ";
-//    }
+    //    std::string connections_str = "";
+    //    for( unsigned i = 0; i < connections.size(); ++i ) {
+    //        connections_str += std::to_string(connections[i]);
+    //        if ( connections.size() != i+1 )
+    //            connections_str += ", ";
+    //    }
 
     log_info("Road ID:    %u\n"
              "Length:       %d\n"
