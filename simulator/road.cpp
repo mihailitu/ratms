@@ -136,6 +136,12 @@ void Road::changeLane(unsigned laneIndex, unsigned vehicleIndex)
     if (laneIndex + 1 < lanesNo) {
     }
 
+    // check for gap on the next lane
+    // check for speeds - speed of prospected leading vehicle is larger than the one of the current leading vehicle?
+    //                  - can current leading vehicle be overtaken?
+    // will the next behind vehicle be incomodated by overtaking vehicle? will current vehicle provoque an anccident?
+    //
+
 }
 
 void Road::update(double dt)
