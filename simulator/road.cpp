@@ -129,7 +129,7 @@ void Road::changeLane(unsigned laneIndex, unsigned vehicleIndex)
     if(processedVehicle.isTrafficLight()) // traffic light
         return;
 
-    if(!(processedVehicle.getAcceleration() < 0)) // consider lane changing only when decelerating
+    if(!(processedVehicle.getAcceleration() < 0) || processedVehicle.laneChangeScheduled()) // consider lane changing only when decelerating
         return;
 
     // prefer overtaking on the left

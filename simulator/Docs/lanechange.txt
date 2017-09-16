@@ -1,0 +1,5 @@
+* Lane changin model for simulator
+
+1. The need for lane change - what are the conditions for a lane change
+2. Possibility - check if a lane change can happen
+3. Opportunity - what is to be gained from the lane change

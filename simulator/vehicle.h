@@ -53,6 +53,13 @@ class Vehicle
 
     double freeRoadDistance = { 100.0 }; // if net distance to vehicle ahead is larger, turn free road on
 
+    /* TODO: rethink this after establishing the initial conditions for lane change
+     * When the need for lane change occurs, sometimes is not possible to
+     * perform the lane change (next lanes are busy (no gap), next leding vehicle is too slow, etc.
+     * a change lane is scheduled for later.
+     */
+    bool changeLane = { false };
+
     /* Keep some stats about this vehicle.
      * We can compare itineraries and travel time between vehicles for performance measures */
     std::vector<roadID> itinerary; // itinerary of this vehicle.
@@ -66,6 +73,8 @@ public:
     double getPos() const;
     double getAcceleration() const;
     double getLength() const;
+    void scheduleLaneChange(bool on);
+    bool laneChangeScheduled() const;
     bool isTrafficLight() const;
 
     void serialize(std::ostream &out) const;

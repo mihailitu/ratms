@@ -67,6 +67,15 @@ double Vehicle::getLength() const
     return length;
 }
 
+void Vehicle::scheduleLaneChange(bool on)
+{
+    changeLane = on;
+}
+
+bool Vehicle::laneChangeScheduled() const
+{
+    return changeLane;
+}
 bool Vehicle::isTrafficLight() const
 {
     return (length <= 0) && (velocity == 0);
