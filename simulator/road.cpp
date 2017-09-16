@@ -107,13 +107,14 @@ void Road::indexRoad()
 }
 
 /* get the next possible leading vehicle from lane. -1 if none */
-int getLeadingVehicleIndex(const Vehicle &current, const std::vector<Vehicle> &lane)
+int nextLeadingVehicleIndex(const Vehicle &current, const std::vector<Vehicle> &lane)
 {
     auto leadingV = std::upper_bound(lane.begin(), lane.end(), current,
                                      [](const auto &lhs, const auto &rhs)
                                         {return lhs.getPos() < rhs.getPos();});
 
-    return (leadingV != lane.end() ? std::distance(lane.begin(), leadingV) : -1);
+    return ((leadingV != lane.end()) && (!(*leadingV).isTrafficLight()) ?
+                std::distance(lane.begin(), leadingV) : -1);
 }
 
 /*
@@ -126,21 +127,39 @@ void Road::changeLane(unsigned laneIndex, unsigned vehicleIndex)
     if (lanesNo == 1) // don't evaluate lane change for one lane road
         return;
 
-    if(processedVehicle.isTrafficLight()) // traffic light
+    if (processedVehicle.isTrafficLight()) // traffic light
         return;
 
-    if(!(processedVehicle.getAcceleration() < 0) || processedVehicle.laneChangeScheduled()) // consider lane changing only when decelerating
+    // consider lane changing only when decelerating
+    if (!(processedVehicle.getAcceleration() < 0) || processedVehicle.laneChangeScheduled())
         return;
 
     // prefer overtaking on the left
-    if (laneIndex + 1 < lanesNo) {
-    }
+    int nextLanes[2] = {      laneIndex + 1 < lanesNo ? (int)laneIndex + 1 : -1,
+                         (int)laneIndex - 1  >= 0     ? (int)laneIndex - 1 : -1 };
 
-    // check for gap on the next lane
+
+    for(int nextLane : nextLanes ) {
+        if ( nextLane < 0 )
+            continue;
+
+        int nextLeader = nextLeadingVehicleIndex(processedVehicle, vehicles[nextLane]);
+
+        int nextFollower = nextLeader + 1;
+        if ( nextFollower == 0 || nextFollower >= vehicles[nextLane].size())
+            nextFollower = -1;
+
+
+        if(nextLeader != -1) { // there's a possible leader on the next lane
+            // check for gap between
+        } else { // no leader on the next lane
+
+        }
     // check for speeds - speed of prospected leading vehicle is larger than the one of the current leading vehicle?
     //                  - can current leading vehicle be overtaken?
     // will the next behind vehicle be incomodated by overtaking vehicle? will current vehicle provoque an anccident?
     //
+    }
 
 }
 
