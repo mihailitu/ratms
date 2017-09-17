@@ -73,6 +73,8 @@ public:
     double getPos() const;
     double getAcceleration() const;
     double getLength() const;
+    double getVelocity() const;
+
     void scheduleLaneChange(bool on);
     bool laneChangeScheduled() const;
     bool isTrafficLight() const;

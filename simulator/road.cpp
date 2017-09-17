@@ -138,7 +138,6 @@ void Road::changeLane(unsigned laneIndex, unsigned vehicleIndex)
     int nextLanes[2] = {      laneIndex + 1 < lanesNo ? (int)laneIndex + 1 : -1,
                          (int)laneIndex - 1  >= 0     ? (int)laneIndex - 1 : -1 };
 
-
     for(int nextLane : nextLanes ) {
         if ( nextLane < 0 )
             continue;
@@ -146,9 +145,23 @@ void Road::changeLane(unsigned laneIndex, unsigned vehicleIndex)
         int nextLeader = nextLeadingVehicleIndex(processedVehicle, vehicles[nextLane]);
 
         int nextFollower = nextLeader + 1;
-        if ( nextFollower == 0 || nextFollower >= vehicles[nextLane].size())
+        if (nextFollower == 0 || nextFollower >= vehicles[nextLane].size())
             nextFollower = -1;
 
+        if (nextLeader < 0 && nextFollower < 0) {
+            log_info("Change lane: lane: %d vIndex: %d nextLane: %d\n"
+                     "             cv speed: %f cf acc: %f cv pos: %f\n"
+                     "             cl speed: %f cl acc: %f cl pos: %f", laneIndex, vehicleIndex, nextLane,
+                     processedVehicle.getVelocity(), processedVehicle.getAcceleration(), processedVehicle.getPos(),
+                     vehicles[laneIndex][vehicleIndex - 1].getVelocity(),
+                     vehicles[laneIndex][vehicleIndex - 1].getAcceleration(),
+                     vehicles[laneIndex][vehicleIndex - 1].getPos());
+
+            vehicles[nextLane].push_back(vehicles[laneIndex][vehicleIndex]);
+            vehicles[laneIndex].erase(vehicles[laneIndex].begin() + vehicleIndex);
+            indexRoad();
+            return;
+        }
 
         if(nextLeader != -1) { // there's a possible leader on the next lane
             // check for gap between

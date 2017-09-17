@@ -49,6 +49,29 @@ std::vector<Road> getTestMap()
 }
 
 /*
+ * Lane change test
+ * Road:
+ *      - length: 2000 m
+ *      - max speed: 20 meters/second (app. 70 km/h)
+ */
+std::vector<Road> laneChangeTest()
+{
+    Config::simulatorOuput = Config::simpleRoadTestFName;
+
+    Road r(0, 2000, 2, 20);
+
+    Vehicle v(0.0, 5.0, 20.0);
+    Vehicle v1(100.0, 5.0, 15);
+
+    r.addVehicle(v, 0);
+    r.addVehicle(v1, 0);
+    std::vector<Road> smap = {
+        r
+    };
+    return smap;
+}
+
+/*
  * Create a two lane test road.
  * Road:
  *      - length: 2000 m

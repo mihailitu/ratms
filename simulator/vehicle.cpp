@@ -52,6 +52,11 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
     // log_info("pos: %.2f v: %.2f acc: %.2f", xPos, velocity, acceleration);
 }
 
+double Vehicle::getVelocity() const
+{
+    return velocity;
+}
+
 double Vehicle::getAcceleration() const
 {
     return acceleration;
