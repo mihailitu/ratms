@@ -6,6 +6,7 @@
 
 #include <utility>
 #include <vector>
+#include <list>
 
 namespace simulator
 {
@@ -87,6 +88,7 @@ private:
      *      - That way we can keep vehicles sorted and we don't have to sort the lane at each time step
      * Vehicles on this road, assigned to lanes
      */
+    // std::vector<std::list<Vehicle>> vehicles = {std::vector<Vehicle>()};
     std::vector<std::vector<Vehicle>> vehicles = {std::vector<Vehicle>()};
 
     static const Vehicle noVehicle; // we use this when no vehicle is on front - free road
