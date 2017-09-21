@@ -94,10 +94,11 @@ def update(frame_no):
                   '\n'
                   '\n'
                   'Speed: $%d$ km/h\n'
-                  'Acc:   $%f$\n'
-                  'Lane:  $%d$'
+                  'Acc:   $%f$\n'   
+                  'Lane:  $%d$\n'
+                  'Index: $%d$'
                   % (frame_no, road_length, mps_to_kmph(max_speed), lanes_no, mps_to_kmph(speed),
-                     acc, cars['lane'][watch_vehicle]))
+                     acc, cars['lane'][watch_vehicle], watch_vehicle))
 
     return scat
 

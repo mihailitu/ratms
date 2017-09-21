@@ -111,13 +111,13 @@ void Vehicle::printVehicle() const
              xOrig, xPos, length, velocity,
              freeRoad ? "yes" : "no" );
 
-    log_info("Vehicle model params: \n"
-             "Desired velocity:      %.2f m/s\n"
-             "Safe time headway:     %.2f s\n"
-             "Maximum acceleration:  %.2f m/s^2\n"
-             "Desired deleration:    %.2f m/s^2\n"
-             "Acceleration exponent: %.2f\n"
-             "Minimum distance:      %.2f m\n", v0, T, a, b, delta, s0);
+//    log_info("Vehicle model params: \n"
+//             "Desired velocity:      %.2f m/s\n"
+//             "Safe time headway:     %.2f s\n"
+//             "Maximum acceleration:  %.2f m/s^2\n"
+//             "Desired deleration:    %.2f m/s^2\n"
+//             "Acceleration exponent: %.2f\n"
+//             "Minimum distance:      %.2f m\n", v0, T, a, b, delta, s0);
 }
 
 } // namespace simulator

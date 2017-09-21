@@ -95,7 +95,8 @@ private:
 
 private:
 
-//     void changeLane(unsigned laneIndex, unsigned vehicleIndex);
+    void changeLane(unsigned laneIndex, std::list<Vehicle>::iterator &it);
+    // std::list<Vehicle>::iterator& nextLanePossibleLeader();
 
 public:
     Road();
