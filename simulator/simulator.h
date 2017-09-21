@@ -29,7 +29,7 @@ public:
 
     void runSimulator();
     void runTestSimulator();
-    void addRoadToMap(const Road &r);
+    void addRoadToMap(Road &r);
     void addRoadNetToMap(std::vector<Road> &roadNet);
 
     /* there will probably several serialization versions, as the project develops

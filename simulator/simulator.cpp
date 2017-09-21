@@ -19,15 +19,18 @@ void Simulator::initSimulatorTestState()
 {
 }
 
-void Simulator::addRoadToMap(const Road &r)
+void Simulator::addRoadToMap(Road &r)
 {
+    r.indexRoad();
     cityMap[r.getId()] = r;
 }
 
 void Simulator::addRoadNetToMap(std::vector<Road> &roadNet)
 {
-    for( Road r : roadNet )
+    for( Road r : roadNet ) {
+        r.indexRoad();
         cityMap[r.getId()] = r;
+    }
 }
 
 void Simulator::runTestSimulator()

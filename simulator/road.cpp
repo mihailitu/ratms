@@ -35,7 +35,8 @@ Road::Road( roadID id, unsigned length, unsigned lanes, unsigned maxSpeed_mps ) 
              "\t max_speed: %d km/h \n",
              id, length, lanesNo, maxSpeed);
     for(unsigned i = 1; i < lanesNo; ++i)
-        vehicles.push_back(std::vector<Vehicle>());
+        // vehicles.push_back(std::vector<Vehicle>());
+        vehicles.push_back(std::list<Vehicle>());
 }
 
 //TODO: should vehicles be added from outside Road class or
@@ -91,7 +92,7 @@ unsigned Road::getLength() const
     return length;
 }
 
-const std::vector<std::vector<Vehicle>>& Road::getVehicles() const
+const std::vector<std::list<Vehicle>>& Road::getVehicles() const
 {
     return vehicles;
 }
@@ -100,98 +101,114 @@ const std::vector<std::vector<Vehicle>>& Road::getVehicles() const
  * Vehicles on front need to be updated first. */
 void Road::indexRoad()
 {
-    for(auto &lane : vehicles)
-        std::sort(lane.begin(), lane.end(),
-                  [](const auto &lhs, const auto &rhs)
-                    {return lhs.getPos() > rhs.getPos();});
+    for(std::list<Vehicle> &lane : vehicles)
+        lane.sort([](const auto &lhs, const auto &rhs)
+                  { return lhs.getPos() > rhs.getPos(); });
+
+//    for(auto &lane : vehicles)
+//        std::sort(lane.begin(), lane.end(),
+//                  [](const auto &lhs, const auto &rhs)
+//        {return lhs.getPos() > rhs.getPos();});
 }
 
-/* get the next possible leading vehicle from lane. -1 if none */
-int nextLeadingVehicleIndex(const Vehicle &current, const std::vector<Vehicle> &lane)
-{
-    auto leadingV = std::upper_bound(lane.begin(), lane.end(), current,
-                                     [](const auto &lhs, const auto &rhs)
-                                        {return lhs.getPos() < rhs.getPos();});
+///* get the next possible leading vehicle from lane. -1 if none */
+//int nextLeadingVehicleIndex(const Vehicle &current, const std::vector<Vehicle> &lane)
+//{
+//    auto leadingV = std::upper_bound(lane.begin(), lane.end(), current,
+//                                     [](const auto &lhs, const auto &rhs)
+//    {return lhs.getPos() < rhs.getPos();});
 
-    return ((leadingV != lane.end()) && (!(*leadingV).isTrafficLight()) ?
-                std::distance(lane.begin(), leadingV) : -1);
-}
+//    return ((leadingV != lane.end()) && (!(*leadingV).isTrafficLight()) ?
+//                std::distance(lane.begin(), leadingV) : -1);
+//}
 
-/*
- *
- */
-void Road::changeLane(unsigned laneIndex, unsigned vehicleIndex)
-{
-    Vehicle &processedVehicle = vehicles[laneIndex][vehicleIndex];
+///*
+// *
+// */
+//void Road::changeLane(unsigned laneIndex, unsigned vehicleIndex)
+//{
+//    Vehicle &processedVehicle = vehicles[laneIndex][vehicleIndex];
 
-    if (lanesNo == 1) // don't evaluate lane change for one lane road
-        return;
+//    if (lanesNo == 1) // don't evaluate lane change for one lane road
+//        return;
 
-    if (processedVehicle.isTrafficLight()) // traffic light
-        return;
+//    if (processedVehicle.isTrafficLight()) // traffic light
+//        return;
 
-    // consider lane changing only when decelerating
-    if (!(processedVehicle.getAcceleration() < 0) || processedVehicle.laneChangeScheduled())
-        return;
+//    // consider lane changing only when decelerating
+//    if (!(processedVehicle.getAcceleration() < 0) || processedVehicle.laneChangeScheduled())
+//        return;
 
-    // prefer overtaking on the left
-    int nextLanes[2] = {      laneIndex + 1 < lanesNo ? (int)laneIndex + 1 : -1,
-                         (int)laneIndex - 1  >= 0     ? (int)laneIndex - 1 : -1 };
+//    // prefer overtaking on the left
+//    int nextLanes[2] = {      laneIndex + 1 < lanesNo ? (int)laneIndex + 1 : -1,
+//                              (int)laneIndex - 1  >= 0     ? (int)laneIndex - 1 : -1 };
 
-    for(int nextLane : nextLanes ) {
-        if ( nextLane < 0 )
-            continue;
+//    for(int nextLane : nextLanes ) {
+//        if ( nextLane < 0 )
+//            continue;
 
-        int nextLeader = nextLeadingVehicleIndex(processedVehicle, vehicles[nextLane]);
+//        int nextLeader = nextLeadingVehicleIndex(processedVehicle, vehicles[nextLane]);
 
-        int nextFollower = nextLeader + 1;
-        if (nextFollower == 0 || nextFollower >= vehicles[nextLane].size())
-            nextFollower = -1;
+//        int nextFollower = nextLeader + 1;
+//        if (nextFollower == 0 || nextFollower >= vehicles[nextLane].size())
+//            nextFollower = -1;
 
-        if (nextLeader < 0 && nextFollower < 0) {
-            log_info("Change lane: lane: %d vIndex: %d nextLane: %d\n"
-                     "             cv speed: %f cf acc: %f cv pos: %f\n"
-                     "             cl speed: %f cl acc: %f cl pos: %f", laneIndex, vehicleIndex, nextLane,
-                     processedVehicle.getVelocity(), processedVehicle.getAcceleration(), processedVehicle.getPos(),
-                     vehicles[laneIndex][vehicleIndex - 1].getVelocity(),
-                     vehicles[laneIndex][vehicleIndex - 1].getAcceleration(),
-                     vehicles[laneIndex][vehicleIndex - 1].getPos());
+//        if (nextLeader < 0 && nextFollower < 0) {
+//            log_info("Change lane: lane: %d vIndex: %d nextLane: %d\n"
+//                     "             cv speed: %f cf acc: %f cv pos: %f\n"
+//                     "             cl speed: %f cl acc: %f cl pos: %f", laneIndex, vehicleIndex, nextLane,
+//                     processedVehicle.getVelocity(), processedVehicle.getAcceleration(), processedVehicle.getPos(),
+//                     vehicles[laneIndex][vehicleIndex - 1].getVelocity(),
+//                    vehicles[laneIndex][vehicleIndex - 1].getAcceleration(),
+//                    vehicles[laneIndex][vehicleIndex - 1].getPos());
 
-            vehicles[nextLane].push_back(vehicles[laneIndex][vehicleIndex]);
-            vehicles[laneIndex].erase(vehicles[laneIndex].begin() + vehicleIndex);
-            indexRoad();
-            return;
-        }
+//            vehicles[nextLane].push_back(vehicles[laneIndex][vehicleIndex]);
+//            vehicles[laneIndex].erase(vehicles[laneIndex].begin() + vehicleIndex);
+//            indexRoad();
+//            return;
+//        }
 
-        if(nextLeader != -1) { // there's a possible leader on the next lane
-            // check for gap between
-        } else { // no leader on the next lane
+//        if(nextLeader != -1) { // there's a possible leader on the next lane
+//            // check for gap between
+//        } else { // no leader on the next lane
 
-        }
-    // check for speeds - speed of prospected leading vehicle is larger than the one of the current leading vehicle?
-    //                  - can current leading vehicle be overtaken?
-    // will the next behind vehicle be incomodated by overtaking vehicle? will current vehicle provoque an anccident?
-    //
-    }
+//        }
+//        // check for speeds - speed of prospected leading vehicle is larger than the one of the current leading vehicle?
+//        //                  - can current leading vehicle be overtaken?
+//        // will the next behind vehicle be incomodated by overtaking vehicle? will current vehicle provoque an anccident?
+//        //
+//    }
 
-}
+//}
 
 void Road::update(double dt)
 {
-    indexRoad();
+    // indexRoad();
 
     // TODO: first vehicle should always be a traffic light
     unsigned laneIndex = 0;
     for(auto &lane : vehicles) {
-        for(unsigned i = 0; i < lane.size(); ++i) // see indexRoad() comments for clarification
-            if (i == 0 ) // first vehicle (highest xPos) has no leading vehicle
-                lane[i].update(dt, noVehicle);
+        for(Vehicle &vehicle : lane) {
+            if(vehicle.isTrafficLight())
+                vehicle.update(dt, noVehicle);
             else {
-                changeLane(laneIndex, i);
-                lane[i].update(dt, lane[i-1]);
+                // changeLane(laneIndex, );
+
             }
+        }
         ++laneIndex;
     }
+
+//        for(unsigned i = 0; i < lane.size(); ++i) {// see indexRoad() comments for clarification
+//            if (i == 0 ) // first vehicle (highest xPos) has no leading vehicle
+//                lane[i].update(dt, noVehicle);
+//            else {
+//                changeLane(laneIndex, i);
+//                lane[i].update(dt, lane[i-1]);
+//            }
+//            ++laneIndex;
+//        }
+//    }
 }
 
 void Road::printRoad() const

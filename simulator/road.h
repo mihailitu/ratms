@@ -88,13 +88,14 @@ private:
      *      - That way we can keep vehicles sorted and we don't have to sort the lane at each time step
      * Vehicles on this road, assigned to lanes
      */
-    // std::vector<std::list<Vehicle>> vehicles = {std::vector<Vehicle>()};
-    std::vector<std::vector<Vehicle>> vehicles = {std::vector<Vehicle>()};
+    std::vector<std::list<Vehicle>> vehicles = {std::list<Vehicle>()};
+    // std::vector<std::vector<Vehicle>> vehicles = {std::vector<Vehicle>()};
 
     static const Vehicle noVehicle; // we use this when no vehicle is on front - free road
 
 private:
-    void changeLane(unsigned laneIndex, unsigned vehicleIndex);
+
+//     void changeLane(unsigned laneIndex, unsigned vehicleIndex);
 
 public:
     Road();
@@ -107,17 +108,18 @@ public:
     void addConnections(std::vector<roadID> rconnections);
     void addConnections(std::vector<Road> rconnections);
 
-    roadID getId() const;
-    unsigned getMaxSpeed() const;
-    unsigned getLength() const;
-    unsigned getLanesNo() const;
-    const std::vector<std::vector<Vehicle>>& getVehicles() const;
-
     // We need to sort vehicles on the road based on their position/lane
     // We need to to this every time before updating vehicle position,
     // because some vehicles might change lanes, some might arrive at their destination,
     // some may enter the road.
     void indexRoad();
+
+    roadID getId() const;
+    unsigned getMaxSpeed() const;
+    unsigned getLength() const;
+    unsigned getLanesNo() const;
+    const std::vector<std::list<Vehicle>>& getVehicles() const;
+
     void update(double dt);
 
     void printRoad() const;
