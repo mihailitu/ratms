@@ -17,7 +17,7 @@ Vehicle::Vehicle( double _x_orig, double _length, double maxV ) :
  * for lane changing.
  */
 
-double Vehicle::getAcceleration(const Vehicle &nextVehicle)
+double Vehicle::getNewAcceleration(const Vehicle &nextVehicle) const
 {
     // ODE here
     // s alfa - net distance to vehicle directly on front
@@ -54,7 +54,7 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
     if (length <= 0)
         return;
 
-    acceleration = getAcceleration(nextVehicle);
+    acceleration = getNewAcceleration(nextVehicle);
 
     // advance
     xPos += velocity * dt + (acceleration * std::pow(dt, 2)) / 2;
@@ -62,6 +62,42 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
     // increase/decrease velocity
     velocity += acceleration * dt;
     // log_info("pos: %.2f v: %.2f acc: %.2f", xPos, velocity, acceleration);
+}
+
+/* Lane change model:
+ * http://traffic-simulation.de/MOBIL.html
+ * Parameters:
+ *      currentLeader - current vehicle in front of this vehicle
+ *      newLeader - next leader candidate, on next lane
+ *      newFollower - next follower candidate, on next lane
+ */
+bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLeader, const Vehicle &newFollower) const
+{
+
+    // gap check
+    bool hasGap = (xPos < newLeader.getPos() - newLeader.getLength() - s0) &&
+                  (xPos - length - s0 > newFollower.getPos());
+    if (!hasGap)
+        return false;
+
+    // MOBIL
+    double p = 0.5; // politeness factor TODO: make this the same as aggresivity
+    double b_safe = 4.0; // maximum safe deceleration
+    double a_thr = 0.2; // acceleration threshold: To avoid lane-change maneoeuvres triggered by marginal advantages
+
+    // safety criterion
+    double nfacc = newFollower.getNewAcceleration(*this);
+    bool isSafe = (nfacc > -b_safe);
+
+    if (!isSafe)
+        return false;
+
+    // incentive criterion
+    bool changeWanted =
+            ((getNewAcceleration(newLeader) - getNewAcceleration(currentLeader)) >
+             ( p * (newFollower.getAcceleration() - newFollower.getNewAcceleration(*this)) + a_thr) );
+
+    return changeWanted;
 }
 
 double Vehicle::getVelocity() const
