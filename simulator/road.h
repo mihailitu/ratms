@@ -89,7 +89,6 @@ private:
      * Vehicles on this road, assigned to lanes
      */
     std::vector<std::list<Vehicle>> vehicles = {std::list<Vehicle>()};
-    // std::vector<std::vector<Vehicle>> vehicles = {std::vector<Vehicle>()};
 
     static const Vehicle noVehicle; // we use this when no vehicle is on front - free road
 

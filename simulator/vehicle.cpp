@@ -73,7 +73,6 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
  */
 bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLeader, const Vehicle &newFollower) const
 {
-
     // gap check
     bool hasGap = (xPos < newLeader.getPos() - newLeader.getLength() - s0) &&
                   (xPos - length - s0 > newFollower.getPos());
