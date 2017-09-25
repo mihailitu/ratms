@@ -94,12 +94,11 @@ private:
 
 private:
 
-    void changeLane(unsigned laneIndex, std::list<Vehicle>::iterator &it);
-    // std::list<Vehicle>::iterator& nextLanePossibleLeader();
+    void changeLane(unsigned laneIndex, std::list<Vehicle>::iterator &currentVehicleIterator);
 
 public:
     Road();
-    Road( roadID id, unsigned length, roadPos startPos, roadPos endpos );
+    // Road( roadID id, unsigned length, roadPos startPos, roadPos endpos );
     Road( roadID id, unsigned length, unsigned lanes, unsigned maxSpeed_mps );
 
     void addVehicle(Vehicle car, unsigned lane);

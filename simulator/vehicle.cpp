@@ -41,7 +41,7 @@ double Vehicle::getNewAcceleration(const Vehicle &nextVehicle) const
 
     // calculate acceleration
     return (a * (1.0 - std::pow(velocity/v0, delta) -
-                        (freeRoad ? 0 : std::pow(sStar/netDistance,2))));
+                 (freeRoad ? 0 : std::pow(sStar/netDistance,2))));
 }
 
 void Vehicle::update(double dt, const Vehicle &nextVehicle)
@@ -75,7 +75,7 @@ bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLead
 {
     // gap check
     bool hasGap = (xPos < newLeader.getPos() - newLeader.getLength() - s0) &&
-                  (xPos - length - s0 > newFollower.getPos());
+            (xPos - length - s0 > newFollower.getPos());
     if (!hasGap)
         return false;
 
@@ -157,13 +157,13 @@ void Vehicle::printVehicle() const
              "Free road:  %s\n",
              xOrig, xPos, length, velocity);
 
-//    log_info("Vehicle model params: \n"
-//             "Desired velocity:      %.2f m/s\n"
-//             "Safe time headway:     %.2f s\n"
-//             "Maximum acceleration:  %.2f m/s^2\n"
-//             "Desired deleration:    %.2f m/s^2\n"
-//             "Acceleration exponent: %.2f\n"
-//             "Minimum distance:      %.2f m\n", v0, T, a, b, delta, s0);
+    //    log_info("Vehicle model params: \n"
+    //             "Desired velocity:      %.2f m/s\n"
+    //             "Safe time headway:     %.2f s\n"
+    //             "Maximum acceleration:  %.2f m/s^2\n"
+    //             "Desired deleration:    %.2f m/s^2\n"
+    //             "Acceleration exponent: %.2f\n"
+    //             "Minimum distance:      %.2f m\n", v0, T, a, b, delta, s0);
 }
 
 } // namespace simulator
