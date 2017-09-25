@@ -155,10 +155,10 @@ void Road::changeLane(unsigned laneIndex, std::list<Vehicle>::iterator &it)
                                                  [](const auto &lhs, const auto &rhs)
                                                  {return lhs.getPos() < rhs.getPos();});
 
-            Vehicle &nextLeader = (nextLeaderIt == nextLane.end() ? noVehicle : *nextLeaderIt);
+//            Vehicle &nextLeader = (nextLeaderIt == nextLane.end() ? noVehicle : *nextLeaderIt);
 
-            if (nextLeaderIt == nextLane.end())
-                return;
+//            if (nextLeaderIt == nextLane.end())
+//                return;
 
 //            int nextFollower = nextLeader + 1;
 //            if (nextFollower == 0 || nextFollower >= vehicles[nextLane].size())

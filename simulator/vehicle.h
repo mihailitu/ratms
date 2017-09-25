@@ -29,8 +29,7 @@ class Vehicle
     double  xOrig = { 0.0 };    // when a vechicle is created, it has to start(appear) somewhere
     double  velocity = { 0.0 }; // current velocity. It will be updated through IDM equations
     double  xPos = { 0.0 };     // current position on the road. It will be updated through IDM equations
-    bool freeRoad = { true };   // if the distance to the vechicle on front is large,
-                                // we will not consider other vechicles to update current velocity and current position
+
     double  s = { -1.0 };       // net distance to vehicle in front of this one (0 = accident, -1 = no vehicle in front
                                 // for large values of net distance, we should enter in free road mode
     double acceleration = { 0 };// vehicle acceleration (meters per second)
@@ -68,6 +67,7 @@ class Vehicle
 public:
     Vehicle( double _x_orig, double _length, double maxV );
 
+    double getAcceleration(const Vehicle &nextVehicle);
     void update(double dt, const Vehicle &nextVehicle); // update position and velocity
 
     double getPos() const;

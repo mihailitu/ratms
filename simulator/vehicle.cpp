@@ -12,19 +12,18 @@ Vehicle::Vehicle( double _x_orig, double _length, double maxV ) :
     log_info("New vehicle: Pos: %2.f V: %.2f L: %.2f", xOrig, v0, length);
 }
 
-void Vehicle::update(double dt, const Vehicle &nextVehicle)
+/*
+ * Split IDM ODE with separate acceleration function, so we can use it also
+ * for lane changing.
+ */
+
+double Vehicle::getAcceleration(const Vehicle &nextVehicle)
 {
-    roadTime += dt;
-
-    // treat traffic lights as standing vehicles for now.
-    // We identify traffic lights as zero length vehicles.
-    // Zero speed vehicles will affect "real" vehicles.
-    if (length <= 0)
-        return;
-
     // ODE here
     // s alfa - net distance to vehicle directly on front
     double netDistance = nextVehicle.xPos - xPos - nextVehicle.length;
+
+    bool freeRoad = false;
 
     // toggle free road
     if (netDistance <= 0)
@@ -41,10 +40,23 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
     double sStar = s0 + std::max(0.0, velocity * T + (velocity*deltaV)/(2*std::sqrt(a*b)));
 
     // calculate acceleration
-    acceleration = a * (1.0 - std::pow(velocity/v0, delta) -
-                        (freeRoad ? 0 : std::pow(sStar/netDistance,2)));
+    return (a * (1.0 - std::pow(velocity/v0, delta) -
+                        (freeRoad ? 0 : std::pow(sStar/netDistance,2))));
+}
 
-    // advance forward
+void Vehicle::update(double dt, const Vehicle &nextVehicle)
+{
+    roadTime += dt;
+
+    // treat traffic lights as standing vehicles for now.
+    // We identify traffic lights as zero length vehicles.
+    // Zero speed vehicles will affect "real" vehicles.
+    if (length <= 0)
+        return;
+
+    acceleration = getAcceleration(nextVehicle);
+
+    // advance
     xPos += velocity * dt + (acceleration * std::pow(dt, 2)) / 2;
 
     // increase/decrease velocity
@@ -108,8 +120,7 @@ void Vehicle::printVehicle() const
              "Length:     %.2f m\n"
              "Velocity:   %.2f m/s\n"
              "Free road:  %s\n",
-             xOrig, xPos, length, velocity,
-             freeRoad ? "yes" : "no" );
+             xOrig, xPos, length, velocity);
 
 //    log_info("Vehicle model params: \n"
 //             "Desired velocity:      %.2f m/s\n"
