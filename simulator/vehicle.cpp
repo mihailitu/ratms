@@ -74,6 +74,7 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
 bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLeader, const Vehicle &newFollower) const
 {
     // gap check
+    if ()
     bool hasGap = (xPos < newLeader.getPos() - newLeader.getLength() - s0) &&
             (xPos - length - s0 > newFollower.getPos());
     if (!hasGap)
@@ -153,8 +154,7 @@ void Vehicle::printVehicle() const
              "Originated: %.2f\n"
              "Position:   %.2f m\n"
              "Length:     %.2f m\n"
-             "Velocity:   %.2f m/s\n"
-             "Free road:  %s\n",
+             "Velocity:   %.2f m/s\n",
              xOrig, xPos, length, velocity);
 
     //    log_info("Vehicle model params: \n"
