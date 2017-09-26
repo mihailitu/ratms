@@ -73,10 +73,17 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
  */
 bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLeader, const Vehicle &newFollower) const
 {
+//    if (currentLeader.getLength() <= 0 )
+//        return false;
+
     // gap check
-    if ()
-    bool hasGap = (xPos < newLeader.getPos() - newLeader.getLength() - s0) &&
-            (xPos - length - s0 > newFollower.getPos());
+    bool hasGap = true;
+    if (newLeader.getLength() > 0)
+        hasGap = xPos < newLeader.getPos() - newLeader.getLength() - s0;
+
+    if (newFollower.getLength() > 0)
+            hasGap &= xPos - length - s0 > newFollower.getPos();
+
     if (!hasGap)
         return false;
 
@@ -86,16 +93,23 @@ bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLead
     double a_thr = 0.2; // acceleration threshold: To avoid lane-change maneoeuvres triggered by marginal advantages
 
     // safety criterion
-    double nfacc = newFollower.getNewAcceleration(*this);
-    bool isSafe = (nfacc > -b_safe);
+    bool isSafe = true;
+    if (newFollower.getLength() > 0 ) {
+        double nfacc = newFollower.getNewAcceleration(*this);
+        isSafe = newFollower.getLength() > 0 ? (nfacc > -b_safe) : true;
+    }
 
     if (!isSafe)
         return false;
 
     // incentive criterion
+    double accNl = newLeader.getLength() > 0 ? getNewAcceleration(newLeader) : 0;
+    double accCl = currentLeader.getLength() > 0 ? getNewAcceleration(currentLeader) : 0;
+    double newFollowerNewAcc = newFollower.getLength() > 0 ? newFollower.getNewAcceleration(*this) : 0;
+
     bool changeWanted =
-            ((getNewAcceleration(newLeader) - getNewAcceleration(currentLeader)) >
-             ( p * (newFollower.getAcceleration() - newFollower.getNewAcceleration(*this)) + a_thr) );
+            ((accNl - accCl) >
+             ( p * (newFollower.getAcceleration() - newFollowerNewAcc) ));//+ a_thr) );
 
     return changeWanted;
 }
