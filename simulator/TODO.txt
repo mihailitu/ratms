@@ -3,6 +3,9 @@
 - Road - find a way to connect a vehicle to a lane, when multiple lanes are on a section of the road.
 - use a linked list instead of vector. That way we can keep vehicles sorted and we don't have to sort the lane at each time step
 - review the level of details involved in the simulator. Is agressivity needed for example?
+- consider crossing intersection on the left side - yield to vehicles comming from front, manage with vehicles comming from front taking left turn
+- add obstacle to right turns, for pedestrians
+
 
 09.14 - DONE - Create a test with more lanes
 09.07 - DONE - Make some sort of vehicle selection in python view. When a vehicle is selected by a mouse click, show it's info
