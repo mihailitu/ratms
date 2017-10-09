@@ -119,12 +119,12 @@ std::list<Vehicle>::iterator nextLaneLeaderCandidate(const Vehicle &current, std
  * http://traffic-simulation.de/MOBIL.html
  *
  */
-void Road::changeLane(unsigned laneIndex, std::list<Vehicle>::iterator &currentVehicleIterator)
+bool Road::changeLane(unsigned laneIndex, std::list<Vehicle>::iterator &currentVehicleIterator)
 {
     Vehicle &currentVehicle = *(currentVehicleIterator);
 
     if (lanesNo == 1)
-        return;
+        return false;
 
     // prefer overtaking on the left
     int nextLanesIdxs[2] = { laneIndex + 1 < lanesNo ? (int)laneIndex + 1 : -1,
@@ -148,13 +148,14 @@ void Road::changeLane(unsigned laneIndex, std::list<Vehicle>::iterator &currentV
                                          nextLeaderIterator == nextLane.end() ? noVehicle : *nextLeaderIterator,
                                          nextLaneFollowerIterator == nextLane.end() ? noVehicle : *nextLaneFollowerIterator)) {
 
-            currentVehicleIterator = vehicles[laneIndex].erase(currentVehicleIterator);
             if ( nextLaneFollowerIterator == nextLane.end())
                 nextLane.push_back(currentVehicle);
             else
                 nextLane.insert(nextLaneFollowerIterator, *currentVehicleIterator);
+            return true;
         }
     }
+    return false;
 }
 
 void Road::update(double dt)
@@ -164,19 +165,24 @@ void Road::update(double dt)
     // TODO: first vehicle should always be a traffic light
     unsigned laneIndex = 0;
     for(auto &lane : vehicles) {
-        for(auto it = lane.begin(); it != lane.end(); ++it) {
+        //for(auto it = lane.begin(); it != lane.end(); ++it) {
+        auto it = lane.begin();
+        while(it != lane.end()) {
             Vehicle &current = (*it);
             if(current.isTrafficLight())
                 current.update(dt, noVehicle);
             else {
-                changeLane(laneIndex, it); // for every vehicle, check if a lane change is preferable
-
+                if (changeLane(laneIndex, it) ) {// for every vehicle, check if a lane change is preferable
+                    lane.erase(it++);
+                    continue;
+                }
                 auto currentLeaderIt = std::prev(it);
                 if (currentLeaderIt != lane.end())
                     current.update(dt, *currentLeaderIt);
                 else
                     current.update(dt, noVehicle);
             }
+            ++it;
         }
         ++laneIndex;
     }
