@@ -7,8 +7,16 @@ import matplotlib.animation as animation
 # *                 |                     | vehicle 0         | vehicle 1 | ...... | vehicle n     | vehicle n+1 |
 # * time0 | roadID0 | maxSpeed | lanes_no | x | v | a | l | x | v | a | l | .......| x | v | a | l |
 # * time0 | roadID1 | maxSpeed | lanes_no | x | v | a | l | x | v | a | l | .......| x | v | a | l |
+# * .................
+# * time0 | roadIDn | maxSpeed | lanes_no | x | v | a | l | x | v | a | l | .......| x | v | a | l |
 # * time1 | roadID0 | maxSpeed | lanes_no | x | v | a | l | x | v | a | l | .......| x | v | a | l |
 # * time1 | roadID1 | maxSpeed | lanes_no | x | v | a | l | x | v | a | l | .......| x | v | a | l |
+# * .................
+# * time1 | roadIDn | maxSpeed | lanes_no | x | v | a | l | x | v | a | l | .......| x | v | a | l |
+# * ..................
+# * timen | roadID0 | maxSpeed | lanes_no | x | v | a | l | x | v | a | l | .......| x | v | a | l |
+# * ..................
+# * timen | roadIDn | maxSpeed | lanes_no | x | v | a | l | x | v | a | l | .......| x | v | a | l |
 
 data = np.loadtxt("simple_road.dat")
 # vehicle data for first road at one time (0.0)
@@ -53,7 +61,7 @@ def onclick(event):
 
 cid = fig.canvas.mpl_connect('button_press_event', onclick)
 
-info = plt.text(road_length, 0.0, 'Some \n text', size=10)
+info = plt.text(road_length, -0.5, 'Some \n text', size=10)
 
 
 def mps_to_kmph(mps):
@@ -88,6 +96,7 @@ def update(frame_no):
     acc = vehicle_data[watch_vehicle][2]
 
     info.set_text('Frame:  $%3d$\n'
+                  'DT:     $%3f$\n'
                   'Length: $%d$ m\n'
                   'Max v:  $%d$ km/h\n'
                   'Lanes:  $%d$\n'
@@ -97,12 +106,12 @@ def update(frame_no):
                   'Acc:   $%f$\n'   
                   'Lane:  $%d$\n'
                   'Index: $%d$'
-                  % (frame_no, road_length, mps_to_kmph(max_speed), lanes_no, mps_to_kmph(speed),
+                  % (frame_no, frame_no/2, road_length, mps_to_kmph(max_speed), lanes_no, mps_to_kmph(speed),
                      acc, cars['lane'][watch_vehicle], watch_vehicle))
 
     return scat
 
 
-animation = animation.FuncAnimation(fig, update, interval=10)
+animation = animation.FuncAnimation(fig, update, interval=300)
 
 plt.show()

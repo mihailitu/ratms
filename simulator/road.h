@@ -88,13 +88,14 @@ private:
      *      - That way we can keep vehicles sorted and we don't have to sort the lane at each time step
      * Vehicles on this road, assigned to lanes
      */
-    std::vector<std::list<Vehicle>> vehicles = {std::list<Vehicle>()};
+    // std::vector<std::list<Vehicle>> vehicles = {std::list<Vehicle>()};
+    std::vector<std::vector<Vehicle>> vehicles = {std::vector<Vehicle>()};
 
     static const Vehicle noVehicle; // we use this when no vehicle is on front - free road
 
 private:
 
-    bool changeLane(unsigned laneIndex, std::list<Vehicle>::iterator &currentVehicleIterator);
+    bool changeLane(unsigned laneIndex, const Vehicle &currentVehicle, unsigned vehicleIndex);
 
 public:
     Road();
@@ -117,7 +118,9 @@ public:
     unsigned getMaxSpeed() const;
     unsigned getLength() const;
     unsigned getLanesNo() const;
-    const std::vector<std::list<Vehicle>>& getVehicles() const;
+    const std::vector<std::vector<Vehicle>>& getVehicles() const;
+    // TODO: revert to linked lists
+    // const std::vector<std::list<Vehicle>>& getVehicles() const;
 
     void update(double dt);
 

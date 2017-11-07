@@ -35,7 +35,9 @@ Road::Road( roadID id, unsigned length, unsigned lanes, unsigned maxSpeed_mps ) 
              "\t max_speed: %d km/h \n",
              id, length, lanesNo, maxSpeed);
     for(unsigned i = 1; i < lanesNo; ++i)
-        vehicles.push_back(std::list<Vehicle>());
+        vehicles.push_back(std::vector<Vehicle>());
+    // TODO: revert to linked list
+    // vehicles.push_back(std::list<Vehicle>());
 }
 
 //TODO: should vehicles be added from outside Road class or
@@ -91,7 +93,9 @@ unsigned Road::getLength() const
     return length;
 }
 
-const std::vector<std::list<Vehicle>>& Road::getVehicles() const
+// TODO: revert to linked lists
+// const std::vector<std::list<Vehicle>>& Road::getVehicles() const
+const std::vector<std::vector<Vehicle>>& Road::getVehicles() const
 {
     return vehicles;
 }
@@ -100,8 +104,12 @@ const std::vector<std::list<Vehicle>>& Road::getVehicles() const
  * Vehicles on front need to be updated first. */
 void Road::indexRoad()
 {
-    for(std::list<Vehicle> &lane : vehicles)
-        lane.sort([](const auto &lhs, const auto &rhs)
+    // TODO: revert to linked lists
+    // for(std::list<Vehicle> &lane : vehicles)
+    //        lane.sort([](const auto &lhs, const auto &rhs)
+    //        { return lhs.getPos() > rhs.getPos(); });
+    for(std::vector<Vehicle> &lane : vehicles)
+        std::sort(lane.begin(), lane.end(), [](const auto &lhs, const auto &rhs)
         { return lhs.getPos() > rhs.getPos(); });
 }
 
@@ -115,45 +123,52 @@ std::list<Vehicle>::iterator nextLaneLeaderCandidate(const Vehicle &current, std
     return leadingV;
 }
 
+int getNextLaneLeader(const Vehicle &current, const std::vector<Vehicle> &nextLane)
+{
+    auto nextLeader = std::upper_bound(nextLane.begin(), nextLane.end(), current,
+                                       [](const auto &lhs, const auto &rhs)
+    {return lhs.getPos() < rhs.getPos();});
+    int i = 0;
+    if(nextLeader != nextLane.end()) {
+        for(auto it = nextLane.begin(); it != nextLane.end(); ++it, ++i)
+            if(nextLeader == it)
+                return i;
+    }
+    return -1;
+}
+
 /* Lane change model:
  * http://traffic-simulation.de/MOBIL.html
  *
+ * use std::vector<> for vehicles on a lane for debug purposes. Revert to linked list later.
  */
-bool Road::changeLane(unsigned laneIndex, std::list<Vehicle>::iterator &currentVehicleIterator)
+bool Road::changeLane(unsigned laneIndex, const Vehicle &currentVehicle, unsigned vehicleIndex)
 {
-    Vehicle &currentVehicle = *(currentVehicleIterator);
-
     if (lanesNo == 1)
         return false;
 
     // prefer overtaking on the left
-    int nextLanesIdxs[2] = { laneIndex + 1 < lanesNo ? (int)laneIndex + 1 : -1,
-                             (int)laneIndex - 1  >= 0     ? (int)laneIndex - 1 : -1 };
+    int nextLanesIdxs[2] = { laneIndex + 1 < lanesNo  ? (int)laneIndex + 1 : -1,
+                             (int)laneIndex - 1  >= 0 ? (int)laneIndex - 1 : -1 };
 
     for(int nextLaneIdx : nextLanesIdxs ) {
         if ( nextLaneIdx < 0 )
             continue;
 
-        std::list<Vehicle> &nextLane = vehicles[nextLaneIdx];
+        std::vector<Vehicle> &nextLane = vehicles[nextLaneIdx];
 
-        auto nextLeaderIterator = std::upper_bound(nextLane.begin(), nextLane.end(), currentVehicle,
-                                                   [](const auto &lhs, const auto &rhs)
-                                                    {return lhs.getPos() < rhs.getPos();});
+        int nextLeaderPos = getNextLaneLeader(currentVehicle, nextLane);
+        const Vehicle &nextLaneLeader    = nextLeaderPos == -1 ? noVehicle : nextLane[nextLeaderPos];
+        const Vehicle &nextLaneFollower  = ((nextLeaderPos + 1 >= 0) &&
+                                            (nextLeaderPos + 1 < nextLane.size())) ?
+                    nextLane[nextLeaderPos + 1] : noVehicle;
+        const Vehicle &currentLaneLeader = vehicleIndex == 0 ? noVehicle : vehicles[laneIndex][vehicleIndex - 1];
 
-
-        auto currentLeaderIterator = std::prev(currentVehicleIterator);
-        auto nextLaneFollowerIterator = std::next(nextLeaderIterator);
-
-        if (currentVehicle.canChangeLane(currentLeaderIterator == nextLane.end() ? noVehicle : *currentLeaderIterator,
-                                         nextLeaderIterator == nextLane.end() ? noVehicle : *nextLeaderIterator,
-                                         nextLaneFollowerIterator == nextLane.end() ? noVehicle : *nextLaneFollowerIterator)) {
-
-            if ( nextLaneFollowerIterator == nextLane.end())
-                nextLane.push_back(currentVehicle);
-            else
-                nextLane.insert(nextLaneFollowerIterator, *currentVehicleIterator);
+        if (currentVehicle.canChangeLane(currentLaneLeader, nextLaneLeader, nextLaneFollower)) {
+            nextLane.push_back(currentVehicle);
             return true;
         }
+
     }
     return false;
 }
@@ -165,28 +180,98 @@ void Road::update(double dt)
     // TODO: first vehicle should always be a traffic light
     unsigned laneIndex = 0;
     for(auto &lane : vehicles) {
-        //for(auto it = lane.begin(); it != lane.end(); ++it) {
-        auto it = lane.begin();
-        while(it != lane.end()) {
-            Vehicle &current = (*it);
+        for(unsigned vIndex = 0; vIndex < lane.size(); ++vIndex) {
+            Vehicle &current = lane[vIndex];
             if(current.isTrafficLight())
                 current.update(dt, noVehicle);
             else {
-                if (changeLane(laneIndex, it) ) {// for every vehicle, check if a lane change is preferable
-                    lane.erase(it++);
+                if (changeLane(laneIndex, current, vIndex) ) {// for every vehicle, check if a lane change is preferable
+                    log_info("Change lane occured v: %d from lane %d", vIndex, laneIndex);
+                    current.printVehicle();
+                    lane.erase(lane.begin() + vIndex);
+                    indexRoad();
                     continue;
                 }
-                auto currentLeaderIt = std::prev(it);
-                if (currentLeaderIt != lane.end())
-                    current.update(dt, *currentLeaderIt);
+
+                if (vIndex > 0)
+                    current.update(dt, lane[vIndex-1]);
                 else
                     current.update(dt, noVehicle);
             }
-            ++it;
         }
         ++laneIndex;
     }
 }
+
+/* TODO: revert to linked list as vehicle lane for optimization */
+//bool Road::changeLane(unsigned laneIndex, std::list<Vehicle>::iterator &currentVehicleIterator)
+//{
+//    Vehicle &currentVehicle = *(currentVehicleIterator);
+
+//    if (lanesNo == 1)
+//        return false;
+
+//    // prefer overtaking on the left
+//    int nextLanesIdxs[2] = { laneIndex + 1 < lanesNo  ? (int)laneIndex + 1 : -1,
+//                             (int)laneIndex - 1  >= 0 ? (int)laneIndex - 1 : -1 };
+
+//    for(int nextLaneIdx : nextLanesIdxs ) {
+//        if ( nextLaneIdx < 0 )
+//            continue;
+
+//        std::list<Vehicle> &nextLane = vehicles[nextLaneIdx];
+
+//        auto nextLeaderIterator = std::upper_bound(nextLane.begin(), nextLane.end(), currentVehicle,
+//                                                   [](const auto &lhs, const auto &rhs)
+//                                                    {return lhs.getPos() < rhs.getPos();});
+
+
+//        auto currentLeaderIterator = std::prev(currentVehicleIterator);
+//        auto nextLaneFollowerIterator = std::next(nextLeaderIterator);
+
+//        if (currentVehicle.canChangeLane(currentLeaderIterator == vehicles[laneIndex].end() ? noVehicle : *currentLeaderIterator,
+//                                         nextLeaderIterator == nextLane.end() ? noVehicle : *nextLeaderIterator,
+//                                         nextLaneFollowerIterator == nextLane.end() ? noVehicle : *nextLaneFollowerIterator)) {
+//            // lane change happenning. Remove vehicle from current lane on main loop (Road::update())
+//            if ( nextLaneFollowerIterator == nextLane.end())
+//                nextLane.push_back(currentVehicle);
+//            else
+//                nextLane.insert(nextLaneFollowerIterator, *currentVehicleIterator);
+//            return true;
+//        }
+//    }
+//    return false;
+//}
+
+//void Road::update(double dt)
+//{
+//    indexRoad();
+
+//    // TODO: first vehicle should always be a traffic light
+//    unsigned laneIndex = 0;
+//    for(auto &lane : vehicles) {
+//        auto it = lane.begin();
+//        while(it != lane.end()) {
+//            Vehicle &current = (*it);
+//            if(current.isTrafficLight())
+//                current.update(dt, noVehicle);
+//            else {
+//                if (changeLane(laneIndex, it) ) {// for every vehicle, check if a lane change is preferable
+//                    log_info("Change lane occured");
+//                    lane.erase(it++);
+//                    continue;
+//                }
+//                auto currentLeaderIt = std::prev(it);
+//                if (currentLeaderIt != lane.end())
+//                    current.update(dt, *currentLeaderIt);
+//                else
+//                    current.update(dt, noVehicle);
+//            }
+//            ++it;
+//        }
+//        ++laneIndex;
+//    }
+//}
 
 void Road::printRoad() const
 {
