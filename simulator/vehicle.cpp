@@ -67,7 +67,6 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
 
     // increase/decrease velocity
     velocity += acceleration * dt;
-    // log_info("pos: %.2f v: %.2f acc: %.2f", xPos, velocity, acceleration);
 }
 
 /* Lane change model:
