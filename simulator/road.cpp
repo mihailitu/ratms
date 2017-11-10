@@ -7,6 +7,8 @@ namespace simulator
 {
 
 const Vehicle Road::noVehicle(0.0, 0.0, 0.0);
+const double Road::minChangeLaneDist = 0.5;
+const double Road::maxChangeLaneDist = 25.0;
 
 Road::Road()
 {
@@ -123,18 +125,16 @@ std::list<Vehicle>::iterator nextLaneLeaderCandidate(const Vehicle &current, std
     return leadingV;
 }
 
-int getNextLaneLeader(const Vehicle &current, const std::vector<Vehicle> &nextLane)
+int getNextLaneLeaderPos(const Vehicle &current, const std::vector<Vehicle> &nextLane)
 {
-    auto nextLeader = std::upper_bound(nextLane.begin(), nextLane.end(), current,
+    if (nextLane.size() == 0)
+        return -1;
+
+    auto nextLeader = std::upper_bound(nextLane.rbegin(), nextLane.rend(), current,
                                        [](const auto &lhs, const auto &rhs)
-    {return lhs.getPos() < rhs.getPos();});
-    int i = 0;
-    if(nextLeader != nextLane.end()) {
-        for(auto it = nextLane.begin(); it != nextLane.end(); ++it, ++i)
-            if(nextLeader == it)
-                return i;
-    }
-    return -1;
+                                       {return lhs.getPos() < rhs.getPos();});
+
+    return std::distance(nextLane.begin(), nextLeader.base() ) - 1;
 }
 
 /* Lane change model:
@@ -147,6 +147,19 @@ bool Road::changeLane(unsigned laneIndex, const Vehicle &currentVehicle, unsigne
     if (lanesNo == 1)
         return false;
 
+    currentVehicle.log();
+    /* no leading vehicle*/
+    if(vehicleIndex == 0) {// TODO: when traffic lights will be on the road, they will have index 0, so so change this condition to 1
+        return false;
+    }
+
+    const Vehicle &currentLaneLeader = vehicleIndex == 0 ? noVehicle : vehicles[laneIndex][vehicleIndex - 1];
+
+    // quick exit condition - don't change lane before maxChangeLaneDist
+    if(currentLaneLeader.getPos() - currentLaneLeader.getPos() > maxChangeLaneDist) {
+        return false;
+    }
+
     // prefer overtaking on the left
     int nextLanesIdxs[2] = { laneIndex + 1 < lanesNo  ? (int)laneIndex + 1 : -1,
                              (int)laneIndex - 1  >= 0 ? (int)laneIndex - 1 : -1 };
@@ -157,15 +170,15 @@ bool Road::changeLane(unsigned laneIndex, const Vehicle &currentVehicle, unsigne
 
         std::vector<Vehicle> &nextLane = vehicles[nextLaneIdx];
 
-        int nextLeaderPos = getNextLaneLeader(currentVehicle, nextLane);
+        int nextLeaderPos = getNextLaneLeaderPos(currentVehicle, nextLane);
         const Vehicle &nextLaneLeader    = nextLeaderPos == -1 ? noVehicle : nextLane[nextLeaderPos];
         const Vehicle &nextLaneFollower  = ((nextLeaderPos + 1 >= 0) &&
                                             (nextLeaderPos + 1 < nextLane.size())) ?
                     nextLane[nextLeaderPos + 1] : noVehicle;
-        const Vehicle &currentLaneLeader = vehicleIndex == 0 ? noVehicle : vehicles[laneIndex][vehicleIndex - 1];
 
         if (currentVehicle.canChangeLane(currentLaneLeader, nextLaneLeader, nextLaneFollower)) {
             nextLane.push_back(currentVehicle);
+            log_debug("!!!!Vehicle %d change from lane %d to lane %d", currentVehicle.getId(), laneIndex, nextLaneIdx);
             return true;
         }
 
@@ -180,14 +193,13 @@ void Road::update(double dt)
     // TODO: first vehicle should always be a traffic light
     unsigned laneIndex = 0;
     for(auto &lane : vehicles) {
+        log_debug("Lane %d *********", laneIndex);
         for(unsigned vIndex = 0; vIndex < lane.size(); ++vIndex) {
             Vehicle &current = lane[vIndex];
             if(current.isTrafficLight())
                 current.update(dt, noVehicle);
             else {
                 if (changeLane(laneIndex, current, vIndex) ) {// for every vehicle, check if a lane change is preferable
-                    log_info("Change lane occured v: %d from lane %d", vIndex, laneIndex);
-                    current.printVehicle();
                     lane.erase(lane.begin() + vIndex);
                     indexRoad();
                     continue;

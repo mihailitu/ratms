@@ -11,6 +11,8 @@ namespace simulator
 
 class Vehicle
 {
+    static int idGen;
+    int id;
     /* the length of the car.
      * We can have:
      *      - compact car - usual sedan 3.5 - 5 meters long
@@ -52,19 +54,13 @@ class Vehicle
 
     double freeRoadDistance = { 100.0 }; // if net distance to vehicle ahead is larger, turn free road on
 
-    /* TODO: rethink this after establishing the initial conditions for lane change
-     * When the need for lane change occurs, sometimes is not possible to
-     * perform the lane change (next lanes are busy (no gap), next leding vehicle is too slow, etc.
-     * a change lane is scheduled for later.
-     */
-    bool changeLane = { false };
-
     /* Keep some stats about this vehicle.
      * We can compare itineraries and travel time between vehicles for performance measures */
     std::vector<roadID> itinerary; // itinerary of this vehicle.
     double roadTime; // time spent in traffic by this car
 
 private:
+    /* compute new acceleration considering next vehicle */
     double getNewAcceleration(const Vehicle &nextVehicle) const;
 public:
     Vehicle( double _x_orig, double _length, double maxV );
@@ -79,7 +75,6 @@ public:
     double getVelocity() const;
 
     void scheduleLaneChange(bool on);
-    bool laneChangeScheduled() const;
     bool isTrafficLight() const;
 
     void serialize(std::ostream &out) const;
@@ -87,6 +82,8 @@ public:
     void serialize_v1(std::ostream &out) const;
 
     void printVehicle() const;
+    void log() const;
+    int getId() const { return id; }
 };
 
 } // simulator

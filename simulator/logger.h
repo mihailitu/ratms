@@ -11,13 +11,14 @@
 #define DEBUG_INFO 1
 #define DEBUG_ERROR 1
 #define DEBUG_WARNING 1
+#define DEBUG_DBG 1
 #define DEBUG_MESSAGE
 
 // with date, time, file:line
 #define log_info(fmt, ...) \
     do { \
             if ( DEBUG_INFO) { \
-                fprintf( stderr, "INFO: %s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
+                fprintf( stdout, "INFO: %s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
             } \
        } while(0)
 
@@ -32,7 +33,15 @@
 #define log_warning(fmt, ...) \
     do { \
             if ( DEBUG_WARNING) { \
-                fprintf( stderr, "WARNING: %s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
+                fprintf( stdout, "WARNING: %s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
+            } \
+       } while(0)
+
+// with date, time, file:line
+#define log_debug(fmt, ...) \
+    do { \
+            if ( DEBUG_DBG) { \
+                fprintf( stdout, "INFO: %s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
             } \
        } while(0)
 

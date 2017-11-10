@@ -91,6 +91,11 @@ private:
     // std::vector<std::list<Vehicle>> vehicles = {std::list<Vehicle>()};
     std::vector<std::vector<Vehicle>> vehicles = {std::vector<Vehicle>()};
 
+    /* Don't consider lane change when leader is more than minChangeLaneDist ahead.
+     * This is a ainor optimization - we don't do all the math for lane change if it's no needed */
+    static const double maxChangeLaneDist; // 25 meters
+    static const double minChangeLaneDist; // 1 meters
+
     static const Vehicle noVehicle; // we use this when no vehicle is on front - free road
 
 private:

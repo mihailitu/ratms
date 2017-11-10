@@ -2,14 +2,18 @@
 
 #include "vehicle.h"
 #include "logger.h"
+#include "utils.h"
 
 namespace simulator
 {
 
+int Vehicle::idGen = 0;
+
 Vehicle::Vehicle( double _x_orig, double _length, double maxV ) :
     length(_length), xOrig(_x_orig), xPos(_x_orig), v0(maxV)
 {
-    log_info("New vehicle: Pos: %2.f V: %.2f L: %.2f", xOrig, v0, length);
+    id = idGen++;
+    // log_info("New vehicle: ID: %d Pos: %2.f V: %.2f L: %.2f", id, xOrig, v0, length);
 }
 
 /*
@@ -40,8 +44,10 @@ double Vehicle::getNewAcceleration(const Vehicle &nextVehicle) const
     double sStar = s0 + std::max(0.0, velocity * T + (velocity*deltaV)/(2*std::sqrt(a*b)));
 
     // calculate acceleration
-    return (a * (1.0 - std::pow(velocity/v0, delta) -
-                 (freeRoad ? 0 : std::pow(sStar/netDistance,2))));
+    double newAcceleration = (a * (1.0 - std::pow(velocity/v0, delta) -
+                          (freeRoad ? 0 : std::pow(sStar/netDistance,2))));
+
+    return newAcceleration;
 }
 
 void Vehicle::update(double dt, const Vehicle &nextVehicle)
@@ -82,13 +88,13 @@ bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLead
         hasGap = xPos < newLeader.getPos() - newLeader.getLength() - s0;
 
     if (newFollower.getLength() > 0)
-            hasGap &= xPos - length - s0 > newFollower.getPos();
+            hasGap = hasGap && (xPos - length - s0 > newFollower.getPos());
 
     if (!hasGap)
         return false;
 
     // MOBIL
-    double p = 0.5; // politeness factor TODO: make this the same as aggresivity
+    double p = 0.3; // politeness factor TODO: make this the same as aggresivity
     double b_safe = 4.0; // maximum safe deceleration
     double a_thr = 0.2; // acceleration threshold: To avoid lane-change maneoeuvres triggered by marginal advantages
 
@@ -103,13 +109,14 @@ bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLead
         return false;
 
     // incentive criterion
-    double accNl = newLeader.getLength() > 0 ? getNewAcceleration(newLeader) : 0;
-    double accCl = currentLeader.getLength() > 0 ? getNewAcceleration(currentLeader) : 0;
-    double newFollowerNewAcc = newFollower.getLength() > 0 ? newFollower.getNewAcceleration(*this) : 0;
+    double accNl = newLeader.getLength() > 0 ? getNewAcceleration(newLeader) : a; // a = max acceleration
+    double accCl = currentLeader.getLength() > 0 ? getNewAcceleration(currentLeader) : a; // a = max acceleration
+    unsigned ll = newFollower.getLength();
+    double newFollowerNewAcc = ll > 0 ? newFollower.getNewAcceleration(*this) : 0;
 
     bool changeWanted =
             ((accNl - accCl) >
-             ( p * (newFollower.getAcceleration() - newFollowerNewAcc) ));//+ a_thr) );
+            ( p * (newFollower.getAcceleration() - newFollowerNewAcc) + a_thr) );
 
     return changeWanted;
 }
@@ -134,15 +141,6 @@ double Vehicle::getLength() const
     return length;
 }
 
-void Vehicle::scheduleLaneChange(bool on)
-{
-    changeLane = on;
-}
-
-bool Vehicle::laneChangeScheduled() const
-{
-    return changeLane;
-}
 bool Vehicle::isTrafficLight() const
 {
     return (length <= 0) && (velocity == 0);
@@ -170,14 +168,13 @@ void Vehicle::printVehicle() const
              "Length:     %.2f m\n"
              "Velocity:   %.2f m/s\n",
              xOrig, xPos, length, velocity);
+}
 
-    //    log_info("Vehicle model params: \n"
-    //             "Desired velocity:      %.2f m/s\n"
-    //             "Safe time headway:     %.2f s\n"
-    //             "Maximum acceleration:  %.2f m/s^2\n"
-    //             "Desired deleration:    %.2f m/s^2\n"
-    //             "Acceleration exponent: %.2f\n"
-    //             "Minimum distance:      %.2f m\n", v0, T, a, b, delta, s0);
+void Vehicle::log() const
+{
+    double mv = mps_to_kmh(velocity);
+    double maxv = mps_to_kmh(v0);
+    log_debug("id: %2d orig: %5.2f x: %5.2f v: %2.f max: %2.f a: %1.1f ", id, xOrig, xPos, mv, maxv, acceleration);
 }
 
 } // namespace simulator

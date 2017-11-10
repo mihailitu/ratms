@@ -13,7 +13,7 @@ public:
     // simple road with few folowing vehicles
     static const std::string simpleRoadTestFName;
 
-    static const int simulationTestTime = 60 * 3 * 2; //
+    static const int simulationTestTime = 60 * 2 * 2; //
 
     // general values
     static const int simulationTime = simulationTestTime;

@@ -112,6 +112,6 @@ def update(frame_no):
     return scat
 
 
-animation = animation.FuncAnimation(fig, update, interval=300)
+animation = animation.FuncAnimation(fig, update, interval=50)
 
 plt.show()
