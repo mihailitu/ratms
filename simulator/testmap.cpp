@@ -1,6 +1,8 @@
 #include "testmap.h"
 #include "config.h"
+#include "logger.h"
 
+#include <random>
 namespace simulator
 {
 
@@ -66,9 +68,9 @@ std::vector<Road> laneChangeTest()
     Vehicle v3(5.0, 5.0, 17.0);
 
     r.addVehicle(v, 0);
-//    r.addVehicle(v1, 0);
-//    r.addVehicle(v2, 1);
-//    r.addVehicle(v3, 1);
+    r.addVehicle(v1, 0);
+    r.addVehicle(v2, 1);
+    r.addVehicle(v3, 1);
     std::vector<Road> smap = {
         r
     };
@@ -102,19 +104,29 @@ std::vector<Road> twoLanesTestMap()
 /* TODO:
  * Add random number of vehicles with random positions and random speeds
  */
-std::vector<Road> manyRandomVehicleTestMap()
+std::vector<Road> manyRandomVehicleTestMap(int numVehicles)
 {
     Config::simulatorOuput = Config::simpleRoadTestFName;
-    Vehicle v(0.0, 5.0, 20.0);
-    Vehicle v1(100.0, 5.0, 18);
-    Vehicle v2(150.0, 5.0, 15.0);
-    Vehicle v3(400, 5.0, 10);
 
-    Road r(0, 2000, 1, 20);
-    r.addVehicle(v3, 0);
-    r.addVehicle(v2, 0);
-    r.addVehicle(v1, 0);
-    r.addVehicle(v, 0);
+    std::random_device rd;
+    std::mt19937 rng(rd());
+
+    std::uniform_int_distribution<int> posRnd(1, 500);
+    std::uniform_int_distribution<int> speedRnd(10, 15);
+    std::uniform_int_distribution<int> laneRnd(0, 2);
+
+    Road r(0, 2000, 3, 20);
+    log_info("Random test - vehicles: %d", numVehicles);
+    for(int i = 0; i < numVehicles; ++i) {
+
+        int pos = posRnd(rng);
+        int speed = speedRnd(rng);
+        int lane = laneRnd(rng);
+        Vehicle v(pos, 5.0, speed);
+        v.log();
+        r.addVehicle(v, lane);
+    }
+
     std::vector<Road> smap = {
         r
     };
