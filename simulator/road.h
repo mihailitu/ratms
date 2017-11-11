@@ -61,7 +61,7 @@ private:
 
 
     /*
-     * TODO - maybe us some reference to other roads instead of ids so we can access quicker?
+     * TODO - maybe use some reference to other roads instead of ids so we can access quicker?
      * TODO - each lane has a connection to a road
      * this road's connections - id's of other roads.
      */
@@ -88,7 +88,6 @@ private:
      *      - That way we can keep vehicles sorted and we don't have to sort the lane at each time step
      * Vehicles on this road, assigned to lanes
      */
-    // std::vector<std::list<Vehicle>> vehicles = {std::list<Vehicle>()};
     std::vector<std::vector<Vehicle>> vehicles = {std::vector<Vehicle>()};
 
     /* Don't consider lane change when leader is more than minChangeLaneDist ahead.
@@ -104,7 +103,6 @@ private:
 
 public:
     Road();
-    // Road( roadID id, unsigned length, roadPos startPos, roadPos endpos );
     Road( roadID id, unsigned length, unsigned lanes, unsigned maxSpeed_mps );
 
     void addVehicle(Vehicle car, unsigned lane);
@@ -124,8 +122,6 @@ public:
     unsigned getLength() const;
     unsigned getLanesNo() const;
     const std::vector<std::vector<Vehicle>>& getVehicles() const;
-    // TODO: revert to linked lists
-    // const std::vector<std::list<Vehicle>>& getVehicles() const;
 
     void update(double dt);
 

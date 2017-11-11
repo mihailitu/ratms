@@ -69,12 +69,13 @@ public:
 
     bool canChangeLane(const Vehicle &currentLeader, const Vehicle &newLeader, const Vehicle &newFollower) const;
 
+    void addRoadToItinerary(roadID rid);
+
     double getPos() const;
     double getAcceleration() const;
     double getLength() const;
     double getVelocity() const;
 
-    void scheduleLaneChange(bool on);
     bool isTrafficLight() const;
 
     void serialize(std::ostream &out) const;

@@ -43,7 +43,7 @@ cars = np.zeros(N, dtype=[('position', float, 2),
 colors = ['blue' for x in range(N)]
 
 # index of the vehicle we want to see data for (speed, acc, etc)
-watch_vehicle = 1
+watch_vehicle = 0
 
 # setup view
 fig = plt.figure(figsize=(15, 3))

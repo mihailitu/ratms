@@ -66,9 +66,9 @@ std::vector<Road> laneChangeTest()
     Vehicle v3(5.0, 5.0, 17.0);
 
     r.addVehicle(v, 0);
-    r.addVehicle(v1, 0);
-    r.addVehicle(v2, 1);
-    r.addVehicle(v3, 1);
+//    r.addVehicle(v1, 0);
+//    r.addVehicle(v2, 1);
+//    r.addVehicle(v3, 1);
     std::vector<Road> smap = {
         r
     };

@@ -120,6 +120,11 @@ bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLead
     return changeWanted;
 }
 
+void Vehicle::addRoadToItinerary(roadID rid)
+{
+    itinerary.push_back(rid);
+}
+
 double Vehicle::getVelocity() const
 {
     return velocity;
