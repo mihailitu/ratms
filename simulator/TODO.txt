@@ -1,11 +1,13 @@
-- Add semaphores
+
 - create connections between roads
 - ???? Road - find a way to connect a vehicle to a lane, when multiple lanes are on a section of the road.
 - review the level of details involved in the simulator. Is agressivity needed for example?
 - consider crossing intersection on the left side - yield to vehicles comming from front, manage with vehicles comming from front taking left turn
+- implement right turn on red light (https://en.wikipedia.org/wiki/Turn_on_red) with yield to left traffic
 - add obstacle to right turns, for pedestrians
 - use a linked list instead of vector. That way we can keep vehicles sorted and we don't have to sort the lane at each time step
 
+15.11 - DONE - Add semaphores
 11.11 - DONE - Create multiple lanes tests - 3, 4 etc
 11.11 - DONE - Add lane change logic
 09.14 - DONE - Create a test with more lanes
