@@ -11,6 +11,10 @@ namespace simulator
 
 class Vehicle
 {
+public:
+    enum ElementType{ vehicle, traffic_light, obstacle };
+
+private:
     static int idGen;
     int id;
     /* the length of the car.
@@ -45,6 +49,9 @@ class Vehicle
     double v0 = { 20.0 };   // Desired velocity - initialize to road's max speed
                             // Adjust depending on aggressivity - some drivers would want to go above speed limit,
                             //                                    while others will want to go lower than speed limit, determined by statistics
+
+    ElementType type;
+
     double T = { 1.0 };     // Safe time headway - aggressivity dependent
     double a = { 1.5 };     // Maximum acceleration - linked to agressivity
     double b = { 3.0 };     // Desired deceleration - linked to agressivity
@@ -63,7 +70,7 @@ private:
     /* compute new acceleration considering next vehicle */
     double getNewAcceleration(const Vehicle &nextVehicle) const;
 public:
-    Vehicle( double _x_orig, double _length, double maxV );
+    Vehicle( double _x_orig, double _length, double maxV, ElementType vType = vehicle );
 
     void update(double dt, const Vehicle &nextVehicle); // update position, acceleration and velocity
 
@@ -77,6 +84,8 @@ public:
     double getVelocity() const;
 
     bool isTrafficLight() const;
+    bool isVehicle() const;
+    bool isObstacle() const;
 
     void serialize(std::ostream &out) const;
 

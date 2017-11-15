@@ -3,6 +3,7 @@
 
 #include "vehicle.h"
 #include "defs.h"
+#include "trafficlight.h"
 
 #include <utility>
 #include <vector>
@@ -88,7 +89,17 @@ private:
      *      - That way we can keep vehicles sorted and we don't have to sort the lane at each time step
      * Vehicles on this road, assigned to lanes
      */
-    std::vector<std::vector<Vehicle>> vehicles = {std::vector<Vehicle>()};
+    std::vector<std::vector<Vehicle>> vehicles;
+
+    /* Every lane from a road has a TrafficLight object associated with it.
+     * Each traffic light is updated independently.
+     * With first vehicle, if the light on it's lane is Red, then that vehicle
+     * will have it's next vehicle (the leader) the static TrafficLight object (zero speed, zero length, etc).
+     * If the light is green, then the first vehicle's leader will be none
+     */
+    std::vector<TrafficLight> trafficLights;
+
+    static Vehicle trafficLight;
 
     /* Don't consider lane change when leader is more than minChangeLaneDist ahead.
      * This is a ainor optimization - we don't do all the math for lane change if it's no needed */

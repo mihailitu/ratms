@@ -19,6 +19,9 @@ public:
     static const int simulationTime = simulationTestTime;
     static std::string simulatorOuput;
     static const double DT;// simulator will update at 0.5 seconds.
+
+    // how far from the end of the road the traffic light should be positioned
+    static const unsigned trafficLightDistToRoadEnd; // = 3 meters
 };
 
 } // namespace simulator

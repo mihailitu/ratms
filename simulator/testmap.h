@@ -8,7 +8,7 @@
 
 namespace simulator
 {
-// TODO
+std::vector<Road> semaphoreTest();
 std::vector<Road> manyRandomVehicleTestMap(int numVehicles);
 
 std::vector<Road> laneChangeTest();

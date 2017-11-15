@@ -9,8 +9,8 @@ namespace simulator
 
 int Vehicle::idGen = 0;
 
-Vehicle::Vehicle( double _x_orig, double _length, double maxV ) :
-    length(_length), xOrig(_x_orig), xPos(_x_orig), v0(maxV)
+Vehicle::Vehicle( double _x_orig, double _length, double maxV, ElementType vType ) :
+    length(_length), xOrig(_x_orig), xPos(_x_orig), v0(maxV), type(vType)
 {
     id = idGen++;
     // log_info("New vehicle: ID: %d Pos: %2.f V: %.2f L: %.2f", id, xOrig, v0, length);
@@ -147,7 +147,17 @@ double Vehicle::getLength() const
 
 bool Vehicle::isTrafficLight() const
 {
-    return (length <= 0) && (velocity == 0);
+    return type == traffic_light;
+}
+
+bool Vehicle::isVehicle() const
+{
+    return type == vehicle;
+}
+
+bool Vehicle::isObstacle() const
+{
+    return type == obstacle;
 }
 
 void Vehicle::serialize(std::ostream &out) const

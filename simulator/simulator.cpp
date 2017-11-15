@@ -42,7 +42,6 @@ void Simulator::runTestSimulator()
 
     while (!terminate && iter < Config::simulationTime) {
         ++iter;
-        log_info("Time: %5f *******************************************************", runTime);
         for( auto &mapEl : cityMap ) {
             mapEl.second.update(dt);
         }

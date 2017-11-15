@@ -1,4 +1,5 @@
 #include "road.h"
+#include "config.h"
 #include "logger.h"
 
 #include <algorithm>
@@ -7,6 +8,7 @@ namespace simulator
 {
 
 const Vehicle Road::noVehicle(0.0, 0.0, 0.0);
+Vehicle Road::trafficLight(0.0, 1.0, 0.0);
 const double Road::minChangeLaneDist = 0.5;
 const double Road::maxChangeLaneDist = 25.0;
 
@@ -23,8 +25,14 @@ Road::Road( roadID id, unsigned length, unsigned lanes, unsigned maxSpeed_mps ) 
              "\t lanes: %d \n"
              "\t max_speed: %d km/h \n",
              id, length, lanesNo, maxSpeed);
-    for(unsigned i = 1; i < lanesNo; ++i)
+
+    for(unsigned i = 0; i < lanesNo; ++i) {
         vehicles.push_back(std::vector<Vehicle>());
+        trafficLights.push_back(TrafficLight(10, 1, 30, TrafficLight::red_light));
+
+    }
+
+    trafficLight = Vehicle(length - Config::trafficLightDistToRoadEnd, 0.0, 0.0, Vehicle::traffic_light);
 }
 
 //TODO: should vehicles be added from outside Road class or
@@ -102,7 +110,7 @@ int getNextLaneLeaderPos(const Vehicle &current, const std::vector<Vehicle> &nex
 
     auto nextLeader = std::upper_bound(nextLane.rbegin(), nextLane.rend(), current,
                                        [](const auto &lhs, const auto &rhs)
-                                       {return lhs.getPos() < rhs.getPos();});
+    {return lhs.getPos() < rhs.getPos();});
 
     return std::distance(nextLane.begin(), nextLeader.base() ) - 1;
 }
@@ -114,12 +122,6 @@ bool Road::changeLane(unsigned laneIndex, const Vehicle &currentVehicle, unsigne
 {
     if (lanesNo == 1)
         return false;
-
-    currentVehicle.log();
-    /* no leading vehicle*/
-    if(vehicleIndex == 0) {// TODO: when traffic lights will be on the road, they will have index 0, so so change this condition to 1
-        return false;
-    }
 
     const Vehicle &currentLaneLeader = vehicleIndex == 0 ? noVehicle : vehicles[laneIndex][vehicleIndex - 1];
 
@@ -158,24 +160,24 @@ void Road::update(double dt)
 {
     indexRoad();
 
-    // TODO: first vehicle should always be a traffic light
     unsigned laneIndex = 0;
     for(auto &lane : vehicles) {
-        log_debug("Lane %d *********", laneIndex);
+        trafficLights[laneIndex].update(dt);
         for(unsigned vIndex = 0; vIndex < lane.size(); ++vIndex) {
             Vehicle &current = lane[vIndex];
-            if(current.isTrafficLight())
-                current.update(dt, noVehicle);
-            else {
+
+            if(vIndex == 0) {
+                if(trafficLights[laneIndex].isRed())
+                    current.update(dt, trafficLight);
+                else
+                    current.update(dt, noVehicle);
+
+            } else {
                 if (changeLane(laneIndex, current, vIndex) ) {// for every vehicle, check if a lane change is preferable
                     lane.erase(lane.begin() + vIndex);
                     continue;
                 }
-
-                if (vIndex > 0)
-                    current.update(dt, lane[vIndex-1]);
-                else
-                    current.update(dt, noVehicle);
+                current.update(dt, lane[vIndex - 1]);
             }
         }
         ++laneIndex;
