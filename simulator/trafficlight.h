@@ -9,7 +9,7 @@ namespace simulator
 /* TrafficLight class
  * Holds information about lights.
  * Light sequence: green - yellow - red - green - yellow - red
- * TODO: some lights have light sequence as green - yellow - red - yellow - greem - etc.
+ * TODO: some lights have light sequence as green - yellow - red - yellow - green - etc.
  *      see if this second possible sequence influence the traffic or the yellow between red and green can be simply added to red light.
  *
  */

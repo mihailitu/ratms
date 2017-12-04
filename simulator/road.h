@@ -63,7 +63,7 @@ private:
 
     /*
      * TODO - maybe use some reference to other roads instead of ids so we can access quicker?
-     * TODO - each lane has a connection to a road
+     * TODO - each lane has a connection to another road
      * this road's connections - id's of other roads.
      */
     std::vector<std::vector<roadID>> connections;
@@ -102,7 +102,7 @@ private:
     static Vehicle trafficLight;
 
     /* Don't consider lane change when leader is more than minChangeLaneDist ahead.
-     * This is a ainor optimization - we don't do all the math for lane change if it's no needed */
+     * This is a minor optimization - we don't do all the math for lane change if it's no needed */
     static const double maxChangeLaneDist; // 25 meters
     static const double minChangeLaneDist; // 1 meters
 

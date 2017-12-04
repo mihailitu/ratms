@@ -21,10 +21,8 @@ TrafficLight::LightColor nextColor(TrafficLight::LightColor current)
         return TrafficLight::yellow_light;
     case TrafficLight::yellow_light:
         return TrafficLight::red_light;
-    case TrafficLight::red_light:
+    default: // case TrafficLight::red_light:
         return TrafficLight::green_light;
-    default:
-        return TrafficLight::green_light; // to get rid of the "warning: control reaches end of non-void function" warning
     }
 }
 

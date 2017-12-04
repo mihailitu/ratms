@@ -103,6 +103,12 @@ void Road::indexRoad()
         { return lhs.getPos() > rhs.getPos(); });
 }
 
+/**
+ * @brief getNextLaneLeaderPos
+ * @param current - vehicle being updated
+ * @param nextLane - target lane
+ * @return the position of the vehicle from next lane which will be on front of @current if a lane change occurs
+ */
 int getNextLaneLeaderPos(const Vehicle &current, const std::vector<Vehicle> &nextLane)
 {
     if (nextLane.size() == 0)
@@ -156,6 +162,11 @@ bool Road::changeLane(unsigned laneIndex, const Vehicle &currentVehicle, unsigne
     return false;
 }
 
+/**
+ * @brief Road::update - apply IDM equations to vehicles on this road.
+ *                     - perfome lane changes according to MOBIL lane change equations
+ * @param dt - update time
+ */
 void Road::update(double dt)
 {
     indexRoad();
@@ -173,7 +184,7 @@ void Road::update(double dt)
                     current.update(dt, noVehicle);
 
             } else {
-                if (changeLane(laneIndex, current, vIndex) ) {// for every vehicle, check if a lane change is preferable
+                if (changeLane(laneIndex, current, vIndex) ) {
                     lane.erase(lane.begin() + vIndex);
                     continue;
                 }
