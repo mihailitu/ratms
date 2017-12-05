@@ -42,9 +42,9 @@ void Simulator::runTestSimulator()
 
     while (!terminate && iter < Config::simulationTime) {
         ++iter;
-        for( auto &mapEl : cityMap ) {
-            mapEl.second.update(dt);
-        }
+        for( auto &mapEl : cityMap )
+            mapEl.second.update(dt, cityMap);
+
         runTime += dt;
 
         serialize_v1(runTime, output);

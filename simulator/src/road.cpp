@@ -153,24 +153,29 @@ bool Road::performLaneChange(unsigned laneIndex, const Vehicle &currentVehicle, 
  * @brief Road::update - apply IDM equations to vehicles on this road.
  *                     - perfome lane changes according to MOBIL lane change equations
  * @param dt - update time
+ * @param cityMap - all the roads from the city
  */
-void Road::update(double dt)
+void Road::update(double dt, const std::map<roadID, Road> &cityMap)
 {
     indexRoad();
 
     unsigned laneIndex = 0;
     for(auto &lane : vehicles) {
-        trafficLights[laneIndex].update(dt);
-        unsigned vIndex = 0;
-        // for(unsigned vIndex = 0; vIndex < lane.size(); ++vIndex) {
-        for(Vehicle &current : lane) {
-            //Vehicle &current = lane[vIndex];
 
+        trafficLights[laneIndex].update(dt);
+
+        unsigned vIndex = 0;
+        for(Vehicle &current : lane) {
             if(vIndex == 0) {
                 if(trafficLights[laneIndex].isRed())
                     current.update(dt, trafficLight);
-                else
-                    current.update(dt, noVehicle);
+                else {
+                    if(performRoadChange(current, cityMap)) {
+                        lane.erase(lane.begin() + vIndex);
+                        continue;
+                    } else
+                        current.update(dt, noVehicle);
+                }
             } else {
                 if (performLaneChange(laneIndex, current, vIndex) ) {
                     lane.erase(lane.begin() + vIndex);
@@ -182,6 +187,11 @@ void Road::update(double dt)
         }
         ++laneIndex;
     }
+}
+
+bool Road::performRoadChange(const Vehicle &currentVehicle, const std::map<roadID, Road> &cityMap)
+{
+    return false;
 }
 
 void Road::printRoad() const

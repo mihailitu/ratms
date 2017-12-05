@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 #include <list>
+#include <map>
 
 namespace simulator
 {
@@ -122,9 +123,10 @@ private:
     /**
      * @brief performRoadChange - change the road that currentVehicle is driving on, if necessary
      * @param currentVehicle - current updated vehicle
+     * @param cityMap - all roads from this city
      * @return true if currentVehicle moved to another road, false otherwise
      */
-    bool performRoadChange(const Vehicle &currentVehicle);
+    bool performRoadChange(const Vehicle &currentVehicle, const std::map<roadID, Road> &cityMap);
 
 public:
     Road();
@@ -155,7 +157,7 @@ public:
     unsigned getLanesNo() const;
     const std::vector<std::vector<Vehicle>>& getVehicles() const;
 
-    void update(double dt);
+    void update(double dt, const std::map<roadID, Road> &cityMap );
 
     void printRoad() const;
 

@@ -10,7 +10,7 @@ int main( )
 {
     Simulator simulator;
 
-    std::vector<Road> roadMap = manyRandomVehicleTestMap(6); //singleLaneIntersectionTest(); // semaphoreTest();// manyRandomVehicleTestMap(30);//laneChangeTest();
+    std::vector<Road> roadMap = singleLaneIntersectionTest(); // semaphoreTest();// manyRandomVehicleTestMap(30);//laneChangeTest();
 
     simulator.addRoadNetToMap( roadMap );
 
