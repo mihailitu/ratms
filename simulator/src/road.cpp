@@ -111,7 +111,7 @@ int getNextLaneLeaderPos(const Vehicle &current, const std::vector<Vehicle> &nex
 /* Lane change model:
  * http://traffic-simulation.de/MOBIL.html
  */
-bool Road::changeLane(unsigned laneIndex, const Vehicle &currentVehicle, unsigned vehicleIndex)
+bool Road::performLaneChange(unsigned laneIndex, const Vehicle &currentVehicle, unsigned vehicleIndex)
 {
     if (lanesNo == 1)
         return false;
@@ -141,7 +141,7 @@ bool Road::changeLane(unsigned laneIndex, const Vehicle &currentVehicle, unsigne
 
         if (currentVehicle.canChangeLane(currentLaneLeader, nextLaneLeader, nextLaneFollower)) {
             nextLane.insert(nextLane.begin() + nextLeaderPos + 1, currentVehicle);
-            log_debug("!!!!Vehicle %d change from lane %d to lane %d", currentVehicle.getId(), laneIndex, nextLaneIdx);
+            log_debug("Road %u: vehicle %d change from lane %d to lane %d", id, currentVehicle.getId(), laneIndex, nextLaneIdx);
             return true;
         }
 
@@ -161,22 +161,24 @@ void Road::update(double dt)
     unsigned laneIndex = 0;
     for(auto &lane : vehicles) {
         trafficLights[laneIndex].update(dt);
-        for(unsigned vIndex = 0; vIndex < lane.size(); ++vIndex) {
-            Vehicle &current = lane[vIndex];
+        unsigned vIndex = 0;
+        // for(unsigned vIndex = 0; vIndex < lane.size(); ++vIndex) {
+        for(Vehicle &current : lane) {
+            //Vehicle &current = lane[vIndex];
 
             if(vIndex == 0) {
                 if(trafficLights[laneIndex].isRed())
                     current.update(dt, trafficLight);
                 else
                     current.update(dt, noVehicle);
-
             } else {
-                if (changeLane(laneIndex, current, vIndex) ) {
+                if (performLaneChange(laneIndex, current, vIndex) ) {
                     lane.erase(lane.begin() + vIndex);
                     continue;
                 }
                 current.update(dt, lane[vIndex - 1]);
             }
+            ++vIndex;
         }
         ++laneIndex;
     }

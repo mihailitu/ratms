@@ -110,7 +110,21 @@ private:
 
 private:
 
-    bool changeLane(unsigned laneIndex, const Vehicle &currentVehicle, unsigned vehicleIndex);
+    /**
+     * @brief changeLane - perform a lane change of currentVehicle, if it's phisically possible and if can gain some acceleration
+     * @param laneIndex - the index of the lane that the current vehicle is driving on
+     * @param currentVehicle - a reference to currentVehicle object
+     * @param vehicleIndex - currentVehicle's index on the current lane
+     * @return true if vehicle has changed lane or false if not
+     */
+    bool performLaneChange(unsigned laneIndex, const Vehicle &currentVehicle, unsigned vehicleIndex);
+
+    /**
+     * @brief performRoadChange - change the road that currentVehicle is driving on, if necessary
+     * @param currentVehicle - current updated vehicle
+     * @return true if currentVehicle moved to another road, false otherwise
+     */
+    bool performRoadChange(const Vehicle &currentVehicle);
 
 public:
     Road();

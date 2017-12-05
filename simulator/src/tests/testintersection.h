@@ -1,11 +1,17 @@
 #ifndef TESTINTERSECTION_H
 #define TESTINTERSECTION_H
 
+#include "../road.h"
+#include "../vehicle.h"
 
-class testintersection
+#include <vector>
+
+namespace simulator
 {
-public:
-    testintersection();
-};
+
+std::vector<Road> singleLaneIntersectionTest();
+
+} //namespace simulator
+
 
 #endif // TESTINTERSECTION_H
