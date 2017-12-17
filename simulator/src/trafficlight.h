@@ -35,6 +35,7 @@ public:
     TrafficLight();
     TrafficLight(double g, double y, double r, LightColor initialColor = green_light, double startTime = 0);
 
+    bool isYellow() const;
     bool isRed() const;
     bool isGreen() const;
     void update(double dt);

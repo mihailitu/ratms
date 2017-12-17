@@ -76,12 +76,13 @@ public:
 
     bool canChangeLane(const Vehicle &currentLeader, const Vehicle &newLeader, const Vehicle &newFollower) const;
 
-    void addRoadToItinerary(roadID rid);
+    void addRoadToItinerary(roadID rId);
 
     double getPos() const;
     double getAcceleration() const;
     double getLength() const;
     double getVelocity() const;
+    roadID getCurrentRoad() const;
 
     bool isTrafficLight() const;
     bool isVehicle() const;

@@ -35,6 +35,11 @@ void TrafficLight::update(double dt)
     counter += dt;
 }
 
+bool TrafficLight::isYellow() const
+{
+    return currentLightColor == yellow_light;
+}
+
 bool TrafficLight::isRed() const
 {
     return currentLightColor == red_light;

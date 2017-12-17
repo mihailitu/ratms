@@ -8,7 +8,7 @@ namespace simulator
 {
 
 const Vehicle Road::noVehicle(0.0, 0.0, 0.0);
-Vehicle Road::trafficLight(0.0, 1.0, 0.0);
+Vehicle Road::trafficLightObject(0.0, 1.0, 0.0);
 const double Road::minChangeLaneDist = 0.5;
 const double Road::maxChangeLaneDist = 25.0;
 
@@ -16,14 +16,14 @@ Road::Road()
 {
 }
 
-Road::Road( roadID id, unsigned length, unsigned lanes, unsigned maxSpeed_mps ) :
-    id (id), length(length), usageProb(0.5), lanesNo(lanes), maxSpeed(maxSpeed_mps)
+Road::Road( roadID id, double rLength, unsigned lanes, double maxSpeed_mps ) :
+    id (id), length(rLength), usageProb(0.5), lanesNo(lanes), maxSpeed(maxSpeed_mps)
 {
     log_info("New road added: \n"
              "\t ID: %u \n"
-             "\t length: %d m\n"
+             "\t length: %.2f m\n"
              "\t lanes: %d \n"
-             "\t max_speed: %d km/h \n",
+             "\t max_speed: %.2f km/h \n",
              id, length, lanesNo, maxSpeed);
 
     for(unsigned i = 0; i < lanesNo; ++i) {
@@ -32,19 +32,19 @@ Road::Road( roadID id, unsigned length, unsigned lanes, unsigned maxSpeed_mps ) 
 
     }
 
-    trafficLight = Vehicle(length - Config::trafficLightDistToRoadEnd, 0.0, 0.0, Vehicle::traffic_light);
+    trafficLightObject = Vehicle(length - Config::trafficLightDistToRoadEnd, 0.0, 0.0, Vehicle::traffic_light);
 }
 
 //TODO: should vehicles be added from outside Road class or
 // a road should maintain it's vehicle pool internally based on statistics?
-void Road::addVehicle(Vehicle car, unsigned lane)
+void Road::addVehicle(Vehicle v, unsigned lane)
 {
     if(lane >= lanesNo) {
         log_warning("Assigned vehicle to road %u on lane %d, where the road has only %d lanes.", id, lane, lanesNo);
         lane = 0; //TODO: throw exception?
     }
-    vehicles[lane].push_back(car);
-    car.addRoadToItinerary(id);
+    vehicles[lane].push_back(v);
+    v.addRoadToItinerary(id);
 }
 
 void Road::addLaneConnection(unsigned lane, roadID road)
@@ -167,14 +167,17 @@ void Road::update(double dt, const std::map<roadID, Road> &cityMap)
         unsigned vIndex = 0;
         for(Vehicle &current : lane) {
             if(vIndex == 0) {
-                if(trafficLights[laneIndex].isRed())
-                    current.update(dt, trafficLight);
-                else {
-                    if(performRoadChange(current, cityMap)) {
+                if(trafficLights[laneIndex].isRed() || trafficLights[laneIndex].isYellow()) {
+                    current.update(dt, trafficLightObject);
+                } else {
+                    // TODO: determine which road this vehicle will choose
+                    if(performRoadChange(current, laneIndex, cityMap)) {
                         lane.erase(lane.begin() + vIndex);
                         continue;
-                    } else
-                        current.update(dt, noVehicle);
+                    }
+
+                    // TODO: Even if we have a green light, check if next road is full.
+                    current.update(dt, noVehicle);
                 }
             } else {
                 if (performLaneChange(laneIndex, current, vIndex) ) {
@@ -189,8 +192,10 @@ void Road::update(double dt, const std::map<roadID, Road> &cityMap)
     }
 }
 
-bool Road::performRoadChange(const Vehicle &currentVehicle, const std::map<roadID, Road> &cityMap)
+bool Road::performRoadChange(const Vehicle &currentVehicle, unsigned laneIndex, const std::map<roadID, Road> &cityMap)
 {
+    if(currentVehicle.getPos() >= length) {
+    }
     return false;
 }
 
@@ -207,7 +212,7 @@ void Road::printRoad() const
              "End:          (%f, %f)\n"
              "Connections:  %s\n",
              id, length, lanesNo, maxSpeed, usageProb, vehicles.size(),
-             startPos.first, startPos.second, endPos.first, endPos.second);//, connections_str.c_str());
+             startPosGeo.first, startPosGeo.second, endPosGeo.first, endPosGeo.second);//, connections_str.c_str());
 
     for(auto lane : vehicles )
         for(auto v : lane)

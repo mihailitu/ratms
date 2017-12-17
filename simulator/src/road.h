@@ -49,17 +49,23 @@ private:
      * xPos of vechicle is the meter on the road
      * length of the road in meters
      */
-    unsigned length;
+    double length;
 
 
+    /* Geodetic coortdinates */
     /* start position of the road - lat/lon - from OMS or something */
-    roadPos startPos; // lat/lon
+    roadPosGeo startPosGeo; // lat/lon
 
     /*
      * the traffic will flow from startPos to endPos
      * end position of the road - lat/lon
      */
-    roadPos endPos; // lat/lon
+    roadPosGeo endPosGeo; // lat/lon
+
+
+    /* Cartesian coordinates - for easier visual 2D representation */
+    roadPosCard startPosCard;
+    roadPosCard endPosCard;
 
 
     /*
@@ -100,7 +106,7 @@ private:
      */
     std::vector<TrafficLight> trafficLights;
 
-    static Vehicle trafficLight;
+    static Vehicle trafficLightObject;
 
     /* Don't consider lane change when leader is more than minChangeLaneDist ahead.
      * This is a minor optimization - we don't do all the math for lane change if it's no needed */
@@ -112,10 +118,10 @@ private:
 private:
 
     /**
-     * @brief changeLane - perform a lane change of currentVehicle, if it's phisically possible and if can gain some acceleration
-     * @param laneIndex - the index of the lane that the current vehicle is driving on
+     * @brief changeLane     - perform a lane change of currentVehicle, if it's phisically possible and if can gain some acceleration
+     * @param laneIndex      - the index of the lane that the current vehicle is driving on
      * @param currentVehicle - a reference to currentVehicle object
-     * @param vehicleIndex - currentVehicle's index on the current lane
+     * @param vehicleIndex   - currentVehicle's index on the current lane
      * @return true if vehicle has changed lane or false if not
      */
     bool performLaneChange(unsigned laneIndex, const Vehicle &currentVehicle, unsigned vehicleIndex);
@@ -123,16 +129,17 @@ private:
     /**
      * @brief performRoadChange - change the road that currentVehicle is driving on, if necessary
      * @param currentVehicle - current updated vehicle
-     * @param cityMap - all roads from this city
+     * @param laneIndex      - lane being processed
+     * @param cityMap        - all roads from this city
      * @return true if currentVehicle moved to another road, false otherwise
      */
-    bool performRoadChange(const Vehicle &currentVehicle, const std::map<roadID, Road> &cityMap);
+    bool performRoadChange(const Vehicle &currentVehicle, unsigned laneIndex, const std::map<roadID, Road> &cityMap);
 
 public:
     Road();
-    Road(roadID id, unsigned length, unsigned lanes, unsigned maxSpeed_mps);
+    Road(roadID id, double length, unsigned lanes, double maxSpeed_mps);
 
-    void addVehicle(Vehicle car, unsigned lane);
+    void addVehicle(Vehicle v, unsigned lane);
 
     /**
      * Each lane from a road has it's own connection to a road.
