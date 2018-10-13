@@ -1,0 +1,15 @@
+* Lane changin model for simulator
+Notations: 
+    vc - current vehicle
+    cl - current leader (vehicle in front of the current vehicle)
+    nf - next folower (vehicle behind the current vehicle in case of a lane change)
+    nl - next leader (vehicle in front of the current vehicle in case of a lane change
+
+1. The need for lane change - what are the conditions for a lane change
+    - 
+
+2. Possibility - check if a lane change can happen
+    - there is enough space for this vehicle
+            nl.xPos - nl.length
+
+3. Opportunity - what is to be gained from the lane change
