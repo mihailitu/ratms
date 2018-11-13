@@ -166,6 +166,11 @@ public:
 
     void update(double dt, const std::map<roadID, Road> &cityMap );
 
+    void setStartPosCard(roadPosCard startPos);
+    void setEndPosCard(roadPosCard endPos);
+    roadPosCard getStartPosCard();
+    roadPosCard getEndPosCard();
+
     void printRoad() const;
 
 private:

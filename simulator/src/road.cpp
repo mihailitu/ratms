@@ -192,6 +192,26 @@ void Road::update(double dt, const std::map<roadID, Road> &cityMap)
     }
 }
 
+void Road::setStartPosCard(roadPosCard startPos)
+{
+    startPosCard = startPos;
+}
+
+void Road::setEndPosCard(roadPosCard endPos)
+{
+    endPosCard = endPos;
+}
+
+roadPosCard Road::getStartPosCard()
+{
+    return startPosCard;
+}
+
+roadPosCard Road::getEndPosCard()
+{
+    return endPosCard;
+}
+
 bool Road::performRoadChange(const Vehicle &currentVehicle, unsigned laneIndex, const std::map<roadID, Road> &cityMap)
 {
     if(currentVehicle.getPos() >= length) {
