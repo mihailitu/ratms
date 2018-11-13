@@ -192,13 +192,9 @@ void Road::update(double dt, const std::map<roadID, Road> &cityMap)
     }
 }
 
-void Road::setStartPosCard(roadPosCard startPos)
+void Road::setCardinalCoordinates(roadPosCard startPos, roadPosCard endPos)
 {
     startPosCard = startPos;
-}
-
-void Road::setEndPosCard(roadPosCard endPos)
-{
     endPosCard = endPos;
 }
 

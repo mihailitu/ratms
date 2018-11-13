@@ -64,6 +64,8 @@ private:
 
 
     /* Cartesian coordinates - for easier visual 2D representation */
+    /* The Cartesian coordinates are set in meters for now */
+    /* TODO: make this scalable and adaptable to screen */
     roadPosCard startPosCard;
     roadPosCard endPosCard;
 
@@ -166,8 +168,7 @@ public:
 
     void update(double dt, const std::map<roadID, Road> &cityMap );
 
-    void setStartPosCard(roadPosCard startPos);
-    void setEndPosCard(roadPosCard endPos);
+    void setCardinalCoordinates(roadPosCard startPos, roadPosCard endPosCard);
     roadPosCard getStartPosCard();
     roadPosCard getEndPosCard();
 
