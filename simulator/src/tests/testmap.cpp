@@ -56,7 +56,8 @@ std::vector<Road> semaphoreTest() {
 
     Config::simulatorOuput = Config::simpleRoadTestFName;
 
-    Road r(0, 1000, 2, 20);
+    Road r(0, 500, 2, 20);
+    r.setCardinalCoordinates({0, 0}, {0, 500});
 
     Vehicle v(0.0, 5.0, 20.0);
     Vehicle v1(30.0, 5.0, 15);

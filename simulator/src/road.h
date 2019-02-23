@@ -69,14 +69,6 @@ private:
     roadPosCard startPosCard;
     roadPosCard endPosCard;
 
-
-    /*
-     * TODO - maybe use some reference to other roads instead of ids so we can access quicker?
-     * TODO - each lane has a connection to another road
-     * this road's connections - id's of other roads.
-     */
-    std::vector<std::vector<roadID>> connections;
-
     /*
      * the preference probability for this road - how much it is used.
      * when a car passes the intersection, it will use this probability to choose the next road.
@@ -90,6 +82,13 @@ private:
     /* road max speed m/s - if any or city speed limit -
      * this doesn't have to be strictly conformed by drivers */
     unsigned maxSpeed;
+
+    /*
+     * TODO - maybe use some reference to other roads instead of ids so we can access quicker?
+     * TODO - each lane has a connection to another road
+     * this road's connections - id's of other roads.
+     */
+    std::vector<std::vector<roadID>> connections;
 
     /*
      * Right side driving only for now (left side steering wheel)
@@ -139,7 +138,7 @@ private:
 
 public:
     Road();
-    Road(roadID id, double length, unsigned lanes, double maxSpeed_mps);
+    Road(roadID rId, double length, unsigned lanes, unsigned maxSpeed_mps);
 
     void addVehicle(Vehicle v, unsigned lane);
 

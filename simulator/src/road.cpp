@@ -16,15 +16,15 @@ Road::Road()
 {
 }
 
-Road::Road( roadID id, double rLength, unsigned lanes, double maxSpeed_mps ) :
-    id (id), length(rLength), usageProb(0.5), lanesNo(lanes), maxSpeed(maxSpeed_mps)
+Road::Road( roadID rId, double rLength, unsigned lanes, unsigned maxSpeed_mps ) :
+    id (rId), length(rLength), usageProb(0.5), lanesNo(lanes), maxSpeed(maxSpeed_mps)
 {
     log_info("New road added: \n"
              "\t ID: %u \n"
              "\t length: %.2f m\n"
-             "\t lanes: %d \n"
-             "\t max_speed: %.2f km/h \n",
-             id, length, lanesNo, maxSpeed);
+             "\t max_speed: %u \n"
+             "\t lanes: %u \n",
+             id, length, maxSpeed, lanesNo);
 
     for(unsigned i = 0; i < lanesNo; ++i) {
         vehicles.push_back(std::vector<Vehicle>());
