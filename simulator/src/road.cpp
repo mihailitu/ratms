@@ -29,7 +29,6 @@ Road::Road( roadID rId, double rLength, unsigned lanes, unsigned maxSpeed_mps ) 
     for(unsigned i = 0; i < lanesNo; ++i) {
         vehicles.push_back(std::vector<Vehicle>());
         trafficLights.push_back(TrafficLight(10, 1, 30, TrafficLight::red_light));
-
     }
 
     trafficLightObject = Vehicle(length - Config::trafficLightDistToRoadEnd, 0.0, 0.0, Vehicle::traffic_light);
@@ -213,6 +212,31 @@ bool Road::performRoadChange(const Vehicle &currentVehicle, unsigned laneIndex, 
     if(currentVehicle.getPos() >= length) {
     }
     return false;
+}
+
+void Road::serialize(std::ostream &out) const
+{
+    serialize_v2(out);
+}
+
+/*
+ *  version 2:
+ * roadID0 | startLon | startLat | endLon | endLat | startX | startY | endX | endY | length | maxSpeed | lanes_no |
+ */
+void Road::serialize_v2(std::ostream &out) const
+{
+    out << id << " " <<
+           startPosGeo.first << " " <<
+           startPosGeo.second << " " <<
+           endPosGeo.first << " " <<
+           endPosGeo.second << " " <<
+           startPosCard.first << " " <<
+           startPosCard.second << " " <<
+           endPosCard.first << " " <<
+           endPosCard.second << " " <<
+           length << " " <<
+           maxSpeed << " " <<
+           lanesNo << " ";
 }
 
 void Road::printRoad() const

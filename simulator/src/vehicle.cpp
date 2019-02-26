@@ -176,7 +176,6 @@ void Vehicle::serialize_v1(std::ostream &out) const
     out << xPos << " " <<
            velocity << " " <<
            acceleration << " ";
-
 }
 
 void Vehicle::printVehicle() const

@@ -32,14 +32,17 @@ public:
     void addRoadToMap(Road &r);
     void addRoadNetToMap(std::vector<Road> &roadNet);
 
+    // output the current layout of this map
+    void serialize(double time, std::ostream &output) const;
+
+private:
     /* there will probably several serialization versions, as the project develops
      * Keep all versions so we can run older python tests at later times
      * !! Final serialization version should be implemented using sockets
      */
-    void serialize_v1(double time, std::ostream &output);
-
-    // output the current layout of this road - version 1
-    void serialize(double time, std::ostream &output);
+    void serialize_v1(double time, std::ostream &output) const;
+    void serialize_v2(double time, std::ostream &output) const;
+    void serialize_roads_v2(std::ostream &road_output) const;
 };
 
 } // namespace simulator

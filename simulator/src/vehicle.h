@@ -12,7 +12,10 @@ namespace simulator
 class Vehicle
 {
 public:
-    enum ElementType{ vehicle, traffic_light, obstacle };
+    enum ElementType{ vehicle,
+                      traffic_light,
+                      obstacle,
+                    };
 
 private:
     static int idGen;
@@ -38,7 +41,7 @@ private:
 
     double  s = { -1.0 };       // net distance to vehicle in front of this one (0 = accident, -1 = no vehicle in front
                                 // for large values of net distance, we should enter in free road mode
-    double acceleration = { 0 };// vehicle acceleration (meters per second square)
+    double acceleration = { 0 };// vehicle acceleration (meters per sqaured second)
 
     /* Model parameters are here, as we make most of it dependent on this driver's aggressivity */
     double aggressivity = { 0.5 };  // aggressivity factor of this driver.
@@ -90,11 +93,12 @@ public:
 
     void serialize(std::ostream &out) const;
 
-    void serialize_v1(std::ostream &out) const;
-
     void printVehicle() const;
     void log() const;
     int getId() const { return id; }
+
+private:
+    void serialize_v1(std::ostream &out) const;
 };
 
 } // simulator

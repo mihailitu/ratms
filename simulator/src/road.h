@@ -171,9 +171,12 @@ public:
     roadPosCard getStartPosCard();
     roadPosCard getEndPosCard();
 
+    void serialize(std::ostream &out) const;
+
     void printRoad() const;
 
 private:
+    void serialize_v2(std::ostream &out) const;
 
 };
 
