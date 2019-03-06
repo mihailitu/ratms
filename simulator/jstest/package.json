@@ -1,0 +1,16 @@
+{
+  "name": "jscanvas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "dependencies": {
+    "express": "^4.16.4",
+    "n-readlines": "^1.0.0"
+  },
+  "devDependencies": {
+    "express": "4.x",
+    "socket.io": "*"
+  },
+  "author": "",
+  "license": "ISC"
+}
