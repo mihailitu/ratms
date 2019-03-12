@@ -5,7 +5,8 @@
   "main": "server.js",
   "dependencies": {
     "express": "^4.16.4",
-    "n-readlines": "^1.0.0"
+    "n-readlines": "^1.0.0",
+    "npm": "^6.9.0"
   },
   "devDependencies": {
     "express": "4.x",

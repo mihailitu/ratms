@@ -3,6 +3,18 @@ var express = require('express'),
     http = require('http'),
     socketIo = require('socket.io');
 
+var lines = require('fs').readFileSync('roads.dat', 'utf-8')
+    .split('\n')
+    .filter(Boolean);
+
+// Map for the roads, where the key is road_id
+// This structure will connect roads to cars
+road_map = {};
+// simple 2D representation of roads for drawing purposes
+var roads = [];
+
+// roads_v2.dat
+// roadID0 | startLon | startLat | endLon | endLat | startX | startY | endX | endY | length | maxSpeed | lanes_no |
 
 // start webserver on port 8080
 var server =  http.createServer(app);
@@ -11,38 +23,6 @@ server.listen(8080);
 // add directory with our static files
 app.use(express.static(__dirname + '/public'));
 console.log("Server running on 127.0.0.1:8080");
-
-// array of all lines drawn
-var line_history = [];
-
-var road = {
-  id: false,
-  startGeo: {
-    lat: false,
-    lon: false
-  },
-  endGeo: {
-    lat: false,
-    lon: false
-  },
-  startCart: {
-    x: false,
-    y: false
-  },
-  endCart: {
-    x: false,
-    y: false
-  },
-  length: 0,
-  maxSpeex: 0,
-  lanes_no: 0
-}
-
-const lineByLine = require('n-readlines');
-var liner = new readlines('roads.dat');
-
-// roads_v2.dat
-// roadID0 | startLon | startLat | endLon | endLat | startX | startY | endX | endY | length | maxSpeed | lanes_no |
 
 // event-handler for new incoming connections
 io.on('connection', function (socket) {
