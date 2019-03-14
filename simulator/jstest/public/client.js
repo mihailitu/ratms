@@ -30,13 +30,20 @@
    };
 
    // draw line received from server
-	socket.on('draw_line', function (data) {
-      var line = data.line;
-      console.log("draw_line: [" + line[0].x + ", " + line[0].y + "] -> [" + line[1].x + ", " + line[1].y + "]");
+	socket.on('draw_map', function (data) {
+    var map = data.map;
+
+    for(var i = 0; i < map.length; i++) {
+      var road = map[i];
+      console.log('drawing: ' + road.id + ': ' + JSON.stringify(road));
       context.beginPath();
-      context.moveTo(line[0].x * width, line[0].y * height);
-      context.lineTo(line[1].x * width, line[1].y * height);
+      context.moveTo(road.start.x, road.start.y);
+      context.lineTo(road.end.x, road.end.y);
+      // TODO: draw normaziled coordinates
+      // context.moveTo(road.start.x * width, road.start.y * height);
+      // context.lineTo(road.end.x * width, road.end.y * height);
       context.stroke();
+    }
    });
 
    // main loop, running every 25ms
