@@ -16,7 +16,7 @@
    canvas.width = width;
    canvas.height = height;
 
-   console.log("canvas[" + width + ", " + height + "]");
+   console.log("client canvas[" + width + ", " + height + "]");
 
    // register mouse event handlers
    canvas.onmousedown = function(e){ mouse.click = true; };
@@ -37,6 +37,8 @@
       var road = map[i];
       console.log('drawing: ' + road.id + ': ' + JSON.stringify(road));
       context.beginPath();
+      context.lineWidth = road.lanes * 3;
+      context.strokeStyle = "#ffff00";
       context.moveTo(road.start.x, road.start.y);
       context.lineTo(road.end.x, road.end.y);
       // TODO: draw normaziled coordinates
@@ -49,15 +51,15 @@
    // main loop, running every 25ms
    function mainLoop() {
       // check if the user is drawing
-      if (mouse.click && mouse.move && mouse.pos_prev) {
-         // send line to to the server
-         socket.emit('draw_line', { line: [ mouse.pos, mouse.pos_prev ] });
-         mouse.move = false;
-      }
-      mouse.pos_prev = {x: mouse.pos.x, y: mouse.pos.y};
+      // if (mouse.click && mouse.move && mouse.pos_prev) {
+      //    // send line to to the server
+      //    socket.emit('draw_line', { line: [ mouse.pos, mouse.pos_prev ] });
+      //    mouse.move = false;
+      // }
+      // mouse.pos_prev = {x: mouse.pos.x, y: mouse.pos.y};
       setTimeout(mainLoop, 25);
    }
-   socket.emit('draw_line', {line: [{x: 0.0, y: 0.0}, {x: 0.5, y:0.5}]})
-   socket.emit('draw_line', {line: [{x: 0.5, y: 0.5}, {x: 1.0, y:0}]})
+   // socket.emit('draw_line', {line: [{x: 0.0, y: 0.0}, {x: 0.5, y:0.5}]})
+   // socket.emit('draw_line', {line: [{x: 0.5, y: 0.5}, {x: 1.0, y:0}]})
    mainLoop();
 });

@@ -7,10 +7,10 @@ var lines = require('fs').readFileSync('roads.dat', 'utf-8')
     .split('\n')
     .filter(Boolean);
 
-// Map for the roads, where the key is road_id
-// This structure will connect roads to cars
+// Map of the roads, where the key is road_id
+// This structure will connect cars to roads
 road_map = {};
-// simple 2D representation of roads for drawing
+// simple 2D representation of roads for drawing in client
 var roads = [];
 
 // roads_v2.dat
@@ -18,10 +18,11 @@ var roads = [];
 for(var i in lines) {
   console.log('Read: ' + lines[i])
   var road_data = lines[i].split(' ');
-  // TODO: Normalize coordinates
+  // TODO: Normalize coordinates with map size and zoom
   roads.push(
     {
         id: road_data[0],
+        lanes: road_data[11],
         start: {
           x: road_data[5],
           y: road_data[6]
@@ -56,6 +57,11 @@ for(var i in lines) {
   };
 }
 
+// find out the dimensions of the map to normalize coordinates
+for(var i = 0; i < roads.length; ++i) {
+  
+}
+
 // start webserver on port 8080
 var server =  http.createServer(app);
 var io = socketIo.listen(server);
@@ -68,13 +74,6 @@ console.log("Server running on 127.0.0.1:8080");
 io.on('connection', function (socket) {
   console.log("on connection: ");
   socket.emit('draw_map', {map: roads})
-   // first send the history to the new client
-   // for (var i in line_history) {
-   //   console.log("line_history X:" + line_history[i][0].x + " Y:" + line_history[i][0].y);
-   //    socket.emit('draw_line', { line: line_history[i] } );
-   // }
-
-
 
    // add handler for message type "draw_line".
    socket.on('draw_line', function (data) {
