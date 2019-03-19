@@ -6,6 +6,7 @@
       pos_prev: false
    };
    // get canvas element and create context
+   document.title = "Bla bla";
    var canvas  = document.getElementById('drawing');
    var context = canvas.getContext('2d');
    var width   = window.innerWidth;
@@ -39,8 +40,8 @@
       context.beginPath();
       context.lineWidth = road.lanes * 3;
       context.strokeStyle = "#ffff00";
-      context.moveTo(road.start.x, road.start.y);
-      context.lineTo(road.end.x, road.end.y);
+      context.moveTo(road.start.x * width, road.start.y * height);
+      context.lineTo(road.end.x * width, road.end.y * height);
       // TODO: draw normaziled coordinates
       // context.moveTo(road.start.x * width, road.start.y * height);
       // context.lineTo(road.end.x * width, road.end.y * height);

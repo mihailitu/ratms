@@ -58,9 +58,23 @@ for(var i in lines) {
 }
 
 // find out the dimensions of the map to normalize coordinates
-for(var i = 0; i < roads.length; ++i) {
-  
-}
+width = Math.max.apply(Math, roads.map(
+  function(o) {
+    return o.end.x;
+  }));
+height = Math.max.apply(Math, roads.map(
+    function(o) {
+      return o.end.y;
+    }));
+console.log('Map size: [' + width + ', ' + height +']');
+
+// normalize values
+roads.forEach(function(road) {
+  road.start.x = road.start.x / width;
+  road.start.y = road.start.y / height;
+  road.end.x = road.end.x / width;
+  road.end.y = road.end.y / height;
+})
 
 // start webserver on port 8080
 var server =  http.createServer(app);
