@@ -36,19 +36,25 @@
 
     for(var i = 0; i < map.length; i++) {
       var road = map[i];
-      console.log('drawing: ' + road.id + ': ' + JSON.stringify(road));
+      // console.log('drawing: ' + road.id + ': ' + JSON.stringify(road));
       context.beginPath();
       context.lineWidth = road.lanes * 3;
-      context.strokeStyle = "#ffff00";
       context.moveTo(road.start.x * width, road.start.y * height);
       context.lineTo(road.end.x * width, road.end.y * height);
-      // TODO: draw normaziled coordinates
-      // context.moveTo(road.start.x * width, road.start.y * height);
-      // context.lineTo(road.end.x * width, road.end.y * height);
+      context.strokeStyle = "#eff2f7";
       context.stroke();
     }
-   });
 
+    for(var i = 0; i < 10;  ++i) {
+      context.beginPath();
+      context.arc(Math.random() * width, Math.random() * height, 3, 0, 2 * Math.PI);
+      context.fillStyle = "red";
+      context.fill();
+      context.strokeStyle = "blue";
+      context.stroke();
+    }
+
+   });
    // main loop, running every 25ms
    function mainLoop() {
       // check if the user is drawing

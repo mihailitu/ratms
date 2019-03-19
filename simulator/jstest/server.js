@@ -16,9 +16,8 @@ var roads = [];
 // roads_v2.dat
 // roadID0 | startLon | startLat | endLon | endLat | startX | startY | endX | endY | length | maxSpeed | lanes_no |
 for(var i in lines) {
-  console.log('Read: ' + lines[i])
   var road_data = lines[i].split(' ');
-  // TODO: Normalize coordinates with map size and zoom
+
   roads.push(
     {
         id: road_data[0],
@@ -68,7 +67,7 @@ height = Math.max.apply(Math, roads.map(
     }));
 console.log('Map size: [' + width + ', ' + height +']');
 
-// normalize values
+// normalize coordinates
 roads.forEach(function(road) {
   road.start.x = road.start.x / width;
   road.start.y = road.start.y / height;
@@ -80,6 +79,7 @@ roads.forEach(function(road) {
 var server =  http.createServer(app);
 var io = socketIo.listen(server);
 server.listen(8080);
+
 // add directory with our static files
 app.use(express.static(__dirname + '/public'));
 console.log("Server running on 127.0.0.1:8080");
