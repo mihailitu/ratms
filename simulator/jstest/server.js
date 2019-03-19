@@ -87,17 +87,18 @@ console.log("Server running on 127.0.0.1:8080");
 // event-handler for new incoming connections
 io.on('connection', function (socket) {
   console.log("on connection: ");
+  var frames = 0;
   socket.emit('draw_map', {map: roads});
   // read vehicle status
-  
   socket.emit('draw_state', {});
+
    // add handler for message type "draw_line".
-   socket.on('draw_line', function (data) {
-      // add received line to history
-//      console.log("draw_line from: " + data.line[0].x + " " + data.line[0].y + " ");
-//      console.log("draw_line to  : " + data.line[1].x + " " + data.line[1].y + " ");
-//      line_history.push(data.line);
-      // send line to all clients
-      io.emit('draw_line', { line: data.line });
+   socket.on('next_frame', function (data) {
+     // console.log("frame: " + frames);
+     if(frames++ < 100)
+        io.emit('draw_state');
+        else {
+          console.log("Simulation done");
+        }
    });
 });
