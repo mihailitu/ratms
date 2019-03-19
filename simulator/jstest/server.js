@@ -87,8 +87,10 @@ console.log("Server running on 127.0.0.1:8080");
 // event-handler for new incoming connections
 io.on('connection', function (socket) {
   console.log("on connection: ");
-  socket.emit('draw_map', {map: roads})
-
+  socket.emit('draw_map', {map: roads});
+  // read vehicle status
+  
+  socket.emit('draw_state', {});
    // add handler for message type "draw_line".
    socket.on('draw_line', function (data) {
       // add received line to history

@@ -30,12 +30,15 @@
       mouse.move = true;
    };
 
+   // save road map. It will not change through the run of the program
+  road_map = {};
+
    // draw line received from server
 	socket.on('draw_map', function (data) {
-    var map = data.map;
+    road_map = data.map;
 
-    for(var i = 0; i < map.length; i++) {
-      var road = map[i];
+    for(var i = 0; i < road_map.length; i++) {
+      var road = road_map[i];
       // console.log('drawing: ' + road.id + ': ' + JSON.stringify(road));
       context.beginPath();
       context.lineWidth = road.lanes * 3;
@@ -44,16 +47,30 @@
       context.strokeStyle = "#eff2f7";
       context.stroke();
     }
+   });
 
-    for(var i = 0; i < 10;  ++i) {
-      context.beginPath();
-      context.arc(Math.random() * width, Math.random() * height, 3, 0, 2 * Math.PI);
-      context.fillStyle = "red";
-      context.fill();
-      context.strokeStyle = "blue";
-      context.stroke();
-    }
+   socket.on('draw_state', function (data) {
+     // first, draw the roads
+     for(var i = 0; i < road_map.length; i++) {
+       var road = road_map[i];
+       // console.log('drawing: ' + road.id + ': ' + JSON.stringify(road));
+       context.beginPath();
+       context.lineWidth = road.lanes * 3;
+       context.moveTo(road.start.x * width, road.start.y * height);
+       context.lineTo(road.end.x * width, road.end.y * height);
+       context.strokeStyle = "#eff2f7";
+       context.stroke();
+     }
 
+     for(var i = 0; i < 10;  ++i) {
+       context.beginPath();
+       context.arc(Math.random() * width, Math.random() * height, 3, 0, 2 * Math.PI);
+       context.fillStyle = "blue";
+       context.fill();
+       context.strokeStyle = "red";
+       context.lineWidth = 1;
+       context.stroke();
+     }
    });
    // main loop, running every 25ms
    function mainLoop() {
