@@ -42,6 +42,12 @@
      var canvas  = document.getElementById('drawing');
      var context = canvas.getContext('2d');
 
+     // clear canvas
+     context.clearRect(0, 0, canvas.width, canvas.height);
+
+     var delay = 500; //ms
+     var statFrameTime = new Date().getTime();
+
      // first, draw the roads
      for(var i = 0; i < road_map.length; i++) {
        var road = road_map[i];
@@ -54,7 +60,7 @@
        context.stroke();
      }
 
-     for(var i = 0; i < 10;  ++i) {
+     for(var i = 0; i < 1000; ++i) {
        context.beginPath();
        context.arc(Math.random() * width, Math.random() * height, 3, 0, 2 * Math.PI);
        context.fillStyle = "blue";
@@ -63,6 +69,13 @@
        context.stroke();
        context.fill();
      }
+
+     function sleep(start, delay) {
+         // var start = new Date().getTime();
+         while (new Date().getTime() < start + delay);
+     }
+     sleep(statFrameTime, delay);
+
      socket.emit('next_frame');
    });
    // main loop, running every 25ms
