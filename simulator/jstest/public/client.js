@@ -9,8 +9,8 @@
    document.title = "Bla bla";
    var canvas  = document.getElementById('drawing');
    var context = canvas.getContext('2d');
-   var width   = window.innerWidth;
-   var height  = window.innerHeight;
+   var width   = window.innerWidth - 10;
+   var height  = window.innerHeight - 10;
    var socket  = io.connect();
 
    // set canvas to full browser width/height
@@ -36,6 +36,7 @@
    // draw line received from server
 	socket.on('draw_map', function (data) {
     road_map = data.map;
+    console.log("Map loaded. Length: " + road_map.length)
    });
 
    socket.on('draw_state', function (data) {
@@ -56,19 +57,20 @@
        context.lineWidth = road.lanes * 3;
        context.moveTo(road.start.x * width, road.start.y * height);
        context.lineTo(road.end.x * width, road.end.y * height);
-       context.strokeStyle = "#eff2f7";
+       // context.strokeStyle = "#eff2f7";
+       context.strokeStyle = 'green';
        context.stroke();
      }
 
-     for(var i = 0; i < 1000; ++i) {
-       context.beginPath();
-       context.arc(Math.random() * width, Math.random() * height, 3, 0, 2 * Math.PI);
-       context.fillStyle = "blue";
-       context.strokeStyle = "red";
-       context.lineWidth = 1;
-       context.stroke();
-       context.fill();
-     }
+     // for(var i = 0; i < 1000; ++i) {
+     //   context.beginPath();
+     //   context.arc(Math.random() * width, Math.random() * height, 3, 0, 2 * Math.PI);
+     //   context.fillStyle = "blue";
+     //   context.strokeStyle = "red";
+     //   context.lineWidth = 1;
+     //   context.stroke();
+     //   context.fill();
+     // }
 
      function sleep(start, delay) {
          // var start = new Date().getTime();

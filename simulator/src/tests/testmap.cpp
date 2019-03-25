@@ -23,15 +23,15 @@ namespace simulator
  */
 std::vector<Road> getTestMap()
 {
+    Road r0(0, 500, 2, 50);
+    r0.setCardinalCoordinates({5, 100}, {505, 100});
+
+    // dummy road to force map size for test maps
+    Road r1(99, 1000, 1, 0);
+    r1.setCardinalCoordinates({0, 500}, {1000, 500});
     std::vector<Road> cmap = {
-    Road(0, 1500, 1, 50),
-    Road(1,  750, 1, 50),
-    Road(2,  750, 1, 50),
-    Road(3, 1500, 1, 50),
-    Road(4,  750, 1, 50),
-    Road(5,  750, 1, 50),
-    Road(6, 1500, 1, 70),
-    Road(7, 1500, 1, 70)
+        r0,
+        r1
     };
 
 //    cmap[0].addConnection( cmap[1] );

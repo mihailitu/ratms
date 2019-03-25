@@ -8,6 +8,7 @@
 
 namespace simulator
 {
+std::vector<Road> getTestMap();
 std::vector<Road> semaphoreTest();
 std::vector<Road> manyRandomVehicleTestMap(int numVehicles);
 
