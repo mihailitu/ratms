@@ -3,6 +3,10 @@ var express = require('express'),
     http = require('http'),
     socketIo = require('socket.io');
 
+var times = var lines = require('fs').readFileSync('simple_road.dat', 'utf-8')
+    .split('\n')
+    .filter(Boolean);
+
 var lines = require('fs').readFileSync('roads.dat', 'utf-8')
     .split('\n')
     .filter(Boolean);
