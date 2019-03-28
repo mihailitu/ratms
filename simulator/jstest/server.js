@@ -3,9 +3,39 @@ var express = require('express'),
     http = require('http'),
     socketIo = require('socket.io');
 
-var times = var lines = require('fs').readFileSync('simple_road.dat', 'utf-8')
+var timeFrames = var lines = require('fs').readFileSync('simple_road.dat', 'utf-8')
     .split('\n')
     .filter(Boolean);
+
+var frames = [];
+var prevFrameTime = 0.0;
+var roadsForTime = [];
+
+for(var i in timeFrames) {
+  var frameData = timeFrames[i].split(' ');
+  var frameTime = frameData[0];
+  var data = {
+      time: frameTime,
+      roadID: frameData[1],
+      vehicles: []
+    };
+
+  for(var v = 2; v < frameData.length; ++v) {
+      data.vehicles.push({
+        x: frameData[v],
+        v: frameData[v+1],
+        a: frameData[v+2],
+        l: frameData[v+3]
+      });
+    }
+
+  if(prevFrameTime != frameTime) {
+    frames.push(roadsForTime);
+    roadsForTime.clear();
+    prevFrameTime = frameTime;
+  }
+  roadsForTime.push(data);
+}
 
 var lines = require('fs').readFileSync('roads.dat', 'utf-8')
     .split('\n')
@@ -13,7 +43,7 @@ var lines = require('fs').readFileSync('roads.dat', 'utf-8')
 
 // Map of the roads, where the key is road_id
 // This structure will connect cars to roads
-road_map = {};
+var road_map = {};
 // simple 2D representation of roads for drawing in client
 var roads = [];
 
