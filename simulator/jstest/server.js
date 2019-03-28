@@ -3,7 +3,7 @@ var express = require('express'),
     http = require('http'),
     socketIo = require('socket.io');
 
-var timeFrames = var lines = require('fs').readFileSync('simple_road.dat', 'utf-8')
+var timeFrames = require('fs').readFileSync('simple_road.dat', 'utf-8')
     .split('\n')
     .filter(Boolean);
 
@@ -15,12 +15,11 @@ for(var i in timeFrames) {
   var frameData = timeFrames[i].split(' ');
   var frameTime = frameData[0];
   var data = {
-      time: frameTime,
       roadID: frameData[1],
       vehicles: []
     };
 
-  for(var v = 2; v < frameData.length; ++v) {
+  for(var v = 2; v < frameData.length; v+=4) {
       data.vehicles.push({
         x: frameData[v],
         v: frameData[v+1],
@@ -30,12 +29,20 @@ for(var i in timeFrames) {
     }
 
   if(prevFrameTime != frameTime) {
-    frames.push(roadsForTime);
-    roadsForTime.clear();
+    frames.push({
+      time: prevFrameTime,
+      data: roadsForTime
+      });
+    roadsForTime = [];
     prevFrameTime = frameTime;
   }
   roadsForTime.push(data);
 }
+
+
+// for(var i = 0; i < frames.length; ++i)
+console.log(JSON.stringify(frames, null, 2));
+// console.log("frame: %j", frames[1]);
 
 var lines = require('fs').readFileSync('roads.dat', 'utf-8')
     .split('\n')
