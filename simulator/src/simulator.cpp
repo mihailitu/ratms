@@ -94,7 +94,7 @@ void Simulator::serialize_v2(double time, std::ostream &output) const
         for(auto &lane : road.getVehicles()) {
             for(auto &vehicle : lane) {
                 vehicle.serialize(output);
-                output << vLane << " "; // until decided how to let a vehicle know on which lane is, simply output it.
+                output << vLane; // until decided how to let a vehicle know on which lane is, simply output it.
             }
             ++vLane;
         }

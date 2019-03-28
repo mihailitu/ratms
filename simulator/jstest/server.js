@@ -1,52 +1,15 @@
 var express = require('express'),
-    app = express(),
-    http = require('http'),
-    socketIo = require('socket.io');
+app = express(),
+http = require('http'),
+socketIo = require('socket.io');
 
 var timeFrames = require('fs').readFileSync('simple_road.dat', 'utf-8')
-    .split('\n')
-    .filter(Boolean);
-
-var frames = [];
-var prevFrameTime = 0.0;
-var roadsForTime = [];
-
-for(var i in timeFrames) {
-  var frameData = timeFrames[i].split(' ');
-  var frameTime = frameData[0];
-  var data = {
-      roadID: frameData[1],
-      vehicles: []
-    };
-
-  for(var v = 2; v < frameData.length; v+=4) {
-      data.vehicles.push({
-        x: frameData[v],
-        v: frameData[v+1],
-        a: frameData[v+2],
-        l: frameData[v+3]
-      });
-    }
-
-  if(prevFrameTime != frameTime) {
-    frames.push({
-      time: prevFrameTime,
-      data: roadsForTime
-      });
-    roadsForTime = [];
-    prevFrameTime = frameTime;
-  }
-  roadsForTime.push(data);
-}
-
-
-// for(var i = 0; i < frames.length; ++i)
-console.log(JSON.stringify(frames, null, 2));
-// console.log("frame: %j", frames[1]);
+.split('\n')
+.filter(Boolean);
 
 var lines = require('fs').readFileSync('roads.dat', 'utf-8')
-    .split('\n')
-    .filter(Boolean);
+.split('\n')
+.filter(Boolean);
 
 // Map of the roads, where the key is road_id
 // This structure will connect cars to roads
@@ -59,19 +22,18 @@ var roads = [];
 for(var i in lines) {
   var road_data = lines[i].split(' ');
 
-  roads.push(
-    {
-        id: road_data[0],
-        lanes: road_data[11],
-        start: {
-          x: road_data[5],
-          y: road_data[6]
-        },
-        end: {
-          x: road_data[7],
-          y: road_data[8]
-        }
-    });
+  roads.push({
+    id: road_data[0],
+    lanes: road_data[11],
+    start: {
+      x: road_data[5],
+      y: road_data[6]
+    },
+    end: {
+      x: road_data[7],
+      y: road_data[8]
+    }
+  });
 
   road_map[road_data[0]] =
   {
@@ -95,17 +57,19 @@ for(var i in lines) {
     maxSpeed: road_data[10],
     lanes: road_data[11]
   };
-}
+};
 
 // find out the dimensions of the map to normalize coordinates
 width = Math.max.apply(Math, roads.map(
   function(o) {
     return o.end.x;
   }));
+
 height = Math.max.apply(Math, roads.map(
-    function(o) {
-      return o.end.y;
-    }));
+  function(o) {
+    return o.end.y;
+  }));
+
 console.log('Map size: [' + width + ', ' + height +']');
 
 // normalize coordinates
@@ -114,7 +78,42 @@ roads.forEach(function(road) {
   road.start.y = road.start.y / height;
   road.end.x = road.end.x / width;
   road.end.y = road.end.y / height;
-})
+});
+
+// read vehicle position
+var frames = [];
+var prevFrameTime = 0.0;
+var roadsForTime = [];
+
+for(var i in timeFrames) {
+  var frameData = timeFrames[i].split(' ');
+  var frameTime = frameData[0];
+  var data = {
+    roadID: frameData[1],
+    vehicles: []
+  };
+
+  for(var v = 2; v < frameData.length; v+=4) {
+    data.vehicles.push({
+      d: frameData[v],
+      v: frameData[v+1],
+      a: frameData[v+2],
+      l: frameData[v+3]
+    });
+  };
+
+  if(prevFrameTime != frameTime) {
+    frames.push({
+      time: prevFrameTime,
+      data: roadsForTime,
+    });
+    roadsForTime = [];
+    prevFrameTime = frameTime;
+  }
+
+  roadsForTime.push(data);
+}
+console.log(JSON.stringify(frames, null, 2));
 
 // start webserver on port 8080
 var server =  http.createServer(app);
@@ -133,13 +132,13 @@ io.on('connection', function (socket) {
   // read vehicle status
   socket.emit('draw_state', {});
   var frames = 0;
-   // add handler for message type "draw_line".
-   socket.on('next_frame', function (data) {
-     // console.log("frame: " + frames);
-     if(frames++ < 100) {
-        // io.emit('draw_state');
-      } else {
-          console.log("Simulation done");
-        }
-   });
+  // add handler for message type "draw_line".
+  socket.on('next_frame', function (data) {
+    // console.log("frame: " + frames);
+    if(frames++ < 100) {
+      // io.emit('draw_state');
+    } else {
+      console.log("Simulation done");
+    }
+  });
 });
