@@ -8,8 +8,9 @@ var lines = require('fs').readFileSync('roads.dat', 'utf-8')
 .filter(Boolean);
 
 // Map of the roads, where the key is road_id
-// This structure will connect cars to roads
+// This structure will hold all road info and it will connect cars to roads
 var road_map = {};
+
 // simple 2D representation of roads for drawing in client
 var roads = [];
 
@@ -81,8 +82,11 @@ var timeFrames = require('fs').readFileSync('output.dat', 'utf-8')
 .split('\n')
 .filter(Boolean);
 
+// each time frame
 var frames = [];
 var prevFrameTime = 0.0;
+
+// all the roads involved in a timeframe
 var roadsForTime = [];
 
 for(var i in timeFrames) {
@@ -95,10 +99,14 @@ for(var i in timeFrames) {
 
   for(var v = 2; v < frameData.length; v+=4) {
     data.vehicles.push({
-      d: frameData[v],
-      v: frameData[v+1],
-      a: frameData[v+2],
-      l: frameData[v+3]
+      // TODO: calculate the exact position of the vehicle relative
+      // to the road it belongs to
+      x: 0,
+      y: 0,
+      d: frameData[v],   // x: distance from the beginning of the road
+      v: frameData[v+1], // v: current velocity
+      a: frameData[v+2], // a: current acceleration
+      l: frameData[v+3] //  l: the lane that this vehicle belongs to
     });
   };
 
@@ -129,16 +137,16 @@ io.on('connection', function (socket) {
   console.log("on connection: ");
 
   socket.emit('draw_map', {map: roads});
-  // read vehicle status
-  socket.emit('draw_state', {});
-  var frames = 0;
+
+  var frame = 0;
+  // send vehicle status
+  socket.emit('draw_state', frames[frame++]);
   // add handler for message type "draw_line".
   socket.on('next_frame', function (data) {
-    // console.log("frame: " + frames);
-    if(frames++ < 100) {
-      // io.emit('draw_state');
+    if (frame < frames.length) {
+      socket.emit('draw_state', frames[frame++]);
     } else {
-      console.log("Simulation done");
+      console.log("DONE");
     }
   });
 });

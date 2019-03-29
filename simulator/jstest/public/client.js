@@ -57,20 +57,20 @@
        context.lineWidth = road.lanes * 3;
        context.moveTo(road.start.x * viewWidth, road.start.y * viewHeight);
        context.lineTo(road.end.x * viewWidth, road.end.y * viewHeight);
-       // context.strokeStyle = "#eff2f7";
-       context.strokeStyle = 'green';
+       context.strokeStyle = "#eff2f7";
+       // context.strokeStyle = 'green';
        context.stroke();
      }
 
-     // for(var i = 0; i < 1000; ++i) {
-     //   context.beginPath();
-     //   context.arc(Math.random() * viewWidth, Math.random() * viewHeight, 3, 0, 2 * Math.PI);
-     //   context.fillStyle = "blue";
-     //   context.strokeStyle = "red";
-     //   context.lineWidth = 1;
-     //   context.stroke();
-     //   context.fill();
-     // }
+     for(var i = 0; i < data.vehicles.length; ++i) {
+       context.beginPath();
+       context.arc(data.vehicles[i].x * viewWidth, data.vehicles[i].y * viewHeight, 3, 0, 2 * Math.PI);
+       context.fillStyle = "blue";
+       context.strokeStyle = "red";
+       context.lineWidth = 1;
+       context.stroke();
+       context.fill();
+     }
 
      function sleep(start, delay) {
          // var start = new Date().getTime();
