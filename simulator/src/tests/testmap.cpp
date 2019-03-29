@@ -6,6 +6,12 @@
 namespace simulator
 {
 
+void setDummyMapSize(unsigned x, unsigned y, std::vector<Road> &map) {
+    Road r(0xffffffff, x, 0, 0);
+    r.setCardinalCoordinates({0, x}, {0, y});
+    map.push_back(r);
+}
+
 /*
  * Construct a simple road network for dev and testing purposes:
  * r1 -> r2
@@ -24,14 +30,13 @@ namespace simulator
 std::vector<Road> getTestMap()
 {
     Road r0(0, 500, 2, 50);
-    r0.setCardinalCoordinates({5, 100}, {505, 100});
+    r0.setCardinalCoordinates({0, 100}, {500, 100});
 
-    // dummy road to force map size for test maps
-    Road r1(99, 1000, 1, 0);
-    r1.setCardinalCoordinates({0, 500}, {1000, 500});
+    Vehicle v(0.0, 5.0, 20.0);
+    r0.addVehicle(v, 0);
+
     std::vector<Road> cmap = {
-        r0,
-        r1
+        r0
     };
 
 //    cmap[0].addConnection( cmap[1] );
@@ -53,9 +58,6 @@ std::vector<Road> getTestMap()
 
 
 std::vector<Road> semaphoreTest() {
-
-    Config::simulatorOuput = Config::simpleRoadTestFName;
-
     Road r(0, 500, 2, 20);
     r.setCardinalCoordinates({0, 0}, {0, 500});
 
@@ -82,8 +84,6 @@ std::vector<Road> semaphoreTest() {
  */
 std::vector<Road> laneChangeTest()
 {
-    Config::simulatorOuput = Config::simpleRoadTestFName;
-
     Road r(0, 2000, 2, 20);
 
     Vehicle v(0.0, 5.0, 20.0);
@@ -109,7 +109,6 @@ std::vector<Road> laneChangeTest()
  */
 std::vector<Road> twoLanesTestMap()
 {
-    Config::simulatorOuput = Config::simpleRoadTestFName;
     Vehicle v(0.0, 5.0, 20.0);
     Vehicle v1(100.0, 5.0, 18);
     Vehicle v2(0.0, 5.0, 22);
@@ -130,8 +129,6 @@ std::vector<Road> twoLanesTestMap()
  */
 std::vector<Road> manyRandomVehicleTestMap(int numVehicles)
 {
-    Config::simulatorOuput = Config::simpleRoadTestFName;
-
     std::random_device rd;
     std::mt19937 rng(rd());
 
@@ -165,7 +162,6 @@ std::vector<Road> manyRandomVehicleTestMap(int numVehicles)
  */
 std::vector<Road> sigleVehicleTestMap()
 {
-    Config::simulatorOuput = Config::simpleRoadTestFName;
     // add one vehicle at the beginning of the road for free road tests
     double vLength = 5.0; // medium sedane
     double vPos = 0.0;
@@ -185,7 +181,6 @@ std::vector<Road> sigleVehicleTestMap()
  */
 std::vector<Road> followingVehicleTestMap()
 {
-    Config::simulatorOuput = Config::simpleRoadTestFName;
     Vehicle v(0.0, 5.0, 20.0);
     Vehicle v1(100.0, 5.0, 18);
     Vehicle v2(150.0, 5.0, 15.0);

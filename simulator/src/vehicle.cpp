@@ -173,9 +173,9 @@ void Vehicle::serialize(std::ostream &out) const
 // version 1:
 void Vehicle::serialize_v1(std::ostream &out) const
 {
-    out << xPos << " " <<
+    out << " " << xPos << " " <<
            velocity << " " <<
-           acceleration << " ";
+           acceleration;
 }
 
 void Vehicle::printVehicle() const

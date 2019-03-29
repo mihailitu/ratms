@@ -236,7 +236,7 @@ void Road::serialize_v2(std::ostream &out) const
            endPosCard.second << " " <<
            length << " " <<
            maxSpeed << " " <<
-           lanesNo << " ";
+           lanesNo;
 }
 
 void Road::printRoad() const

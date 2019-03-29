@@ -8,6 +8,7 @@
 
 namespace simulator
 {
+void setDummyMapSize(unsigned x, unsigned y, std::vector<Road> &map);
 std::vector<Road> getTestMap();
 std::vector<Road> semaphoreTest();
 std::vector<Road> manyRandomVehicleTestMap(int numVehicles);

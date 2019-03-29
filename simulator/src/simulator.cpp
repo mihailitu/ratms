@@ -48,9 +48,9 @@ void Simulator::runTestSimulator()
         for( auto &mapEl : cityMap )
             mapEl.second.update(dt, cityMap);
 
-        runTime += dt;
-
         serialize(runTime, output);
+
+        runTime += dt;
     }
     output.close();
 }
@@ -89,17 +89,17 @@ void Simulator::serialize_v2(double time, std::ostream &output) const
     std::showpoint(output);
     for(auto &roadElement : cityMap) {
         const Road& road = roadElement.second;
-        output << time << " " << road.getId() << " ";
+        output << time << " " << road.getId();
         unsigned vLane = 0;
         for(auto &lane : road.getVehicles()) {
             for(auto &vehicle : lane) {
                 vehicle.serialize(output);
-                output << vLane; // until decided how to let a vehicle know on which lane is, simply output it.
+                output << " " << vLane; // until decided how to let a vehicle know on which lane is, simply output it.
             }
             ++vLane;
         }
+        output << "\n";
     }
-    output << "\n";
 }
 
 /* let other services know this road's layout (version 1, compatible with simple_road.py test:

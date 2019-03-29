@@ -3,10 +3,6 @@ app = express(),
 http = require('http'),
 socketIo = require('socket.io');
 
-var timeFrames = require('fs').readFileSync('simple_road.dat', 'utf-8')
-.split('\n')
-.filter(Boolean);
-
 var lines = require('fs').readFileSync('roads.dat', 'utf-8')
 .split('\n')
 .filter(Boolean);
@@ -81,6 +77,10 @@ roads.forEach(function(road) {
 });
 
 // read vehicle position
+var timeFrames = require('fs').readFileSync('output.dat', 'utf-8')
+.split('\n')
+.filter(Boolean);
+
 var frames = [];
 var prevFrameTime = 0.0;
 var roadsForTime = [];
