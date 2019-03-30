@@ -81,53 +81,20 @@ var timeFrames = require('fs').readFileSync('output.dat', 'utf-8')
     .split('\n')
     .filter(Boolean);
 
-function getCoordFromDist__(x1, y1, x2, y2, distance) {
-    // Determine line lengths
-    var xlen = x2 - x1;
-    var ylen = y2 - y1;
-
-    // Determine hypotenuse length
-    var hlen = Math.sqrt(Math.pow(xlen,2) + Math.pow(ylen,2));
-
-    // The variable identifying the length of the `shortened` line.
-    // In this case 50 units.
-    var smallerLen = distance;
-
-    // Determine the ratio between they shortened value and the full hypotenuse.
-    var ratio = smallerLen / hlen;
-
-    var smallerXLen = xlen * ratio;
-    var smallerYLen = ylen * ratio;
-
-    // The new X point is the starting x plus the smaller x length.
-    var smallerX = x1 + smallerXLen;
-
-    // Same goes for the new Y.
-    var smallerY = y1 + smallerYLen;
-    return {x: smallerX, y: smallerY};
-}
-
 function getCoordFromDist(startCoord, endCoord, distance) {
-    console.log({startCoord, endCoord});
     // line lengths
     var xlen = endCoord.x - startCoord.x;
     var ylen = endCoord.y - startCoord.y;
-    console.log({xlen, ylen});
     // hypotenuse length
     var hlen = Math.sqrt(Math.pow(xlen,2) + Math.pow(ylen,2));
-    console.log({hlen});
     // Determine the ratio between they ditance value and the full hypotenuse.
     var ratio = distance / hlen;
-    console.log({ratio});
     var newXLen = xlen * ratio;
     var newYLen = ylen * ratio;
-    console.log({newXLen, newYLen});
     // The new X point is the starting x plus the smaller x length.
     var x = startCoord.x + newXLen;
     // Same goes for the new Y.
     var y = startCoord.y + newYLen;
-    console.log(startCoord.y + ' + ' + newYLen + ' = ' + y);
-    console.log({x: x, y: y});
     return {x, y};
 }
 
@@ -147,12 +114,7 @@ for (var i in timeFrames) {
     };
 
     for (var v = 2; v < frameData.length; v += 4) {
-        console.log("Road: [" + JSON.stringify(road_map[data.roadID].startCard) + ', ' + JSON.stringify(road_map[data.roadID].endCard) + ']');
         var vehicleCoord = getCoordFromDist(road_map[data.roadID].startCard, road_map[data.roadID].endCard, frameData[v]);
-        // var vehicleCoord = getCoordFromDist(road_map[data.roadID].startCard.x, road_map[data.roadID].startCard.y,
-        //                                     road_map[data.roadID].endCard.x, road_map[data.roadID].endCard.y,
-        //                                     frameData[v]);
-        console.log("VCoord: [" + JSON.stringify(vehicleCoord) + ']');
         data.vehicles.push({
             // TODO: calculate the exact position of the vehicle relative
             // to the road it belongs to
@@ -163,7 +125,6 @@ for (var i in timeFrames) {
             a: frameData[v + 2], // a: current acceleration
             l: frameData[v + 3] //  l: the lane that this vehicle belongs to
         });
-        console.log(JSON.stringify(data, null, 2));
     };
 
     if (prevFrameTime != frameTime) {
