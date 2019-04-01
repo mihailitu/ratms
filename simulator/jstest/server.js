@@ -20,15 +20,15 @@ for (var i in lines) {
     var road_data = lines[i].split(' ');
 
     roads.push({
-        id: road_data[0],
-        lanes: road_data[11],
+        id: Number(road_data[0]),
+        lanes: Number(road_data[11]),
         start: {
-            x: road_data[5],
-            y: road_data[6]
+            x: Number(road_data[5]),
+            y: Number(road_data[6])
         },
         end: {
-            x: road_data[7],
-            y: road_data[8]
+            x: Number(road_data[7]),
+            y: Number(road_data[8])
         }
     });
 
@@ -49,9 +49,9 @@ for (var i in lines) {
             x: Number(road_data[7]),
             y: Number(road_data[8]),
         },
-        length: road_data[9],
-        maxSpeed: road_data[10],
-        lanes: road_data[11]
+        length: Number(road_data[9]),
+        maxSpeed: Number(road_data[10]),
+        lanes: Number(road_data[11])
     };
 };
 
@@ -98,7 +98,7 @@ function getCoordFromDist(startCoord, endCoord, distance) {
     return {x, y};
 }
 
-// each time frame
+// entire vehicle data for each time frame
 var frames = [];
 var prevFrameTime = 0.0;
 
@@ -109,13 +109,14 @@ for (var i in timeFrames) {
     var frameData = timeFrames[i].split(' ');
     var frameTime = frameData[0];
     var data = {
-        roadID: frameData[1],
+        roadID: Number(frameData[1]),
         vehicles: []
     };
 
     for (var v = 2; v < frameData.length; v += 4) {
+        //TODO: draw vehicle relative to the lane it's running on
         var vehicleCoord = getCoordFromDist(road_map[data.roadID].startCard, road_map[data.roadID].endCard, frameData[v]);
-        data.vehicles.push({
+        var vehicle = {
             // TODO: calculate the exact position of the vehicle relative
             // to the road it belongs to
             x: vehicleCoord.x/width,
@@ -124,7 +125,8 @@ for (var i in timeFrames) {
             v: frameData[v + 1], // v: current velocity
             a: frameData[v + 2], // a: current acceleration
             l: frameData[v + 3] //  l: the lane that this vehicle belongs to
-        });
+        }
+        data.vehicles.push(vehicle);
     };
 
     if (prevFrameTime != frameTime) {
@@ -138,7 +140,7 @@ for (var i in timeFrames) {
 
     roadsForTime.push(data);
 }
-console.log(JSON.stringify(frames, null, 2));
+// console.log(JSON.stringify(frames, null, 2));
 
 // start webserver on port 8080
 var server = http.createServer(app);

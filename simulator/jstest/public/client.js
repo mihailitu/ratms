@@ -47,10 +47,21 @@ document.addEventListener("DOMContentLoaded", function() {
         var canvas  = document.getElementById('drawing');
         var context = canvas.getContext('2d');
 
-        var delay = 500; //ms
-        var statFrameTime = new Date().getTime();
         // clear canvas
         context.clearRect(0, 0, viewWidth, viewHeight);
+
+        var frameTxt = "Frame: " + data.time;
+        var textX = viewWidth - context.measureText("Frame: 000000.000000").width;
+        var textY = 15;
+        var textH = 15;
+        context.fillText(frameTxt, textX, textY);
+        textY += textH;
+        context.fillText("Roads: " + road_map.length, textX, textY);
+        textY += textH;
+        context.fillText("Vehicles: " + data.data.length, textX, textY);
+
+        var delay = 500; //ms
+        var statFrameTime = new Date().getTime();
 
         // first, draw the roads
         for(var i = 0; i < road_map.length; i++) {
@@ -64,7 +75,6 @@ document.addEventListener("DOMContentLoaded", function() {
             // context.strokeStyle = 'green';
             context.stroke();
         }
-        console.log("frame: " + data.time);
 
         for(var i = 0; i < data.data.length; ++i) {
             for(var v = 0; v < data.data[i].vehicles.length; ++v) {
