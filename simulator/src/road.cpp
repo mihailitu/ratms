@@ -12,12 +12,14 @@ Vehicle Road::trafficLightObject(0.0, 1.0, 0.0);
 const double Road::minChangeLaneDist = 0.5;
 const double Road::maxChangeLaneDist = 25.0;
 
+static long idSeed = 0;
+
 Road::Road()
 {
 }
 
 Road::Road( roadID rId, double rLength, unsigned lanes, unsigned maxSpeed_mps ) :
-    id (rId), length(rLength), usageProb(0.5), lanesNo(lanes), maxSpeed(maxSpeed_mps)
+    id (idSeed++), length(rLength), usageProb(0.5), lanesNo(lanes), maxSpeed(maxSpeed_mps)
 {
     log_info("New road added: \n"
              "\t ID: %u \n"

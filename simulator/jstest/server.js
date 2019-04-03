@@ -114,8 +114,10 @@ for (var i in timeFrames) {
     };
 
     for (var v = 2; v < frameData.length; v += 4) {
-        //TODO: draw vehicle relative to the lane it's running on
         var vehicleCoord = getCoordFromDist(road_map[data.roadID].startCard, road_map[data.roadID].endCard, frameData[v]);
+        var vLane = frameData[v+3];
+        vehicleCoord.x -= vLane * 3;
+        vehicleCoord.y -= vLane * 3;
         var vehicle = {
             // TODO: calculate the exact position of the vehicle relative
             // to the road it belongs to

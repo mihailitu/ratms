@@ -84,20 +84,41 @@ std::vector<Road> semaphoreTest() {
  */
 std::vector<Road> laneChangeTest()
 {
-    Road r(0, 2000, 2, 20);
+    Road r1(0, 1990, 2, 20);
+    r1.setCardinalCoordinates({10, 100}, {2000, 100});
+    {
+        Vehicle v(0.0, 5.0, 20.0);
+        Vehicle v1(20.0, 5.0, 15);
+        Vehicle v2(20.0, 5.0, 18.0);
+        Vehicle v3(5.0, 5.0, 17.0);
 
-    Vehicle v(0.0, 5.0, 20.0);
-    Vehicle v1(20.0, 5.0, 15);
-    Vehicle v2(20.0, 5.0, 18.0);
-    Vehicle v3(5.0, 5.0, 17.0);
+        r1.addVehicle(v, 0);
+        r1.addVehicle(v1, 0);
+        r1.addVehicle(v2, 1);
+        r1.addVehicle(v3, 1);
+    }
 
-    r.addVehicle(v, 0);
-    r.addVehicle(v1, 0);
-    r.addVehicle(v2, 1);
-    r.addVehicle(v3, 1);
     std::vector<Road> smap = {
-        r
+        r1
     };
+
+    Road r2(1, 1400, 3, 20);
+    r2.setCardinalCoordinates({1500, 90}, {100, 90});
+    {
+        Vehicle v(0.0, 5.0, 20.0);
+        Vehicle v1(20.0, 5.0, 15);
+        Vehicle v2(20.0, 5.0, 18.0);
+        Vehicle v3(5.0, 5.0, 17.0);
+
+        r2.addVehicle(v, 0);
+        r2.addVehicle(v1, 0);
+        r2.addVehicle(v2, 1);
+        r2.addVehicle(v3, 1);
+    }
+
+    smap.push_back(r2);
+
+    setDummyMapSize(2000, 500, smap);
     return smap;
 }
 
