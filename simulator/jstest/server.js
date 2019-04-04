@@ -98,6 +98,14 @@ function getCoordFromDist(startCoord, endCoord, distance) {
     return {x, y};
 }
 
+function getCoordOnTheRoadLane(startCoord, endCoord, roadLane) {
+    var angle = Math.atan2(endCoord.y - startCoord.y, endCoord.x - startCoord.x);
+    var lanePix = roadLane * 3; // 3 pixels per lane
+    var x = -Math.sin(angle) * lanePix + startCoord.x;
+    var y = Math.cos(angle) * lanePix + startCoord.y;
+    return {x, y};
+}
+
 // entire vehicle data for each time frame
 var frames = [];
 var prevFrameTime = 0.0;
@@ -114,10 +122,9 @@ for (var i in timeFrames) {
     };
 
     for (var v = 2; v < frameData.length; v += 4) {
+        //TODO: draw vehicle relative to the lane it's running on
         var vehicleCoord = getCoordFromDist(road_map[data.roadID].startCard, road_map[data.roadID].endCard, frameData[v]);
-        var vLane = frameData[v+3];
-        vehicleCoord.x -= vLane * 3;
-        vehicleCoord.y -= vLane * 3;
+        vehicleCoord = getCoordOnTheRoadLane(vehicleCoord, road_map[data.roadID].endCard, frameData[v + 3]);
         var vehicle = {
             // TODO: calculate the exact position of the vehicle relative
             // to the road it belongs to
@@ -143,6 +150,7 @@ for (var i in timeFrames) {
     roadsForTime.push(data);
 }
 // console.log(JSON.stringify(frames, null, 2));
+console.log("Frames: " + frames.length);
 
 // start webserver on port 8080
 var server = http.createServer(app);
@@ -163,13 +171,15 @@ io.on('connection', function(socket) {
 
     var frame = 0;
     // send vehicle status
-    socket.emit('draw_state', frames[frame++]);
+    socket.emit('draw_state', {frameData: frames[frame++], frameNo: frame, frameTotal: frames.length});
     // add handler for message type "draw_line".
     socket.on('next_frame', function(data) {
         if (frame < frames.length) {
-            socket.emit('draw_state', frames[frame++]);
+            socket.emit('draw_state', {frameData: frames[frame++], frameNo: frame, frameTotal: frames.length});
         } else {
             console.log("DONE");
+            frame = 0;
+            socket.emit('draw_state', {frameData: frames[frame++], frameNo: frame, frameTotal: frames.length});
         }
     });
 });

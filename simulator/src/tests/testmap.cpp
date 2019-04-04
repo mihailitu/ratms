@@ -158,6 +158,7 @@ std::vector<Road> manyRandomVehicleTestMap(int numVehicles)
     std::uniform_int_distribution<int> laneRnd(0, 2);
 
     Road r(0, 2000, 3, 20);
+    r.setCardinalCoordinates({10, 100}, {2010, 100});
     log_info("Random test - vehicles: %d", numVehicles);
     for(int i = 0; i < numVehicles; ++i) {
 
@@ -172,6 +173,9 @@ std::vector<Road> manyRandomVehicleTestMap(int numVehicles)
     std::vector<Road> smap = {
         r
     };
+
+    setDummyMapSize(2000, 500, smap);
+
     return smap;
 }
 

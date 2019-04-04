@@ -43,6 +43,9 @@ document.addEventListener("DOMContentLoaded", function() {
         console.log("Map loaded. Length: " + road_map.length)
     });
 
+    var delay = 500; //ms
+    var statFrameTime = new Date().getTime();
+
     socket.on('draw_state', function (data) {
         var canvas  = document.getElementById('drawing');
         var context = canvas.getContext('2d');
@@ -50,18 +53,20 @@ document.addEventListener("DOMContentLoaded", function() {
         // clear canvas
         context.clearRect(0, 0, viewWidth, viewHeight);
 
-        var frameTxt = "Frame: " + data.time;
-        var textX = viewWidth - context.measureText("Frame: 000000.000000").width;
+        var frameTxt = "Time: " + data.frameData.time;
+        var textX = viewWidth - context.measureText("Time: 000000.000000").width;
         var textY = 15;
         var textH = 15;
         context.fillText(frameTxt, textX, textY);
         textY += textH;
+        context.fillText("Frame: " + data.frameNo + " / " + data.frameTotal, textX, textY);
+        textY += textH;
         context.fillText("Roads: " + road_map.length, textX, textY);
         textY += textH;
-        context.fillText("Vehicles: " + data.data.length, textX, textY);
-
-        var delay = 500; //ms
-        var statFrameTime = new Date().getTime();
+        var totalFramevehiclesNo = 0;
+        for(var i = 0; i < data.frameData.data.length; ++i)
+            totalFramevehiclesNo += data.frameData.data[i].vehicles.length;
+        context.fillText("Vehicles: " + totalFramevehiclesNo, textX, textY);
 
         // first, draw the roads
         for(var i = 0; i < road_map.length; i++) {
@@ -76,10 +81,10 @@ document.addEventListener("DOMContentLoaded", function() {
             context.stroke();
         }
 
-        for(var i = 0; i < data.data.length; ++i) {
-            for(var v = 0; v < data.data[i].vehicles.length; ++v) {
+        for(var i = 0; i < data.frameData.data.length; ++i) {
+            for(var v = 0; v < data.frameData.data[i].vehicles.length; ++v) {
                 context.beginPath();
-                context.arc(data.data[i].vehicles[v].x * viewWidth, data.data[i].vehicles[v].y * viewHeight, 3, 0, 2 * Math.PI);
+                context.arc(data.frameData.data[i].vehicles[v].x * viewWidth, data.frameData.data[i].vehicles[v].y * viewHeight, 3, 0, 2 * Math.PI);
                 context.fillStyle = "blue";
                 context.strokeStyle = "red";
                 context.lineWidth = 1;
@@ -89,7 +94,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         sleep(statFrameTime, delay);
-
+        statFrameTime = new Date().getTime();
         socket.emit('next_frame');
     });
     // main loop, running every 25ms
