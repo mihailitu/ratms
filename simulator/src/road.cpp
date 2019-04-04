@@ -57,31 +57,6 @@ void Road::addLaneConnection(unsigned lane, roadID road)
     connections[lane].push_back(road);
 }
 
-roadID Road::getId() const
-{
-    return id;
-}
-
-unsigned Road::getMaxSpeed() const
-{
-    return maxSpeed;
-}
-
-unsigned Road::getLanesNo() const
-{
-    return lanesNo;
-}
-
-unsigned Road::getLength() const
-{
-    return length;
-}
-
-const std::vector<std::vector<Vehicle>>& Road::getVehicles() const
-{
-    return vehicles;
-}
-
 /* Vehicles are sorted on descenting order: first vehicle is closest to the end of the road - highest xPos
  * Vehicles on front need to be updated first. */
 void Road::indexRoad()
@@ -160,6 +135,20 @@ void Road::update(double dt, const std::map<roadID, Road> &cityMap)
 {
     indexRoad();
 
+/***
+ * - isSlowingDown ?
+ *      - takeOver() if:
+ *          - isEnoughSpace on the next lane
+ *          - changing lane will improve speed for this vehicle
+ * - canCrossRoad ?
+ *      - crossRoad() if:
+ *          - thereIsAConnection
+ *          - conndctedRoadNotFull
+ *          - semaphoreIsGreen
+ *          - vehicleIsFirstInLine
+ *          - vehicleIsAtTheEndOfTheRoad
+ */
+
     unsigned laneIndex = 0;
     for(auto &lane : vehicles) {
 
@@ -177,7 +166,7 @@ void Road::update(double dt, const std::map<roadID, Road> &cityMap)
                         continue;
                     }
 
-                    // TODO: Even if we have a green light, check if next road is full.
+                    // TODO: Even if we have a green light, check if connection road is full.
                     current.update(dt, noVehicle);
                 }
             } else {
@@ -219,6 +208,31 @@ bool Road::performRoadChange(const Vehicle &currentVehicle, unsigned laneIndex, 
 void Road::serialize(std::ostream &out) const
 {
     serialize_v2(out);
+}
+
+roadID Road::getId() const
+{
+    return id;
+}
+
+unsigned Road::getMaxSpeed() const
+{
+    return maxSpeed;
+}
+
+unsigned Road::getLanesNo() const
+{
+    return lanesNo;
+}
+
+unsigned Road::getLength() const
+{
+    return length;
+}
+
+const std::vector<std::vector<Vehicle>>& Road::getVehicles() const
+{
+    return vehicles;
 }
 
 /*
