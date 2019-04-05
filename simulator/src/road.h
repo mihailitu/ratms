@@ -97,7 +97,7 @@ private:
      *      - That way we can keep vehicles sorted and we don't have to sort the lane at each time step
      * Vehicles on this road, assigned to lanes
      */
-    std::vector<std::vector<Vehicle>> vehicles;
+    std::vector<std::list<Vehicle>> vehicles;
 
     /* Every lane from a road has a TrafficLight object associated with it.
      * Each traffic light is updated independently.
@@ -153,17 +153,11 @@ public:
      */
     void addLaneConnection(unsigned lane, roadID road);
 
-    // We need to sort vehicles on the road based on their position/lane
-    // We need to to this every time before updating vehicle position,
-    // because some vehicles might change lanes, some might arrive at their destination,
-    // some may enter the road.
-    void indexRoad();
-
     roadID getId() const;
     unsigned getMaxSpeed() const;
     unsigned getLength() const;
     unsigned getLanesNo() const;
-    const std::vector<std::vector<Vehicle>>& getVehicles() const;
+    const std::vector<std::list<Vehicle>>& getVehicles() const;
 
     void update(double dt, const std::map<roadID, Road> &cityMap );
 
