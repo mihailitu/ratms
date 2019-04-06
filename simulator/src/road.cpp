@@ -18,7 +18,7 @@ Road::Road()
 {
 }
 
-Road::Road( roadID rId, double rLength, unsigned lanes, unsigned maxSpeed_mps ) :
+Road::Road(roadID /*rId*/, double rLength, unsigned lanes, unsigned maxSpeed_mps ) :
     id (idSeed++), length(rLength), usageProb(0.5), lanesNo(lanes), maxSpeed(maxSpeed_mps)
 {
     log_info("New road added: \n"
@@ -29,7 +29,7 @@ Road::Road( roadID rId, double rLength, unsigned lanes, unsigned maxSpeed_mps ) 
              id, length, maxSpeed, lanesNo);
 
     for(unsigned i = 0; i < lanesNo; ++i) {
-        // vehicles.push_back(std::list<Vehicle>());
+        vehicles.push_back(std::list<Vehicle>());
         trafficLights.push_back(TrafficLight(10, 1, 30, TrafficLight::red_light));
     }
 
@@ -44,6 +44,7 @@ void Road::addVehicle(Vehicle v, unsigned lane)
         log_warning("Assigned vehicle to road %u on lane %d, where the road has only %d lanes.", id, lane, lanesNo);
         lane = 0; //TODO: throw exception?
     }
+
     auto comp = [](const Vehicle &v1, const Vehicle &v2)
     {
             return v1.getPos() < v2.getPos();
@@ -67,7 +68,9 @@ void Road::addLaneConnection(unsigned lane, roadID road)
 /* Lane change model:
  * http://traffic-simulation.de/MOBIL.html
  */
-bool Road::performLaneChange(unsigned laneIndex, const Vehicle &currentVehicle, unsigned vehicleIndex)
+bool Road::performLaneChange(unsigned /*laneIndex*/,
+                             const Vehicle &/*currentVehicle*/,
+                             unsigned /*vehicleIndex*/)
 {
 //    if (lanesNo == 1)
 //        return false;
@@ -111,7 +114,8 @@ bool Road::performLaneChange(unsigned laneIndex, const Vehicle &currentVehicle, 
  * @param dt - update time
  * @param cityMap - all the roads from the city
  */
-void Road::update(double dt, const std::map<roadID, Road> &cityMap)
+void Road::update(double dt,
+                  const std::map<roadID, Road> &/*cityMap*/)
 {
 
 /***
@@ -132,6 +136,8 @@ void Road::update(double dt, const std::map<roadID, Road> &cityMap)
     for(auto &lane : vehicles) {
 
         trafficLights[laneIndex].update(dt);
+        for(auto it = lane.rbegin(); it != lane.rend(); ++it)
+            it->update(dt, noVehicle);
 
         ++laneIndex;
     }
@@ -153,7 +159,9 @@ roadPosCard Road::getEndPosCard()
     return endPosCard;
 }
 
-bool Road::performRoadChange(const Vehicle &currentVehicle, unsigned laneIndex, const std::map<roadID, Road> &cityMap)
+bool Road::performRoadChange(const Vehicle &currentVehicle,
+                             unsigned /*laneIndex*/,
+                             const std::map<roadID, Road> &/*cityMap*/)
 {
     if(currentVehicle.getPos() >= length) {
     }

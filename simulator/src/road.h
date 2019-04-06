@@ -65,7 +65,6 @@ private:
 
     /* Cartesian coordinates - for easier visual 2D representation */
     /* The Cartesian coordinates are set in meters for now */
-    /* TODO: make this scalable and adaptable to screen */
     roadPosCard startPosCard;
     roadPosCard endPosCard;
 

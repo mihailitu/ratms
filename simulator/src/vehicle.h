@@ -31,7 +31,7 @@ private:
      *      in a regular city, sedans (or shorter should be more probable than trucks, etc
      *
      * NOTE: Use Vehicle class to represent traffic lights for now.
-     *       We identify them as zero or negavice length vehicles with zero speed.
+     *       We identify them as zero or negavice length vehicles with zero speed and acceleration.
      *
      */
     double  length = { 5.0 };   // vechile length - see above
