@@ -83,6 +83,7 @@ public:
 
     double getPos() const;
     double getAcceleration() const;
+    bool isSlowingDown() const;
     double getLength() const;
     double getVelocity() const;
     roadID getCurrentRoad() const;

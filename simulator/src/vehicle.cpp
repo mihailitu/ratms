@@ -140,6 +140,11 @@ double Vehicle::getAcceleration() const
     return acceleration;
 }
 
+bool Vehicle::isSlowingDown() const
+{
+    return acceleration < 0;
+}
+
 double Vehicle::getPos() const
 {
     return xPos;

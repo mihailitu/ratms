@@ -136,9 +136,28 @@ void Road::update(double dt,
     for(auto &lane : vehicles) {
 
         trafficLights[laneIndex].update(dt);
-        for(auto it = lane.rbegin(); it != lane.rend(); ++it)
-            it->update(dt, noVehicle);
 
+        Vehicle &nextVehicle = trafficLightObject;
+        if (trafficLights[laneIndex].isGreen())
+            nextVehicle = noVehicle;
+
+        for(std::list<Vehicle>::reverse_iterator currentVehicle = lane.rbegin(); currentVehicle != lane.rend(); ++currentVehicle) {
+            currentVehicle->update(dt, nextVehicle);
+
+            if(currentVehicle == lane.rend()) { // first vehicle - get into another road
+
+
+                if (connections[laneIndex].size() == 0) { // no more connections.
+                    lane.erase(--currentVehicle.base());
+                    continue;
+                }
+            }
+
+            if(currentVehicle->isSlowingDown()) { // take over or pass obstacle
+            }
+
+             nextVehicle = *currentVehicle;
+        }
         ++laneIndex;
     }
 }
