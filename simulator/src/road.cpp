@@ -29,7 +29,7 @@ Road::Road( roadID rId, double rLength, unsigned lanes, unsigned maxSpeed_mps ) 
              id, length, maxSpeed, lanesNo);
 
     for(unsigned i = 0; i < lanesNo; ++i) {
-        vehicles.push_back(std::list<Vehicle>());
+        // vehicles.push_back(std::list<Vehicle>());
         trafficLights.push_back(TrafficLight(10, 1, 30, TrafficLight::red_light));
     }
 
@@ -44,8 +44,14 @@ void Road::addVehicle(Vehicle v, unsigned lane)
         log_warning("Assigned vehicle to road %u on lane %d, where the road has only %d lanes.", id, lane, lanesNo);
         lane = 0; //TODO: throw exception?
     }
-    vehicles[lane].push_back(v);
+    auto comp = [](const Vehicle &v1, const Vehicle &v2)
+    {
+            return v1.getPos() < v2.getPos();
+    };
+
     v.addRoadToItinerary(id);
+
+    vehicles[lane].insert(std::lower_bound(vehicles[lane].begin(), vehicles[lane].end(), v, comp), v);
 }
 
 void Road::addLaneConnection(unsigned lane, roadID road)
