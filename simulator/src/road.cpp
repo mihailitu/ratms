@@ -133,6 +133,7 @@ void Road::update(double dt,
  *          - vehicleIsAtTheEndOfTheRoad
  */
 
+    // Vehicle *nextVehicle = &trafficLightObject;
     std::reference_wrapper<Vehicle const> nextVehicle = trafficLightObject;
 
     unsigned laneIndex = 0;
