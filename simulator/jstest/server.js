@@ -55,6 +55,8 @@ for (var i in lines) {
     };
 };
 
+// console.log("Roads: " + JSON.stringify(roads, 0, 2));
+
 // find out the dimensions of the map to normalize coordinates
 width = Math.max.apply(Math, roads.map(
     function(o) {
@@ -118,10 +120,34 @@ for (var i in timeFrames) {
     var frameTime = frameData[0];
     var data = {
         roadID: Number(frameData[1]),
+        trafficLights: [],
         vehicles: []
     };
 
-    for (var v = 2; v < frameData.length; v += 4) {
+    var lanes = frameData[2];
+    var index = 3;
+    for(var lane = 0; lane < lanes; ++lane) {
+        var trafficLight = {
+        }
+        trafficLight.state = frameData[index++];
+        switch(trafficLight.state) {
+            case 'R':
+                trafficLight.state = 'red';
+                break;
+            case 'G':
+                trafficLight.state = 'green';
+                break;
+            case 'Y':
+                trafficLight.state = 'yellow';
+                break;
+        }
+        var coord = getCoordOnTheRoadLane(road_map[data.roadID].endCard, road_map[data.roadID].endCard, lane);
+        trafficLight.x = coord.x/width;
+        trafficLight.y = coord.y/height;
+        data.trafficLights.push(trafficLight);
+    }
+
+    for (var v = index; v < frameData.length; v += 4) {
         //TODO: draw vehicle relative to the lane it's running on
         var vehicleCoord = getCoordFromDist(road_map[data.roadID].startCard, road_map[data.roadID].endCard, frameData[v]);
         vehicleCoord = getCoordOnTheRoadLane(vehicleCoord, road_map[data.roadID].endCard, frameData[v + 3]);
@@ -151,6 +177,7 @@ for (var i in timeFrames) {
 }
 // console.log(JSON.stringify(frames, null, 2));
 console.log("Frames: " + frames.length);
+// console.log("Frames: " + JSON.stringify(frames, 0, 2));
 
 // start webserver on port 8080
 var server = http.createServer(app);

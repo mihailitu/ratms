@@ -7,8 +7,8 @@ namespace simulator
 {
 
 void setDummyMapSize(unsigned x, unsigned y, std::vector<Road> &map) {
-    Road r(0xffffffff, x, 0, 0);
-    r.setCardinalCoordinates({0, x}, {0, y});
+    Road r(0xffff, x, 0, 0);
+    r.setCardinalCoordinates({0, y}, {x, y});
     map.push_back(r);
 }
 
@@ -38,7 +38,7 @@ std::vector<Road> getTestMap()
         r
     };
 
-    setDummyMapSize(500, 500, cmap);
+    setDummyMapSize(1000, 500, cmap);
 //    cmap[0].addConnection( cmap[1] );
 //    cmap[1].addConnections({ cmap[2], cmap[7] });
 //    cmap[2].addConnection( cmap[3] );
@@ -55,7 +55,19 @@ std::vector<Road> getTestMap()
     return cmap;
 }
 
+std::vector<Road> getSmallerTestMap()
+{
+    Road r(0, 200, 2, 50);
+    r.setCardinalCoordinates({0, 100}, {200, 100});
 
+    r.addVehicle({0.0, 5.0, 20.0}, 0);
+    std::vector<Road> cmap = {
+        r
+    };
+
+    setDummyMapSize(250, 500, cmap);
+    return cmap;
+}
 
 std::vector<Road> semaphoreTest() {
     Road r(0, 500, 2, 20);

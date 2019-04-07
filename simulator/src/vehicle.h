@@ -73,6 +73,7 @@ private:
     /* compute new acceleration considering next vehicle */
     double getNewAcceleration(const Vehicle &nextVehicle) const;
 public:
+    Vehicle() {}
     Vehicle( double _x_orig, double _length, double maxV, ElementType vType = vehicle );
 
     void update(double dt, const Vehicle &nextVehicle); // update position, acceleration and velocity

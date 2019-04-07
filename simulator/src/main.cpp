@@ -10,7 +10,7 @@ int main( )
 {
     Simulator simulator;
 
-    std::vector<Road> roadMap = getTestMap();
+    std::vector<Road> roadMap = getSmallerTestMap();//getTestMap();
     // semaphoreTest();// manyRandomVehicleTestMap(30);//laneChangeTest();
 
     // setDummyMapSize(500, 500, roadMap);

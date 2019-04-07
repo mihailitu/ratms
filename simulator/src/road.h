@@ -106,7 +106,7 @@ private:
      */
     std::vector<TrafficLight> trafficLights;
 
-    static Vehicle trafficLightObject;
+    Vehicle trafficLightObject;
 
     /* Don't consider lane change when leader is more than minChangeLaneDist ahead.
      * This is a minor optimization - we don't do all the math for lane change if it's no needed */
@@ -156,6 +156,9 @@ public:
     unsigned getMaxSpeed() const;
     unsigned getLength() const;
     unsigned getLanesNo() const;
+
+    /* Returns lane lights in format for each lane (G=green, Y=yellow and R=red) */
+    std::vector<char> getCurrentLightConfig() const;
     const std::vector<std::list<Vehicle>>& getVehicles() const;
 
     void update(double dt, const std::map<roadID, Road> &cityMap );

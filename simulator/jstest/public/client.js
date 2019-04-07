@@ -82,6 +82,15 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         for(var i = 0; i < data.frameData.data.length; ++i) {
+            for(var l = 0; l < data.frameData.data[i].trafficLights.length; ++l) {
+                context.beginPath();
+                context.arc(data.frameData.data[i].trafficLights[l].x * viewWidth, data.frameData.data[i].trafficLights[l].y * viewHeight, 3, 0, 2 * Math.PI);
+                context.fillStyle = data.frameData.data[i].trafficLights[l].state;
+                context.lineWidth = 1;
+                context.stroke();
+                context.fill();
+            }
+
             for(var v = 0; v < data.frameData.data[i].vehicles.length; ++v) {
                 context.beginPath();
                 context.arc(data.frameData.data[i].vehicles[v].x * viewWidth, data.frameData.data[i].vehicles[v].y * viewHeight, 3, 0, 2 * Math.PI);

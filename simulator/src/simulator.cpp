@@ -76,11 +76,11 @@ void Simulator::serialize_roads_v2(std::ostream &road_output) const
 
 /*
  * At each iteration, we will output the status of the traffic
- *                 | vehicle 0      |   vehicle 1   | ...... |   vehicle n   |
- * time0 | roadID0 |  x | v | a | l | x | v | a | l | .......| x | v | a | l |
- * time0 | roadID1 |  x | v | a | l | x | v | a | l | .......| x | v | a | l |
- * time1 | roadID0 |  x | v | a | l | x | v | a | l | .......| x | v | a | l |
- * time1 | roadID1 |  x | v | a | l | x | v | a | l | .......| x | v | a | l |
+ *                 | lanes / light ...|   vehicle 0    |   vehicle 1   | ...... |   vehicle n   |
+ * time0 | roadID0 |   l   |  RYG  |  x | v | a | l | x | v | a | l | .......| x | v | a | l |
+ * time0 | roadID1 |   l   |  RYG  |  x | v | a | l | x | v | a | l | .......| x | v | a | l |
+ * time1 | roadID0 |   l   |  RYG  |  x | v | a | l | x | v | a | l | .......| x | v | a | l |
+ * time1 | roadID1 |   l   |  RYG  |  x | v | a | l | x | v | a | l | .......| x | v | a | l |
  */
 void Simulator::serialize_v2(double time, std::ostream &output) const
 {
@@ -88,6 +88,12 @@ void Simulator::serialize_v2(double time, std::ostream &output) const
     for(auto &roadElement : cityMap) {
         const Road& road = roadElement.second;
         output << time << " " << road.getId();
+
+        output << " " << road.getLanesNo();
+        std::vector<char> lights = road.getCurrentLightConfig();
+        for(unsigned i = 0; i < lights.size(); ++i)
+            output << " " << lights[i];
+
         unsigned vLane = 0;
         for(auto &lane : road.getVehicles()) {
             for(auto &vehicle : lane) {

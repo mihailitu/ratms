@@ -8,7 +8,6 @@ namespace simulator
 {
 
 const Vehicle Road::noVehicle(0.0, 0.0, 0.0);
-Vehicle Road::trafficLightObject(0.0, 1.0, 0.0);
 const double Road::minChangeLaneDist = 0.5;
 const double Road::maxChangeLaneDist = 25.0;
 
@@ -34,7 +33,7 @@ Road::Road(roadID /*rId*/, double rLength, unsigned lanes, unsigned maxSpeed_mps
         trafficLights.push_back(TrafficLight(10, 1, 30, TrafficLight::red_light));
     }
 
-    trafficLightObject = Vehicle(length - Config::trafficLightDistToRoadEnd, 0.0, 0.0, Vehicle::traffic_light);
+    trafficLightObject = Vehicle(length, 0.0, 0.0, Vehicle::traffic_light);
 }
 
 //TODO: should vehicles be added from outside Road class or
@@ -48,7 +47,7 @@ void Road::addVehicle(Vehicle v, unsigned lane)
 
     auto comp = [](const Vehicle &v1, const Vehicle &v2)
     {
-            return v1.getPos() < v2.getPos();
+        return v1.getPos() < v2.getPos();
     };
 
     v.addRoadToItinerary(id);
@@ -73,39 +72,39 @@ bool Road::performLaneChange(unsigned /*laneIndex*/,
                              const Vehicle &/*currentVehicle*/,
                              unsigned /*vehicleIndex*/)
 {
-//    if (lanesNo == 1)
-//        return false;
+    //    if (lanesNo == 1)
+    //        return false;
 
-//    const Vehicle &currentLaneLeader = vehicleIndex == 0 ? noVehicle : vehicles[laneIndex][vehicleIndex - 1];
+    //    const Vehicle &currentLaneLeader = vehicleIndex == 0 ? noVehicle : vehicles[laneIndex][vehicleIndex - 1];
 
-//    // quick exit condition - don't change lane before maxChangeLaneDist
-//    if(currentLaneLeader.getPos() - currentLaneLeader.getPos() > maxChangeLaneDist) {
-//        return false;
-//    }
+    //    // quick exit condition - don't change lane before maxChangeLaneDist
+    //    if(currentLaneLeader.getPos() - currentLaneLeader.getPos() > maxChangeLaneDist) {
+    //        return false;
+    //    }
 
-//    // prefer overtaking on the left
-//    int nextLanesIdxs[2] = { laneIndex + 1 < lanesNo  ? (int)laneIndex + 1 : -1,
-//                             (int)laneIndex - 1  >= 0 ? (int)laneIndex - 1 : -1 };
+    //    // prefer overtaking on the left
+    //    int nextLanesIdxs[2] = { laneIndex + 1 < lanesNo  ? (int)laneIndex + 1 : -1,
+    //                             (int)laneIndex - 1  >= 0 ? (int)laneIndex - 1 : -1 };
 
-//    for(int nextLaneIdx : nextLanesIdxs ) {
-//        if ( nextLaneIdx < 0 )
-//            continue;
+    //    for(int nextLaneIdx : nextLanesIdxs ) {
+    //        if ( nextLaneIdx < 0 )
+    //            continue;
 
-//        std::vector<Vehicle> &nextLane = vehicles[nextLaneIdx];
+    //        std::vector<Vehicle> &nextLane = vehicles[nextLaneIdx];
 
-//        int nextLeaderPos = getNextLaneLeaderPos(currentVehicle, nextLane);
-//        const Vehicle &nextLaneLeader    = nextLeaderPos == -1 ? noVehicle : nextLane[nextLeaderPos];
-//        const Vehicle &nextLaneFollower  = ((nextLeaderPos + 1 >= 0) &&
-//                                            ((unsigned)nextLeaderPos + 1 < nextLane.size())) ?
-//                    nextLane[nextLeaderPos + 1] : noVehicle;
+    //        int nextLeaderPos = getNextLaneLeaderPos(currentVehicle, nextLane);
+    //        const Vehicle &nextLaneLeader    = nextLeaderPos == -1 ? noVehicle : nextLane[nextLeaderPos];
+    //        const Vehicle &nextLaneFollower  = ((nextLeaderPos + 1 >= 0) &&
+    //                                            ((unsigned)nextLeaderPos + 1 < nextLane.size())) ?
+    //                    nextLane[nextLeaderPos + 1] : noVehicle;
 
-//        if (currentVehicle.canChangeLane(currentLaneLeader, nextLaneLeader, nextLaneFollower)) {
-//            nextLane.insert(nextLane.begin() + nextLeaderPos + 1, currentVehicle);
-//            log_debug("Road %u: vehicle %d change from lane %d to lane %d", id, currentVehicle.getId(), laneIndex, nextLaneIdx);
-//            return true;
-//        }
+    //        if (currentVehicle.canChangeLane(currentLaneLeader, nextLaneLeader, nextLaneFollower)) {
+    //            nextLane.insert(nextLane.begin() + nextLeaderPos + 1, currentVehicle);
+    //            log_debug("Road %u: vehicle %d change from lane %d to lane %d", id, currentVehicle.getId(), laneIndex, nextLaneIdx);
+    //            return true;
+    //        }
 
-//    }
+    //    }
     return false;
 }
 
@@ -119,7 +118,7 @@ void Road::update(double dt,
                   const std::map<roadID, Road> &/*cityMap*/)
 {
 
-/***
+    /***
  * - isSlowingDown ?
  *      - takeOver() if:
  *          - isEnoughSpace on the next lane
@@ -143,14 +142,13 @@ void Road::update(double dt,
             nextVehicle = noVehicle;
 
         for(std::list<Vehicle>::reverse_iterator currentVehicle = lane.rbegin(); currentVehicle != lane.rend(); ++currentVehicle) {
+
             currentVehicle->update(dt, nextVehicle);
 
             if(currentVehicle == lane.rbegin() && // first vehicle - get into another road
-                    trafficLights[laneIndex].isGreen() &&
                     currentVehicle->getPos() >= length) { // is at the end of the road
-
                 if (connections[laneIndex].size() == 0) { // no more connections.
-                    log_debug("Vehicle %f has left the simulation", currentVehicle->getPos());
+                    log_debug("Vehicle %d has left the simulation: %f", currentVehicle->getId(), currentVehicle->getPos());
                     lane.erase(--currentVehicle.base());
                     continue;
                 }
@@ -159,7 +157,7 @@ void Road::update(double dt,
             if(currentVehicle->isSlowingDown()) { // take over or pass obstacle
             }
 
-             nextVehicle = *currentVehicle;
+            nextVehicle = *currentVehicle;
         }
         ++laneIndex;
     }
@@ -195,26 +193,6 @@ void Road::serialize(std::ostream &out) const
     serialize_v2(out);
 }
 
-roadID Road::getId() const
-{
-    return id;
-}
-
-unsigned Road::getMaxSpeed() const
-{
-    return maxSpeed;
-}
-
-unsigned Road::getLanesNo() const
-{
-    return lanesNo;
-}
-
-unsigned Road::getLength() const
-{
-    return length;
-}
-
 const std::vector<std::list<Vehicle>>& Road::getVehicles() const
 {
     return vehicles;
@@ -238,6 +216,39 @@ void Road::serialize_v2(std::ostream &out) const
            length << " " <<
            maxSpeed << " " <<
            lanesNo;
+}
+
+std::vector<char> Road::getCurrentLightConfig() const
+{
+    std::vector<char> lights(trafficLights.size());
+    for(unsigned i = 0; i < trafficLights.size(); ++i)
+        if(trafficLights[i].isGreen())
+            lights[i] = 'G';
+        else if (trafficLights[i].isYellow())
+            lights[i] = 'Y';
+        else lights[i] = 'R';
+
+    return lights;
+}
+
+roadID Road::getId() const
+{
+    return id;
+}
+
+unsigned Road::getMaxSpeed() const
+{
+    return maxSpeed;
+}
+
+unsigned Road::getLanesNo() const
+{
+    return lanesNo;
+}
+
+unsigned Road::getLength() const
+{
+    return length;
 }
 
 void Road::printRoad() const

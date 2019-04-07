@@ -21,9 +21,6 @@ public:
     static std::string simulatorOuput;
     static std::string simulatorMap;
     static const double DT;// simulator will update at 0.5 seconds.
-
-    // how far from the end of the road the traffic light should be positioned
-    static const double trafficLightDistToRoadEnd; // = 1 meters
 };
 
 } // namespace simulator
