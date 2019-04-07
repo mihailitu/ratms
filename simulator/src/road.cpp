@@ -3,6 +3,7 @@
 #include "logger.h"
 
 #include <algorithm>
+#include <functional>
 
 namespace simulator
 {
@@ -132,23 +133,26 @@ void Road::update(double dt,
  *          - vehicleIsAtTheEndOfTheRoad
  */
 
+    std::reference_wrapper<Vehicle const> nextVehicle = trafficLightObject;
+
     unsigned laneIndex = 0;
     for(auto &lane : vehicles) {
 
         trafficLights[laneIndex].update(dt);
 
-        Vehicle const *nextVehicle = &trafficLightObject;
         if (trafficLights[laneIndex].isGreen())
-            nextVehicle = &noVehicle;
+            nextVehicle = noVehicle;
+        else
+            nextVehicle = trafficLightObject;
 
         for(std::list<Vehicle>::reverse_iterator currentVehicle = lane.rbegin(); currentVehicle != lane.rend(); ++currentVehicle) {
 
-            currentVehicle->update(dt, *nextVehicle);
+            currentVehicle->update(dt, nextVehicle);
 
-            if(currentVehicle == lane.rbegin() && // first vehicle - get into another road
+            if (currentVehicle == lane.rbegin() && // first vehicle - get into another road
                     currentVehicle->getPos() >= length) { // is at the end of the road
+
                 if (connections[laneIndex].size() == 0) { // no more connections.
-                    log_debug("Vehicle %d has left the simulation: %f", currentVehicle->getId(), currentVehicle->getPos());
                     lane.erase(--currentVehicle.base());
                     continue;
                 } else { // change roads
@@ -156,10 +160,11 @@ void Road::update(double dt,
                 }
             }
 
-            if(currentVehicle->isSlowingDown() && !nextVehicle->isTrafficLight()) { // take over or pass obstacle
+            if (currentVehicle->isSlowingDown() &&
+                    !nextVehicle.get().isTrafficLight()) { // take over or pass obstacle
             }
 
-            nextVehicle = &(*currentVehicle);
+            nextVehicle = *currentVehicle;
         }
         ++laneIndex;
     }
