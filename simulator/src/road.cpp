@@ -30,6 +30,7 @@ Road::Road(roadID /*rId*/, double rLength, unsigned lanes, unsigned maxSpeed_mps
 
     for(unsigned i = 0; i < lanesNo; ++i) {
         vehicles.push_back(std::list<Vehicle>());
+        connections.push_back(std::vector<roadID>());
         trafficLights.push_back(TrafficLight(10, 1, 30, TrafficLight::red_light));
     }
 
@@ -144,10 +145,12 @@ void Road::update(double dt,
         for(std::list<Vehicle>::reverse_iterator currentVehicle = lane.rbegin(); currentVehicle != lane.rend(); ++currentVehicle) {
             currentVehicle->update(dt, nextVehicle);
 
-            if(currentVehicle == lane.rend()) { // first vehicle - get into another road
-
+            if(currentVehicle == lane.rbegin() && // first vehicle - get into another road
+                    trafficLights[laneIndex].isGreen() &&
+                    currentVehicle->getPos() >= length) { // is at the end of the road
 
                 if (connections[laneIndex].size() == 0) { // no more connections.
+                    log_debug("Vehicle %f has left the simulation", currentVehicle->getPos());
                     lane.erase(--currentVehicle.base());
                     continue;
                 }
