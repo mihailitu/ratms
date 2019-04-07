@@ -57,6 +57,7 @@ document.addEventListener("DOMContentLoaded", function() {
         var textX = viewWidth - context.measureText("Time: 000000.000000").width;
         var textY = 15;
         var textH = 15;
+        context.fillStyle = 'black';
         context.fillText(frameTxt, textX, textY);
         textY += textH;
         context.fillText("Frame: " + data.frameNo + " / " + data.frameTotal, textX, textY);

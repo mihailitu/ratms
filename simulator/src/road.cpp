@@ -137,13 +137,13 @@ void Road::update(double dt,
 
         trafficLights[laneIndex].update(dt);
 
-        Vehicle &nextVehicle = trafficLightObject;
+        Vehicle const *nextVehicle = &trafficLightObject;
         if (trafficLights[laneIndex].isGreen())
-            nextVehicle = noVehicle;
+            nextVehicle = &noVehicle;
 
         for(std::list<Vehicle>::reverse_iterator currentVehicle = lane.rbegin(); currentVehicle != lane.rend(); ++currentVehicle) {
 
-            currentVehicle->update(dt, nextVehicle);
+            currentVehicle->update(dt, *nextVehicle);
 
             if(currentVehicle == lane.rbegin() && // first vehicle - get into another road
                     currentVehicle->getPos() >= length) { // is at the end of the road
@@ -151,13 +151,15 @@ void Road::update(double dt,
                     log_debug("Vehicle %d has left the simulation: %f", currentVehicle->getId(), currentVehicle->getPos());
                     lane.erase(--currentVehicle.base());
                     continue;
+                } else { // change roads
+
                 }
             }
 
-            if(currentVehicle->isSlowingDown()) { // take over or pass obstacle
+            if(currentVehicle->isSlowingDown() && !nextVehicle->isTrafficLight()) { // take over or pass obstacle
             }
 
-            nextVehicle = *currentVehicle;
+            nextVehicle = &(*currentVehicle);
         }
         ++laneIndex;
     }
