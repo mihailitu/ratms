@@ -18,6 +18,8 @@ class Simulator
 
     bool terminate = {false};
 
+    bool outputData = {false};
+
     // simulator run time
     double runTime = {0};
 
