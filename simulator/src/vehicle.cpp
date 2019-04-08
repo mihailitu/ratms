@@ -18,7 +18,8 @@ Vehicle::Vehicle( double _x_orig, double _length, double maxV, ElementType vType
         typeStr = "Traffic light";
     else if (type == obstacle)
         typeStr = "obstacle";
-    log_debug("New vehicle: ID: %d type: %s Pos: %2.f V: %.2f L: %.2f", id, typeStr.c_str(), xOrig, v0, length);
+
+    // log_debug("New vehicle: ID: %d type: %s Pos: %2.f V: %.2f L: %.2f", id, typeStr.c_str(), xOrig, v0, length);
 }
 
 /*

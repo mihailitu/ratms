@@ -133,7 +133,7 @@ void Road::update(double dt,
  *          - vehicleIsAtTheEndOfTheRoad
  */
 
-    // Vehicle *nextVehicle = &trafficLightObject;
+    // Vehicle const *nextVehicle = &trafficLightObject; // Using pointer is slightly faster
     std::reference_wrapper<Vehicle const> nextVehicle = trafficLightObject;
 
     unsigned laneIndex = 0;
@@ -165,7 +165,7 @@ void Road::update(double dt,
                     !nextVehicle.get().isTrafficLight()) { // take over or pass obstacle
             }
 
-            nextVehicle = *currentVehicle;
+            nextVehicle = (*currentVehicle);
         }
         ++laneIndex;
     }

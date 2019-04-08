@@ -69,6 +69,22 @@ std::vector<Road> getSmallerTestMap()
     return cmap;
 }
 
+std::vector<Road> getTimeTestMap()
+{
+    std::vector<Road> cmap;
+    for(unsigned i = 0; i < 1000; ++i){
+        Road r(0, 1000000, 1, 20);
+        int pos = 0;
+        for(unsigned i = 0; i < 500; ++i ) {
+            r.addVehicle({static_cast<float>(pos++), 1.0, 20.0}, 0);
+        }
+        cmap.push_back(r);
+    }
+
+    // setDummyMapSize(1000000, 500, cmap);
+    return cmap;
+}
+
 std::vector<Road> semaphoreTest() {
     Road r(0, 500, 2, 20);
     r.setCardinalCoordinates({0, 0}, {0, 500});
