@@ -46,6 +46,15 @@ document.addEventListener("DOMContentLoaded", function() {
     var delay = 500; //ms
     var statFrameTime = new Date().getTime();
 
+    var vehicleColors = ["AliceBlue", "AntiqueWhite", "Aqua", "Aquamarine", "Azure", "Beige", "Bisque", "Black",
+    "BlanchedAlmond", "Blue", "BlueViolet", "Brown", "BurlyWood", "CadetBlue", "Chartreuse", "Chocolate", "Coral",
+    "CornflowerBlue", "Cornsilk", "Crimson", "Cyan", "DarkBlue", "DarkCyan", "DarkGoldenRod", "DarkGray", "DarkGrey",
+    "DarkGreen", "DarkKhaki", "DarkMagenta", "DarkOliveGreen", "DarkOrange", "DarkOrchid", "DarkRed", "DarkSalmon",
+    "DarkSeaGreen", "DarkSlateBlue", "DarkSlateGray", "DarkSlateGrey", "DarkTurquoise", "DarkViolet", "DeepPink",
+    "DeepSkyBlue", "DimGray", "DimGrey", "DodgerBlue", "FireBrick", "FloralWhite", "ForestGreen", "Fuchsia",
+    "Gainsboro", "GhostWhite", "Gold", "GoldenRod", "Gray", "Grey", "Green", "GreenYellow", "HoneyDew", "HotPink",
+    "IndianRed", "Indigo", "Ivory", "Khaki", "Lavender", "LavenderBlush"]
+
     socket.on('draw_state', function (data) {
         var canvas  = document.getElementById('drawing');
         var context = canvas.getContext('2d');
@@ -83,6 +92,7 @@ document.addEventListener("DOMContentLoaded", function() {
         }
 
         for(var i = 0; i < data.frameData.data.length; ++i) {
+            // Traffic lights
             for(var l = 0; l < data.frameData.data[i].trafficLights.length; ++l) {
                 context.beginPath();
                 context.arc(data.frameData.data[i].trafficLights[l].x * viewWidth, data.frameData.data[i].trafficLights[l].y * viewHeight, 3, 0, 2 * Math.PI);
@@ -92,10 +102,11 @@ document.addEventListener("DOMContentLoaded", function() {
                 context.fill();
             }
 
+            // Vehicles
             for(var v = 0; v < data.frameData.data[i].vehicles.length; ++v) {
                 context.beginPath();
                 context.arc(data.frameData.data[i].vehicles[v].x * viewWidth, data.frameData.data[i].vehicles[v].y * viewHeight, 3, 0, 2 * Math.PI);
-                context.fillStyle = "blue";
+                context.fillStyle = vehicleColors[data.frameData.data[i].vehicles[v].id];
                 context.strokeStyle = "red";
                 context.lineWidth = 1;
                 context.stroke();

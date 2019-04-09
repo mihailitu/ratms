@@ -147,10 +147,10 @@ for (var i in timeFrames) {
         data.trafficLights.push(trafficLight);
     }
 
-    for (var v = index; v < frameData.length; v += 4) {
+    for (var v = index; v < frameData.length; v += 5) {
         //TODO: draw vehicle relative to the lane it's running on
         var vehicleCoord = getCoordFromDist(road_map[data.roadID].startCard, road_map[data.roadID].endCard, frameData[v]);
-        vehicleCoord = getCoordOnTheRoadLane(vehicleCoord, road_map[data.roadID].endCard, frameData[v + 3]);
+        vehicleCoord = getCoordOnTheRoadLane(vehicleCoord, road_map[data.roadID].endCard, frameData[v + 4]);
         var vehicle = {
             // TODO: calculate the exact position of the vehicle relative
             // to the road it belongs to
@@ -159,7 +159,9 @@ for (var i in timeFrames) {
             d: frameData[v], // x: distance from the beginning of the road
             v: frameData[v + 1], // v: current velocity
             a: frameData[v + 2], // a: current acceleration
-            l: frameData[v + 3] //  l: the lane that this vehicle belongs to
+            id:frameData[v + 3], // id: vehicle id
+            l: frameData[v + 4] //  l: the lane that this vehicle belongs to
+
         }
         data.vehicles.push(vehicle);
     };

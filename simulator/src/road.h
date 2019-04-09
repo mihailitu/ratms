@@ -118,18 +118,18 @@ private:
 private:
 
     /**
-     * @brief changeLane     - perform a lane change of currentVehicle, if it's phisically possible and if can gain some acceleration
-     * @param laneIndex      - the index of the lane that the current vehicle is driving on
-     * @param currentVehicle - a reference to currentVehicle object
-     * @param vehicleIndex   - currentVehicle's index on the current lane
-     * @return true if vehicle has changed lane or false if not
+     * @brief tryLaneChange     - perform a lane change of currentVehicle, if it's phisically possible and if can gain some acceleration
+     * @param currentLaneIndex  - the index of the lane that the current vehicle is driving on
+     * @param currentVehicle    - a reference to currentVehicle object
+     * @param nextVehicle       - next leading vehicle on current lane
+     * @return true if vehicle has changed lane
      */
-    bool performLaneChange(unsigned laneIndex, const Vehicle &currentVehicle, unsigned vehicleIndex);
+     bool tryLaneChange(const Vehicle &currentVehicle, const Vehicle &nextVehicle, unsigned currentLane);
 
     /**
      * @brief performRoadChange - change the road that currentVehicle is driving on, if necessary
      * @param currentVehicle - current updated vehicle
-     * @param laneIndex      - lane being processed
+     * @param laneIndex      - current's vehicle lane on the road
      * @param cityMap        - all roads from this city
      * @return true if currentVehicle moved to another road, false otherwise
      */

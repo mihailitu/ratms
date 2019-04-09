@@ -81,9 +81,6 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
  */
 bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLeader, const Vehicle &newFollower) const
 {
-//    if (currentLeader.getLength() <= 0 )
-//        return false;
-
     // gap check
     bool hasGap = true;
     if (newLeader.getLength() > 0)
@@ -96,9 +93,9 @@ bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLead
         return false;
 
     // MOBIL
-    double p = 0.3; // politeness factor TODO: make this the same as aggresivity
-    double b_safe = 4.0; // maximum safe deceleration
-    double a_thr = 0.2; // acceleration threshold: To avoid lane-change maneoeuvres triggered by marginal advantages
+    double p = 0.3;         // politeness factor TODO: make this the same as aggresivity
+    double b_safe = 4.0;    // maximum safe deceleration
+    double a_thr = 0.2;     // acceleration threshold: To avoid lane-change maneoeuvres triggered by marginal advantages
 
     // safety criterion
     bool isSafe = true;
@@ -111,8 +108,8 @@ bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLead
         return false;
 
     // incentive criterion
-    double accNl = newLeader.getLength() > 0 ? getNewAcceleration(newLeader) : a; // a = max acceleration
-    double accCl = currentLeader.getLength() > 0 ? getNewAcceleration(currentLeader) : a; // a = max acceleration
+    double accNl = newLeader.getLength() > 0 ? getNewAcceleration(newLeader) : a;           // a = max acceleration
+    double accCl = currentLeader.getLength() > 0 ? getNewAcceleration(currentLeader) : a;   // a = max acceleration
     unsigned ll = newFollower.getLength();
     double newFollowerNewAcc = ll > 0 ? newFollower.getNewAcceleration(*this) : 0;
 
@@ -183,7 +180,8 @@ void Vehicle::serialize_v1(std::ostream &out) const
 {
     out << " " << xPos << " " <<
            velocity << " " <<
-           acceleration;
+           acceleration << " "<<
+           id;
 }
 
 void Vehicle::printVehicle() const

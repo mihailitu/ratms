@@ -39,14 +39,14 @@ std::vector<Road> getTestMap()
     };
 
     setDummyMapSize(1000, 500, cmap);
-//    cmap[0].addConnection( cmap[1] );
-//    cmap[1].addConnections({ cmap[2], cmap[7] });
-//    cmap[2].addConnection( cmap[3] );
-//    cmap[3].addConnection( cmap[4] );
-//    cmap[4].addConnections({ cmap[5], cmap[6] });
-//    cmap[5].addConnection( cmap[0] );
-//    cmap[6].addConnection( cmap[2]);
-//    cmap[7].addConnection( cmap[5] );
+    //    cmap[0].addConnection( cmap[1] );
+    //    cmap[1].addConnections({ cmap[2], cmap[7] });
+    //    cmap[2].addConnection( cmap[3] );
+    //    cmap[3].addConnection( cmap[4] );
+    //    cmap[4].addConnections({ cmap[5], cmap[6] });
+    //    cmap[5].addConnection( cmap[0] );
+    //    cmap[6].addConnection( cmap[2]);
+    //    cmap[7].addConnection( cmap[5] );
 
     /* Add some hardcoded cars on the road, so we test equations */
 
@@ -57,14 +57,14 @@ std::vector<Road> getTestMap()
 
 std::vector<Road> getSmallerTestMap()
 {
-    Road r(0, 200, 2, 50);
-    r.setCardinalCoordinates({0, 100}, {200, 100});
+    std::vector<Road> cmap;
+    for(unsigned i = 0; i < 100; ++i) {
+        Road r(0, 200, 2, 50);
+        r.setCardinalCoordinates({0, 100}, {200, 100});
 
-    r.addVehicle({0.0, 5.0, 20.0}, 0);
-    std::vector<Road> cmap = {
-        r
-    };
+        cmap.push_back(r);
 
+    }
     setDummyMapSize(250, 500, cmap);
     return cmap;
 }
@@ -72,16 +72,18 @@ std::vector<Road> getSmallerTestMap()
 std::vector<Road> getTimeTestMap()
 {
     std::vector<Road> cmap;
-    for(unsigned i = 0; i < 1000; ++i){
-        Road r(0, 1000000, 1, 20);
+    for(unsigned i = 0; i < 100; ++i){
+        Road r(0, 3000, 1, 50);
+        r.setCardinalCoordinates({0, i}, {3000, i});
         int pos = 0;
-        for(unsigned i = 0; i < 500; ++i ) {
-            r.addVehicle({static_cast<float>(pos++), 1.0, 20.0}, 0);
+        for(unsigned v = 0; v < 200; ++v ) {
+            r.addVehicle({static_cast<float>(pos + 5), 1.0, 20.0}, 0);
+            pos+=5;
         }
         cmap.push_back(r);
     }
 
-    // setDummyMapSize(1000000, 500, cmap);
+    setDummyMapSize(5000, 500, cmap);
     return cmap;
 }
 
@@ -130,23 +132,23 @@ std::vector<Road> laneChangeTest()
         r1
     };
 
-    Road r2(1, 1400, 3, 20);
-    r2.setCardinalCoordinates({1500, 90}, {100, 90});
-    {
-        Vehicle v(0.0, 5.0, 20.0);
-        Vehicle v1(20.0, 5.0, 15);
-        Vehicle v2(20.0, 5.0, 18.0);
-        Vehicle v3(5.0, 5.0, 17.0);
+//    Road r2(1, 1400, 3, 20);
+//    r2.setCardinalCoordinates({1500, 90}, {100, 90});
+//    {
+//        Vehicle v(0.0, 5.0, 20.0);
+//        Vehicle v1(20.0, 5.0, 15);
+//        Vehicle v2(20.0, 5.0, 18.0);
+//        Vehicle v3(5.0, 5.0, 17.0);
 
-        r2.addVehicle(v, 0);
-        r2.addVehicle(v1, 0);
-        r2.addVehicle(v2, 1);
-        r2.addVehicle(v3, 1);
-    }
+//        r2.addVehicle(v, 0);
+//        r2.addVehicle(v1, 0);
+//        r2.addVehicle(v2, 1);
+//        r2.addVehicle(v3, 1);
+//    }
 
-    smap.push_back(r2);
+//    smap.push_back(r2);
 
-    setDummyMapSize(2000, 500, smap);
+    setDummyMapSize(2200, 500, smap);
     return smap;
 }
 
