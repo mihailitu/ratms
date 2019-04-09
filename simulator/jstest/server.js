@@ -103,8 +103,12 @@ function getCoordFromDist(startCoord, endCoord, distance) {
 function getCoordOnTheRoadLane(startCoord, endCoord, roadLane) {
     var angle = Math.atan2(endCoord.y - startCoord.y, endCoord.x - startCoord.x);
     var lanePix = roadLane * 3; // 3 pixels per lane
-    var x = -Math.sin(angle) * lanePix + startCoord.x;
-    var y = Math.cos(angle) * lanePix + startCoord.y;
+    // For driving on the left side of the road
+    // var x = -Math.sin(angle) * lanePix + startCoord.x;
+    // var y = Math.cos(angle) * lanePix + startCoord.y;
+    // For driving on the right side of the road
+    var x = Math.sin(angle) * lanePix + startCoord.x;
+    var y = -Math.cos(angle) * lanePix + startCoord.y;
     return {x, y};
 }
 
