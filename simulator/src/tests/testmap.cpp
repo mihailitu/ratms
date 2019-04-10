@@ -29,11 +29,15 @@ void setDummyMapSize(unsigned x, unsigned y, std::vector<Road> &map) {
  */
 std::vector<Road> getTestMap()
 {
-    Road r(0, 500, 2, 50);
+    Road r(0, 500, 2, 20);
     r.setCardinalCoordinates({0, 100}, {500, 100});
 
-    r.addVehicle({0.0, 5.0, 20.0}, 0);
-    r.addVehicle({100.0, 5.0, 5.0}, 0);
+    r.addVehicle({1.0, 5.0, 20.0}, 0);
+    r.addVehicle({10.0, 5.0, 17.0}, 0);
+    r.addVehicle({20.0, 5.0, 15.0}, 0);
+    r.addVehicle({30.0, 5.0, 13.0}, 0);
+//    r.addVehicle({1.0, 5.0, 20.0}, 0);
+//    r.addVehicle({10.0, 5.0, 10.0}, 0);
     std::vector<Road> cmap = {
         r
     };
@@ -109,13 +113,13 @@ std::vector<Road> semaphoreTest() {
 /*
  * Lane change test
  * Road:
- *      - length: 2000 m
+ *      - length: 1500 m
  *      - max speed: 20 meters/second (app. 70 km/h)
  */
 std::vector<Road> laneChangeTest()
 {
-    Road r1(0, 1990, 2, 20);
-    r1.setCardinalCoordinates({10, 100}, {2000, 100});
+    Road r1(0, 2000, 2, 20);
+    r1.setCardinalCoordinates({10, 100}, {1000, 100});
     {
         Vehicle v(0.0, 5.0, 20.0);
         Vehicle v1(20.0, 5.0, 15);

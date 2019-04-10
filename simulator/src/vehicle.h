@@ -43,6 +43,8 @@ private:
                                 // for large values of net distance, we should enter in free road mode
     double acceleration = { 0 };// vehicle acceleration (meters per sqaured second)
 
+    bool slowingDown = false;   // if velocity decreases, it's slowing down.
+
     /* Model parameters are here, as we make most of it dependent on this driver's aggressivity */
     double aggressivity = { 0.5 };  // aggressivity factor of this driver.
                                     // 0.5 - normal driver

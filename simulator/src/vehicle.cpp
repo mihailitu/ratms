@@ -68,8 +68,12 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
     // advance
     xPos += velocity * dt + (acceleration * std::pow(dt, 2)) / 2;
 
+    double currentVelocity = velocity;
+
     // increase/decrease velocity
     velocity += acceleration * dt;
+
+    slowingDown = velocity < currentVelocity;
 }
 
 /* Lane change model:
@@ -142,7 +146,7 @@ double Vehicle::getAcceleration() const
 
 bool Vehicle::isSlowingDown() const
 {
-    return acceleration < 0;
+    return slowingDown;
 }
 
 double Vehicle::getPos() const

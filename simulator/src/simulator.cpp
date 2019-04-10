@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <algorithm>
 
 namespace simulator
 {
@@ -32,6 +33,32 @@ void Simulator::addRoadNetToMap(std::vector<Road> &roadNet)
     }
 }
 
+
+void log_map(const Simulator::CityMap &cityMap, double dt)
+{
+    for(auto &roadElement : cityMap) {
+        const Road& road = roadElement.second;
+        fprintf(stdout, "Delta: %4.2f RoadID: %3lu\n", dt, road.getId());
+
+        unsigned vLane = 0;
+        std::vector<Vehicle> vectorRoad;
+        for(auto &lane : road.getVehicles()) {
+            std::string vehiclesStr = "";
+            vectorRoad.insert(vectorRoad.end(), lane.begin(), lane.end());
+            fprintf(stdout, "\tLane: %d\t { ", vLane);
+            for(auto &vehicle : lane) {
+                fprintf(stdout, "%3d, ", vehicle.getId());
+            }
+            fprintf(stdout, "}\n");
+            ++vLane;
+        }
+        std::sort(vectorRoad.begin(), vectorRoad.end(),[](const Vehicle &v1, const Vehicle &v2){return v1.getId() < v2.getId();});
+        for(auto v : vectorRoad)
+            fprintf(stdout, "\t\t\t{id: %3d d: %6.2f a: %2.2f v: %2.2f}\n", v.getId(), v.getPos(), v.getAcceleration(), v.getVelocity());
+        fprintf(stdout, "\n\n");
+    }
+}
+
 void Simulator::runTestSimulator()
 {
     double dt = Config::DT;
@@ -46,6 +73,7 @@ void Simulator::runTestSimulator()
     }
 
     while (!terminate && iter < Config::simulationTime) {
+        // log_map(cityMap, runTime);
         ++iter;
         for( auto &mapEl : cityMap )
             mapEl.second.update(dt, cityMap);

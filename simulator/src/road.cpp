@@ -37,6 +37,7 @@ Road::Road(roadID /*rId*/, double rLength, unsigned lanes, unsigned maxSpeed_mps
     trafficLightObject = Vehicle(length, 0.0, 0.0, Vehicle::traffic_light);
 }
 
+//
 bool vehicleComparer(const Vehicle &v1, const Vehicle &v2)
 {
     return v1.getPos() < v2.getPos();
@@ -50,11 +51,6 @@ void Road::addVehicle(Vehicle v, unsigned lane)
         log_warning("Assigned vehicle to road %u on lane %d, where the road has only %d lanes.", id, lane, lanesNo);
         lane = 0; //TODO: throw exception?
     }
-
-//    auto comp = [](const Vehicle &v1, const Vehicle &v2)
-//    {
-//        return v1.getPos() < v2.getPos();
-//    };
 
     v.addRoadToItinerary(id);
 
@@ -100,11 +96,18 @@ bool Road::tryLaneChange(const Vehicle &currentVehicle, const Vehicle &currentLa
 
         const Vehicle &nextLaneLeader = (nextLaneLeaderIterator == nextLaneVehicles.end()) ?
                     noVehicle : *nextLaneLeaderIterator;
-        const Vehicle &nextLaneFollower = (std::prev(nextLaneLeaderIterator) == nextLaneVehicles.begin()) ?
-                    noVehicle : *std::prev(nextLaneLeaderIterator);
+
+        auto nextLaneFollowerIterator = nextLaneVehicles.end();
+        if (nextLaneLeaderIterator != nextLaneVehicles.begin() &&
+                nextLaneVehicles.size() > 0)
+            nextLaneFollowerIterator = std::prev(nextLaneLeaderIterator);
+
+        const Vehicle &nextLaneFollower = (nextLaneFollowerIterator == nextLaneVehicles.end()) ?
+                    noVehicle : *nextLaneFollowerIterator;
 
         if(currentVehicle.canChangeLane(currentLaneLeader, nextLaneLeader, nextLaneFollower)) {
-            log_info("Vehicle %d switched to lane %d", currentVehicle.getId(), nextLaneIdx);
+            log_info("Vehicle %d switched to lane %d.\n \tCurrent leader: %d, next leader: %d, nextFolower: %d",
+                     currentVehicle.getId(), nextLaneIdx, nextLaneLeader.getId(), nextLaneFollower.getId());
             addVehicle(currentVehicle, nextLaneIdx);
             return true;
         }
