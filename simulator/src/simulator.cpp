@@ -42,6 +42,7 @@ void log_map(const Simulator::CityMap &cityMap, double dt)
 
         unsigned vLane = 0;
         std::vector<Vehicle> vectorRoad;
+        auto trafficLights = road.getCurrentLightConfig();
         for(auto &lane : road.getVehicles()) {
             std::string vehiclesStr = "";
             vectorRoad.insert(vectorRoad.end(), lane.begin(), lane.end());
@@ -49,7 +50,7 @@ void log_map(const Simulator::CityMap &cityMap, double dt)
             for(auto &vehicle : lane) {
                 fprintf(stdout, "%3d, ", vehicle.getId());
             }
-            fprintf(stdout, "}\n");
+            fprintf(stdout, "} { %c }\n", trafficLights[vLane]);
             ++vLane;
         }
         std::sort(vectorRoad.begin(), vectorRoad.end(),[](const Vehicle &v1, const Vehicle &v2){return v1.getId() < v2.getId();});
@@ -73,7 +74,9 @@ void Simulator::runTestSimulator()
     }
 
     while (!terminate && iter < Config::simulationTime) {
+
         // log_map(cityMap, runTime);
+
         ++iter;
         for( auto &mapEl : cityMap )
             mapEl.second.update(dt, cityMap);

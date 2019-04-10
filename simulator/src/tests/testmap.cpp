@@ -119,7 +119,7 @@ std::vector<Road> semaphoreTest() {
 std::vector<Road> laneChangeTest()
 {
     Road r1(0, 2000, 2, 20);
-    r1.setCardinalCoordinates({10, 100}, {1000, 100});
+    r1.setCardinalCoordinates({10, 100}, {2010, 100});
     {
         Vehicle v(0.0, 5.0, 20.0);
         Vehicle v1(20.0, 5.0, 15);
