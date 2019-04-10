@@ -19,7 +19,7 @@ Road::Road()
 }
 
 Road::Road(roadID /*rId*/, double rLength, unsigned lanes, unsigned maxSpeed_mps ) :
-    id (idSeed++), length(rLength), usageProb(0.5), lanesNo(lanes), maxSpeed(maxSpeed_mps)
+    id (idSeed++), length(rLength), lanesNo(lanes), maxSpeed(maxSpeed_mps)
 {
     log_info("New road added: \n"
              "\t ID: %u \n"
@@ -30,7 +30,7 @@ Road::Road(roadID /*rId*/, double rLength, unsigned lanes, unsigned maxSpeed_mps
 
     for(unsigned i = 0; i < lanesNo; ++i) {
         vehicles.push_back(std::list<Vehicle>());
-        connections.push_back(std::vector<roadID>());
+        connections.push_back(std::vector<std::pair<roadID, float>>());
         trafficLights.push_back(TrafficLight(10, 3, 30, TrafficLight::green_light));
     }
 
@@ -57,13 +57,13 @@ void Road::addVehicle(Vehicle v, unsigned lane)
     vehicles[lane].insert(std::lower_bound(vehicles[lane].begin(), vehicles[lane].end(), v, &vehicleComparer), v);
 }
 
-void Road::addLaneConnection(unsigned lane, roadID road)
+void Road::addLaneConnection(unsigned lane, roadID road, float usageProb)
 {
     if (lane >= lanesNo) {
         log_error("Cannot connect road %u with lane %d. Max lanes: %d", road, lane, lanesNo);
         return;
     }
-    connections[lane].push_back(road);
+    connections[lane].push_back({road, usageProb});
 }
 
 
@@ -123,13 +123,7 @@ bool Road::tryLaneChange(const Vehicle &currentVehicle, const Vehicle &currentLa
  */
 void Road::update(double dt, const std::map<roadID, Road> &/*cityMap*/)
 {
-
-    /***
- * - isSlowingDown ?
- *      - takeOver() if:
- *          - isEnoughSpace on the next lane
- *          - changing lane will improve speed for this vehicle
- * - canCrossRoad ?
+/* - canCrossRoad ?
  *      - crossRoad() if:
  *          - thereIsAConnection
  *          - conndctedRoadNotFull
@@ -278,12 +272,11 @@ void Road::printRoad() const
              "Length:       %d\n"
              "Lanes:        %d\n"
              "Max speed:    %d\n"
-             "Usage:        %.2f\n"
              "Vehicle No.:  %d\n"
              "Start:        (%f, %f)\n"
              "End:          (%f, %f)\n"
              "Connections:  %s\n",
-             id, length, lanesNo, maxSpeed, usageProb, vehicles.size(),
+             id, length, lanesNo, maxSpeed, vehicles.size(),
              startPosGeo.first, startPosGeo.second, endPosGeo.first, endPosGeo.second);//, connections_str.c_str());
 
     for(auto lane : vehicles )

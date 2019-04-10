@@ -18,7 +18,7 @@ std::vector<Road> singleLaneIntersectionTest()
     r0.addVehicle(Vehicle(30.0, 5.0, 15), 0);
     Road r1(1, 1500, 1, 20);
 
-    r0.addLaneConnection(1, r1.getId());
+    r0.addLaneConnection(1, r1.getId(), 1.0);
 
     cmap.push_back(r0);
     cmap.push_back(r1);

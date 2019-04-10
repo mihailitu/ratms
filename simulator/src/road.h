@@ -68,12 +68,6 @@ private:
     roadPosCard startPosCard;
     roadPosCard endPosCard;
 
-    /*
-     * the preference probability for this road - how much it is used.
-     * when a car passes the intersection, it will use this probability to choose the next road.
-     */
-    float usageProb;
-
     /* TODO: assign vehicles to lanes on the road!!!
      * the number of lanes */
     unsigned lanesNo = { 1 };
@@ -84,10 +78,12 @@ private:
 
     /*
      * TODO - maybe use some reference to other roads instead of ids so we can access quicker?
-     * TODO - each lane has a connection to another road
-     * this road's connections - id's of other roads.
+     * this road's connections - id's of other roads and the probability that a connection is chosen over other.
+     * Each lane has a list of possible connections. For each lane, connections' probabilities must sum to 1.0
      */
-    std::vector<std::vector<roadID>> connections;
+    // std::vector<std::vector<roadID>> connections;
+
+    std::vector<std::vector<std::pair<roadID, float>>> connections;
 
     /*
      * Right side driving only for now (left side steering wheel)
@@ -149,8 +145,9 @@ public:
      * @brief addLaneConnection - makes the connection between a lane the road that vehicles might take
      * @param lane - lane number
      * @param road - road ID the the vehicles on this current lane might use
+     * @param usageProb - probability that this road is used
      */
-    void addLaneConnection(unsigned lane, roadID road);
+    void addLaneConnection(unsigned lane, roadID road, float usageProb);
 
     roadID getId() const;
     unsigned getMaxSpeed() const;
