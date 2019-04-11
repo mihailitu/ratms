@@ -121,7 +121,7 @@ bool Road::tryLaneChange(const Vehicle &currentVehicle, const Vehicle &currentLa
  * @param dt - update time
  * @param cityMap - all the roads from the city
  */
-void Road::update(double dt, const std::map<roadID, Road> &/*cityMap*/)
+void Road::update(double dt, const std::map<roadID, Road> &cityMap)
 {
 /* - canCrossRoad ?
  *      - crossRoad() if:
@@ -152,12 +152,11 @@ void Road::update(double dt, const std::map<roadID, Road> &/*cityMap*/)
             if (currentVehicle == lane.rbegin() && // first vehicle - get into another road
                     currentVehicle->getPos() >= length) { // is at the end of the road
 
-                if (connections[laneIndex].size() == 0) { // no more connections.
-                    lane.erase(--currentVehicle.base());
-                    continue;
-                } else { // change roads
-
-                }
+                    bool roadChanged = performRoadChange(*currentVehicle, laneIndex, cityMap);
+                    if (roadChanged) {
+                        lane.erase(--currentVehicle.base());
+                        continue;
+                    }
             }
 
             if (currentVehicle->isSlowingDown() &&
@@ -194,11 +193,16 @@ roadPosCard Road::getEndPosCard()
 }
 
 bool Road::performRoadChange(const Vehicle &currentVehicle,
-                             unsigned /*laneIndex*/,
+                             unsigned laneIndex,
                              const std::map<roadID, Road> &/*cityMap*/)
 {
-    if(currentVehicle.getPos() >= length) {
-    }
+    if (connections[laneIndex].size() == 0)
+        return true; // return true only to remove currentVehicle from this road
+
+    auto laneConnections = connections[laneIndex];
+
+
+
     return false;
 }
 

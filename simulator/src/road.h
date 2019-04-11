@@ -88,9 +88,8 @@ private:
     /*
      * Right side driving only for now (left side steering wheel)
      *      lane 0 is the most right ("slow lane"), whilst lane n is the most left ("fast lane")
-     * TODO - use a linked list instead of vector.
-     *      - That way we can keep vehicles sorted and we don't have to sort the lane at each time step
-     * Vehicles on this road, assigned to lanes
+     *  TODO: Arrange vehicles somehow before traffic lights so we have a distribution closer to
+     *        to reality. Maybe consider connection usage probability
      */
     std::vector<std::list<Vehicle>> vehicles;
 
@@ -99,6 +98,7 @@ private:
      * With first vehicle, if the light on it's lane is Red, then that vehicle
      * will have it's next vehicle (the leader) the static TrafficLight object (zero speed, zero length, etc).
      * If the light is green, then the first vehicle's leader will be none
+     * NOTE: the simulator does not verify the safey of traffic light configuration.
      */
     std::vector<TrafficLight> trafficLights;
 
