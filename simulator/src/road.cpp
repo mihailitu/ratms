@@ -31,7 +31,7 @@ Road::Road(roadID /*rId*/, double rLength, unsigned lanes, unsigned maxSpeed_mps
 
     for(unsigned i = 0; i < lanesNo; ++i) {
         vehicles.push_back(std::list<Vehicle>());
-        connections.push_back(std::vector<std::pair<roadID, float>>());
+        connections.push_back(std::vector<std::pair<roadID, double>>());
         trafficLights.push_back(TrafficLight(10, 3, 30, TrafficLight::green_light));
     }
 
@@ -58,7 +58,7 @@ void Road::addVehicle(Vehicle v, unsigned lane)
     vehicles[lane].insert(std::lower_bound(vehicles[lane].begin(), vehicles[lane].end(), v, &vehicleComparer), v);
 }
 
-void Road::addLaneConnection(unsigned lane, roadID road, float usageProb)
+void Road::addLaneConnection(unsigned lane, roadID road, double usageProb)
 {
     if (lane >= lanesNo) {
         log_error("Cannot connect road %u with lane %d. Max lanes: %d", road, lane, lanesNo);
@@ -203,6 +203,40 @@ roadPosCard Road::getEndPosCard()
     return endPosCard;
 }
 
+/**
+ * @brief selectConnection - given connections and their probabilities,
+ *                           choose one weighted connection
+ * @param connections   - possible connections
+ * @return ID of the chosen connection
+ */
+roadID selectConnection(std::vector<std::pair<roadID, double>> &connections)
+{
+    if (connections.empty())
+        return -1;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    std::uniform_real_distribution<double> posRnd(0, 1);
+
+    double distribution = posRnd(gen);
+
+    double beginInterval = 0;
+    for(auto r : connections) {
+        if (distribution > beginInterval && distribution <= r.second)
+            return r.first;
+        beginInterval = r.second;
+    }
+    return -1;
+}
+
+/**
+ * @brief Road::performRoadChange
+ * @param currentVehicle
+ * @param laneIndex
+ * @param cityMap
+ * @return
+ */
 bool Road::performRoadChange(const Vehicle &/*currentVehicle*/,
                              unsigned laneIndex,
                              const std::map<roadID, Road> &/*cityMap*/)
@@ -211,11 +245,6 @@ bool Road::performRoadChange(const Vehicle &/*currentVehicle*/,
         return true; // return true only to remove currentVehicle from this road
 
     auto laneConnections = connections[laneIndex];
-
-    std::random_device rd;
-    std::mt19937 rng(rd());
-
-    std::uniform_real_distribution<> posRnd(0, 1);
 
     return false;
 }

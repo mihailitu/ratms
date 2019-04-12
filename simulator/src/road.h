@@ -83,7 +83,7 @@ private:
      */
     // std::vector<std::vector<roadID>> connections;
 
-    std::vector<std::vector<std::pair<roadID, float>>> connections;
+    std::vector<std::vector<std::pair<roadID, double>>> connections;
 
     /*
      * Right side driving only for now (left side steering wheel)
@@ -147,7 +147,7 @@ public:
      * @param road - road ID the the vehicles on this current lane might use
      * @param usageProb - probability that this road is used
      */
-    void addLaneConnection(unsigned lane, roadID road, float usageProb);
+    void addLaneConnection(unsigned lane, roadID road, double usageProb);
 
     roadID getId() const;
     unsigned getMaxSpeed() const;
