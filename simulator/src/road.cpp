@@ -107,8 +107,11 @@ bool Road::tryLaneChange(const Vehicle &currentVehicle, const Vehicle &currentLa
                     noVehicle : *nextLaneFollowerIterator;
 
         if(currentVehicle.canChangeLane(currentLaneLeader, nextLaneLeader, nextLaneFollower)) {
-            log_info("Vehicle %d switched to lane %d.\n \tCurrent leader: %d, next leader: %d, nextFolower: %d",
-                     currentVehicle.getId(), nextLaneIdx, nextLaneLeader.getId(), nextLaneFollower.getId());
+            log_info("Vehicle %d switched lanes (%d -> %d).\n "
+                     "\tCurrent leader: %d, next leader: %d, nextFolower: %d",
+                     currentVehicle.getId(), currentLane, nextLaneIdx,
+                     currentLaneLeader.getId(), nextLaneLeader.getId(), nextLaneFollower.getId());
+
             addVehicle(currentVehicle, nextLaneIdx);
             return true;
         }
@@ -131,6 +134,13 @@ void Road::update(double dt, const std::map<roadID, Road> &cityMap)
  *          - semaphoreIsGreen
  *          - vehicleIsFirstInLine
  *          - vehicleIsAtTheEndOfTheRoad
+ */
+
+/* TODO:
+ *      - start slowing down vehicles if it's yellow light or is about to come
+ *          (or maybe just cross on yellow if it's too late to stop (as in real life)
+ *      - choose a connection that a vehicle will take earlier on the road so we can
+ *          force that vehicle on the correct traffic lane.
  */
 
     // Vehicle const *nextVehicle = &trafficLightObject; // Using pointer is slightly faster
