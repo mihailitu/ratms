@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <random>
 
 namespace simulator
 {
@@ -192,7 +193,7 @@ roadPosCard Road::getEndPosCard()
     return endPosCard;
 }
 
-bool Road::performRoadChange(const Vehicle &currentVehicle,
+bool Road::performRoadChange(const Vehicle &/*currentVehicle*/,
                              unsigned laneIndex,
                              const std::map<roadID, Road> &/*cityMap*/)
 {
@@ -201,7 +202,10 @@ bool Road::performRoadChange(const Vehicle &currentVehicle,
 
     auto laneConnections = connections[laneIndex];
 
+    std::random_device rd;
+    std::mt19937 rng(rd());
 
+    std::uniform_real_distribution<> posRnd(0, 1);
 
     return false;
 }
