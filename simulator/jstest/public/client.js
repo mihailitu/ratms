@@ -83,7 +83,7 @@ document.addEventListener("DOMContentLoaded", function() {
             var road = road_map[i];
             // console.log('drawing: ' + road.id + ': ' + JSON.stringify(road));
             context.beginPath();
-            context.lineWidth = road.lanes * 3;
+            context.lineWidth = road.lanes * 5;
             context.moveTo(road.start.x * viewWidth, road.start.y * viewHeight);
             context.lineTo(road.end.x * viewWidth, road.end.y * viewHeight);
             context.strokeStyle = "#eff2f7";

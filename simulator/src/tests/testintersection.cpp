@@ -1,15 +1,43 @@
 #include "testintersection.h"
+#include "testmap.h"
 
 namespace simulator {
 
+/*
+ *
+ *
+ */
+
 std::vector<Road> testIntersectionTest()
 {
+    unsigned rId = 0;
     std::vector<Road> cmap;
-    Road r0(0, 1500, 3, 16.7);
+    Road r0(rId++, 1500, 3, 16.7);
+    r0.setCardinalCoordinates({10, 1100}, {1510, 1100});
     cmap.push_back(r0);
-//    Road r1();
-//    Road r2();
-//    Road r3();
+
+    Road r00(rId++, 1500, 3, 16.7);
+    r00.setCardinalCoordinates({1510, 1000}, {10, 1000});
+    cmap.push_back(r00);
+
+    Road r1(rId++, 1500, 3, 16.7);
+    r1.setCardinalCoordinates({1610, 1100}, {1610 + 1500, 1100});
+    cmap.push_back(r1);
+
+    Road r11(rId++, 1500, 3, 16.7);
+    r11.setCardinalCoordinates({1610 + 1500, 1000}, {1610, 1000});
+    cmap.push_back(r11);
+
+    Road r2(rId++, 1000, 2, 16.7);
+    r2.setCardinalCoordinates({1500, 0}, {1500,1000});
+    cmap.push_back(r2);
+
+//    Road r3(2, 1000, 2, 16.7);
+//    r3.setCardinalCoordinates({1500, 1100}, {1500,2100});
+//    cmap.push_back(r3);
+
+
+
     return cmap;
 }
 
