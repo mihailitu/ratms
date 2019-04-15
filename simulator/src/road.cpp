@@ -71,6 +71,16 @@ void Road::addLaneConnection(unsigned lane, roadID road, double usageProb)
     connections[lane].push_back({road, usageProb});
 }
 
+void Road::addLaneConnection(unsigned lane, std::vector<std::pair<roadID, double>> connection)
+{
+    if (lane >= lanesNo) {
+        log_error("Road %ul lane %u mismatch. Max lanes: %d", id, lane, lanesNo);
+        return;
+    }
+    for(auto c : connection)
+        connections[lane].push_back(c);
+}
+
 
 /* Lane change model:
  * http://traffic-simulation.de/MOBIL.html
@@ -195,6 +205,11 @@ void Road::update(double dt, const std::map<roadID, Road> &cityMap)
         }
         ++currentLaneIndex;
     }
+}
+
+void Road::setTrafficLightSequence(unsigned lane, double g, double y, double r, TrafficLight::LightColor initialColor, double startTime)
+{
+    trafficLights[lane].setSequence(g, y, r, initialColor, startTime);
 }
 
 void Road::setCardinalCoordinates(roadPosCard startPos, roadPosCard endPos)

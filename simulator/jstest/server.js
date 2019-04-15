@@ -107,8 +107,8 @@ function getCoordOnTheRoadLane(startCoord, endCoord, roadLane) {
     // var x = -Math.sin(angle) * lanePix + startCoord.x;
     // var y = Math.cos(angle) * lanePix + startCoord.y;
     // For driving on the right side of the road
-    var x = Math.sin(angle) * lanePix + startCoord.x;
-    var y = -Math.cos(angle) * lanePix + startCoord.y;
+    var x = Math.sin(angle) * lanePix + endCoord.x;
+    var y = -Math.cos(angle) * lanePix + endCoord.y;
     return {x, y};
 }
 
@@ -145,7 +145,7 @@ for (var i in timeFrames) {
                 trafficLight.state = 'yellow';
                 break;
         }
-        var coord = getCoordOnTheRoadLane(road_map[data.roadID].endCard, road_map[data.roadID].endCard, lane);
+        var coord = getCoordOnTheRoadLane(road_map[data.roadID].startCard, road_map[data.roadID].endCard, lane);
         trafficLight.x = coord.x/width;
         trafficLight.y = coord.y/height;
         data.trafficLights.push(trafficLight);
@@ -154,7 +154,7 @@ for (var i in timeFrames) {
     for (var v = index; v < frameData.length; v += 5) {
         //TODO: draw vehicle relative to the lane it's running on
         var vehicleCoord = getCoordFromDist(road_map[data.roadID].startCard, road_map[data.roadID].endCard, frameData[v]);
-        vehicleCoord = getCoordOnTheRoadLane(vehicleCoord, road_map[data.roadID].endCard, frameData[v + 4]);
+        vehicleCoord = getCoordOnTheRoadLane(road_map[data.roadID].startCard, vehicleCoord, frameData[v + 4]);
         var vehicle = {
             // TODO: calculate the exact position of the vehicle relative
             // to the road it belongs to

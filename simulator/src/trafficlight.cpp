@@ -14,6 +14,15 @@ TrafficLight::TrafficLight(double g, double y, double r, LightColor initialColor
     lightsTime[red_light] = r;
 }
 
+void TrafficLight::setSequence(double g, double y, double r, LightColor initialColor, double startTime)
+{
+    currentLightColor = initialColor;
+    counter = startTime;
+    lightsTime[green_light] = g;
+    lightsTime[yellow_light] = y;
+    lightsTime[red_light] = r;
+}
+
 TrafficLight::LightColor nextColor(TrafficLight::LightColor current)
 {
     switch (current) {

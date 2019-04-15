@@ -22,6 +22,13 @@ Vehicle::Vehicle( double _x_orig, double _length, double maxV, ElementType vType
     // log_debug("New vehicle: ID: %d type: %s Pos: %2.f V: %.2f L: %.2f", id, typeStr.c_str(), xOrig, v0, length);
 }
 
+void Vehicle::setState(double d, double v, double a)
+{
+    xPos = d;
+    velocity = v;
+    acceleration = a;
+}
+
 /*
  * Split IDM ODE with separate acceleration function, so we can use it also
  * for lane changing.

@@ -30,7 +30,9 @@ void setDummyMapSize(unsigned x, unsigned y, std::vector<Road> &map) {
 std::vector<Road> getTestMap()
 {
     Road r(0, 500, 2, 20);
-    r.setCardinalCoordinates({0, 100}, {500, 100});
+    // r.setCardinalCoordinates({0, 100}, {500, 100});
+    r.setCardinalCoordinates({200, 0}, {200, 500});
+
 
     r.addVehicle({1.0, 5.0, 20.0}, 0);
     r.addVehicle({10.0, 5.0, 17.0}, 0);
@@ -42,7 +44,7 @@ std::vector<Road> getTestMap()
         r
     };
 
-    setDummyMapSize(1000, 500, cmap);
+    setDummyMapSize(1000, 1000, cmap);
     //    cmap[0].addConnection( cmap[1] );
     //    cmap[1].addConnections({ cmap[2], cmap[7] });
     //    cmap[2].addConnection( cmap[3] );

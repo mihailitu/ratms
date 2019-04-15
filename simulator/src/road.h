@@ -160,6 +160,13 @@ public:
      * @param usageProb - probability that this road is used
      */
     void addLaneConnection(unsigned lane, roadID road, double usageProb);
+    void addLaneConnection(unsigned lane, std::vector<std::pair<roadID, double>> connection);
+
+    /**
+     * @brief setTrafficLightSequence - modify traffic light sequence
+     * @param lane
+     */
+    void setTrafficLightSequence(unsigned lane, double g, double y, double r, TrafficLight::LightColor initialColor = TrafficLight::green_light, double startTime = 0);
 
     roadID getId() const;
     unsigned getMaxSpeed() const;

@@ -78,6 +78,14 @@ public:
     Vehicle() {}
     Vehicle( double _x_orig, double _length, double maxV, ElementType vType = vehicle );
 
+    /**
+     * @brief setState - change a vehicle's state for tests.
+     * @param d - distance
+     * @param v - current velocity
+     * @param a - current acceleration
+     */
+    void setState(double d, double v, double a = 0.0);
+
     void update(double dt, const Vehicle &nextVehicle); // update position, acceleration and velocity
 
     bool canChangeLane(const Vehicle &currentLeader, const Vehicle &newLeader, const Vehicle &newFollower) const;
