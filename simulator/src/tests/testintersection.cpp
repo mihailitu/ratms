@@ -2,6 +2,16 @@
 
 namespace simulator {
 
+std::vector<Road> testIntersectionTest()
+{
+    std::vector<Road> cmap;
+    Road r0(0, 1500, 3, 16.7);
+    cmap.push_back(r0);
+//    Road r1();
+//    Road r2();
+//    Road r3();
+    return cmap;
+}
 
 std::vector<Road> singleLaneIntersectionTest()
 {

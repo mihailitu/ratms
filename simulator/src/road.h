@@ -82,7 +82,6 @@ private:
      * Each lane has a list of possible connections. For each lane, connections' probabilities must sum to 1.0
      */
     // std::vector<std::vector<roadID>> connections;
-
     std::vector<std::vector<std::pair<roadID, double>>> connections;
 
     /*
@@ -105,7 +104,7 @@ private:
     Vehicle trafficLightObject;
 
     /* Don't consider lane change when leader is more than minChangeLaneDist ahead.
-     * This is a minor optimization - we don't do all the math for lane change if it's no needed */
+     * This is a minor optimization - we don't do all the math for lane change if it's not needed */
     static const double maxChangeLaneDist; // 25 meters
     static const double minChangeLaneDist; // 1 meters
 
@@ -131,11 +130,24 @@ private:
      */
     bool performRoadChange(const Vehicle &currentVehicle, unsigned laneIndex, const std::map<roadID, Road> &cityMap);
 
+    /**
+     * @brief vehicleCanJoinThisRoad - returns true if there is room for another vehicle
+     * @param vehicle - vehicle that wants to cross
+     * @return true if new vehicle with a certain length can cross roads
+     */
+    bool vehicleCanJoinThisRoad(const Vehicle &vehicle);
+
 public:
     Road();
     Road(roadID rId, double length, unsigned lanes, unsigned maxSpeed_mps);
 
-    void addVehicle(Vehicle v, unsigned lane);
+    /**
+     * @brief addVehicle - adds a new vehicle to this road, sorted by v.getPos() and if there is enough space for v.
+     * @param v - vehicle to be added
+     * @param lane - lane on which this vehicle will join.
+     * @return true if vehicle was added
+     */
+    bool addVehicle(Vehicle v, unsigned lane);
 
     /**
      * Each lane from a road has it's own connection to a road.

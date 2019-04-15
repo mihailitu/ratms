@@ -39,6 +39,7 @@ public:
     bool isRed() const;
     bool isGreen() const;
     void update(double dt);
+    double getRenainingTimeForCurrentColor();
 };
 
 } // namespace simulator

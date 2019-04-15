@@ -35,6 +35,11 @@ void TrafficLight::update(double dt)
     counter += dt;
 }
 
+double TrafficLight::getRenainingTimeForCurrentColor()
+{
+    return lightsTime[currentLightColor] - counter;
+}
+
 bool TrafficLight::isYellow() const
 {
     return currentLightColor == yellow_light;

@@ -75,7 +75,7 @@ void Simulator::runTestSimulator()
 
     while (!terminate && iter < Config::simulationTime) {
 
-        // log_map(cityMap, runTime);
+        log_map(cityMap, runTime);
 
         ++iter;
         for( auto &mapEl : cityMap )

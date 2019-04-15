@@ -11,6 +11,8 @@ namespace simulator
 
 std::vector<Road> singleLaneIntersectionTest();
 
+std::vector<Road> testIntersectionTest();
+
 } //namespace simulator
 
 

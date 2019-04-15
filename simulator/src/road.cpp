@@ -10,7 +10,7 @@ namespace simulator
 {
 
 const Vehicle Road::noVehicle(0.0, 0.0, 0.0);
-const double Road::minChangeLaneDist = 0.5;
+const double Road::minChangeLaneDist = 1.0;
 const double Road::maxChangeLaneDist = 25.0;
 
 static long idSeed = 0;
@@ -46,16 +46,20 @@ bool vehicleComparer(const Vehicle &v1, const Vehicle &v2)
 
 //TODO: should vehicles be added from outside Road class or
 // a road should maintain it's vehicle pool internally based on statistics?
-void Road::addVehicle(Vehicle v, unsigned lane)
+bool Road::addVehicle(Vehicle v, unsigned lane)
 {
     if(lane >= lanesNo) {
         log_warning("Assigned vehicle to road %u on lane %d, where the road has only %d lanes.", id, lane, lanesNo);
         lane = 0; //TODO: throw exception?
     }
 
+    auto vehiclePos = std::lower_bound(vehicles[lane].begin(), vehicles[lane].end(), v, &vehicleComparer);
+
+    vehicles[lane].insert(vehiclePos, v);
+
     v.addRoadToItinerary(id);
 
-    vehicles[lane].insert(std::lower_bound(vehicles[lane].begin(), vehicles[lane].end(), v, &vehicleComparer), v);
+    return true;
 }
 
 void Road::addLaneConnection(unsigned lane, roadID road, double usageProb)
@@ -138,7 +142,7 @@ void Road::update(double dt, const std::map<roadID, Road> &cityMap)
 
 /* TODO:
  *      - start slowing down vehicles if it's yellow light or is about to come
- *          (or maybe just cross on yellow if it's too late to stop (as in real life)
+ *          (or maybe just cross on yellow if it's too late to stop (as in reality)
  *      - choose a connection that a vehicle will take earlier on the road so we can
  *          force that vehicle on the correct traffic lane.
  */
@@ -146,34 +150,40 @@ void Road::update(double dt, const std::map<roadID, Road> &cityMap)
     // Vehicle const *nextVehicle = &trafficLightObject; // Using pointer is slightly faster
     std::reference_wrapper<Vehicle const> nextVehicle = trafficLightObject;
 
-    unsigned laneIndex = 0;
+    unsigned currentLaneIndex = 0;
     for(auto &lane : vehicles) {
 
-        trafficLights[laneIndex].update(dt);
+        trafficLights[currentLaneIndex].update(dt);
 
-        if (trafficLights[laneIndex].isGreen())
+        if (trafficLights[currentLaneIndex].isGreen())
             nextVehicle = noVehicle;
         else
             nextVehicle = trafficLightObject;
 
         for(std::list<Vehicle>::reverse_iterator currentVehicle = lane.rbegin(); currentVehicle != lane.rend(); ++currentVehicle) {
 
+            // If a road change is opportune but not possible, update against traffic light
+            // If is yellow light and we are too close to stop, cross on yellow
+
+            bool canChangeLane = true;
+            bool canChangeRoad = true;
+
             currentVehicle->update(dt, nextVehicle);
 
-            if (currentVehicle == lane.rbegin() && // first vehicle - get into another road
+            if (canChangeRoad && currentVehicle == lane.rbegin() && // first vehicle - get into another road
                     currentVehicle->getPos() >= length) { // is at the end of the road
 
-                    bool roadChanged = performRoadChange(*currentVehicle, laneIndex, cityMap);
+                    bool roadChanged = performRoadChange(*currentVehicle, currentLaneIndex, cityMap);
                     if (roadChanged) {
                         lane.erase(--currentVehicle.base());
                         continue;
                     }
             }
 
-            if (currentVehicle->isSlowingDown() &&
+            if (canChangeLane && currentVehicle->isSlowingDown() &&
                     !nextVehicle.get().isTrafficLight()) { // take over or pass obstacle
 
-                bool laneChanged = tryLaneChange(*currentVehicle, nextVehicle, laneIndex);
+                bool laneChanged = tryLaneChange(*currentVehicle, nextVehicle, currentLaneIndex);
 
                 if( laneChanged ) {
                     lane.erase(--currentVehicle.base());
@@ -183,7 +193,7 @@ void Road::update(double dt, const std::map<roadID, Road> &cityMap)
 
             nextVehicle = (*currentVehicle);
         }
-        ++laneIndex;
+        ++currentLaneIndex;
     }
 }
 
