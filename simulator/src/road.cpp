@@ -139,7 +139,7 @@ bool Road::tryLaneChange(const Vehicle &currentVehicle, const Vehicle &currentLa
  * @param dt - update time
  * @param cityMap - all the roads from the city
  */
-void Road::update(double dt, const std::map<roadID, Road> &cityMap)
+void Road::update(double dt, std::map<roadID, Road> &cityMap)
 {
 /* - canCrossRoad ?
  *      - crossRoad() if:
@@ -262,16 +262,20 @@ roadID selectConnection(std::vector<std::pair<roadID, double>> &connections)
  * @param cityMap
  * @return
  */
-bool Road::performRoadChange(const Vehicle &/*currentVehicle*/,
+bool Road::performRoadChange(Vehicle &currentVehicle,
                              unsigned laneIndex,
-                             const std::map<roadID, Road> &/*cityMap*/)
+                             std::map<roadID, Road> &cityMap)
 {
     if (connections[laneIndex].size() == 0)
         return true; // return true only to remove currentVehicle from this road
 
-    auto laneConnections = connections[laneIndex];
+    roadID connectionID = selectConnection(connections[laneIndex]);
+    Road &r = cityMap[connectionID];
+    currentVehicle.resetPosition(currentVehicle.getLength());
+    r.addVehicle(currentVehicle, 0);
+    log_debug("Vehicle %u crossed to road: %u]", currentVehicle.getId(), r.getId());
 
-    return false;
+    return true;
 }
 
 void Road::serialize(std::ostream &out) const

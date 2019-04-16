@@ -128,7 +128,7 @@ private:
      * @param cityMap        - all roads from this city
      * @return true if currentVehicle moved to another road, false otherwise
      */
-    bool performRoadChange(const Vehicle &currentVehicle, unsigned laneIndex, const std::map<roadID, Road> &cityMap);
+    bool performRoadChange(Vehicle &currentVehicle, unsigned laneIndex, std::map<roadID, Road> &cityMap);
 
     /**
      * @brief vehicleCanJoinThisRoad - returns true if there is room for another vehicle
@@ -177,7 +177,7 @@ public:
     std::vector<char> getCurrentLightConfig() const;
     const std::vector<std::list<Vehicle>>& getVehicles() const;
 
-    void update(double dt, const std::map<roadID, Road> &cityMap );
+    void update(double dt, std::map<roadID, Road> &cityMap );
 
     void setCardinalCoordinates(roadPosCard startPos, roadPosCard endPosCard);
     roadPosCard getStartPosCard();

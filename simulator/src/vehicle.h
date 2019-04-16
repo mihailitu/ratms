@@ -92,6 +92,11 @@ public:
 
     void addRoadToItinerary(roadID rId);
 
+    /**
+     * @brief resetPosition - reset vehicle's position to new pos. Useful when changing roads
+     * @param newPos - new position
+     */
+    void resetPosition(double newPos);
     double getPos() const;
     double getAcceleration() const;
     bool isSlowingDown() const;

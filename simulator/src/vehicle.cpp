@@ -156,6 +156,11 @@ bool Vehicle::isSlowingDown() const
     return slowingDown;
 }
 
+void Vehicle::resetPosition(double newPos)
+{
+    xPos = newPos;
+}
+
 double Vehicle::getPos() const
 {
     return xPos;
