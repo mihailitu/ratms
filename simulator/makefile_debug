@@ -1,0 +1,24 @@
+CC := g++
+CO := -c -ggdb -std=c++1z -O0 -W -Wall -Wextra -pedantic -Wno-unknown-pragmas -fPIC -fno-strict-aliasing
+
+LN := g++
+LO =
+
+SRCS := $(wildcard src/*.cpp src/tests/*.cpp)
+OBJS := $(patsubst %.cpp, bin/debug/%.o, $(SRCS))
+
+TARGET := bin/debug/simulator_dbg
+
+first: all
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(LN) $(LO) -o $@ $^ #-lpthread  -lboost_system
+
+bin/debug/%.o: %.cpp
+	mkdir -p bin/debug/src/tests
+	$(CC) $(CO) -o $@ $<
+
+clean:
+	rm -f $(OBJS) $(TARGET)

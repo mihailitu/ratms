@@ -1,22 +1,24 @@
 CC := g++
-CO := -c -ggdb -std=c++1z -O0 -W -Wall -Wextra -pedantic -Wno-unknown-pragmas -fPIC -fno-strict-aliasing
+CO := -c -std=c++17 -O3 -W -Wall -Wextra -pedantic -Wno-unknown-pragmas -fPIC -fno-strict-aliasing
 
 LN := g++
 LO =
 
-SRCS := $(wildcard *.cpp)
-OBJS := $(patsubst %.cpp, %.o, $(SRCS))
+SRCS := $(wildcard src/*.cpp src/tests/*.cpp)
+OBJS := $(patsubst %.cpp, bin/release/%.o, $(SRCS))
 
-TARGET := simulator
+TARGET := bin/release/simulator
 
 first: all
 
 all: $(TARGET)
+debug: $(TARGET_DBG)
 
 $(TARGET): $(OBJS)
 	$(LN) $(LO) -o $@ $^ #-lpthread  -lboost_system
-
-%.o: %.cpp
+	
+bin/release/%.o: %.cpp
+	mkdir -p bin/release/src/tests
 	$(CC) $(CO) -o $@ $<
 
 clean:
