@@ -260,4 +260,26 @@ std::vector<Road> followingVehicleTestMap()
     return smap;
 }
 
+std::vector<Road> performanceTest(unsigned roadsNo, unsigned carsPerRoad)
+{
+    std::vector<Road> cmap;
+    const unsigned roadLength = 2000;
+    const unsigned roadLanes = 3;
+    unsigned y = 0;
+
+    for(unsigned r = 0; r < roadsNo; ++r) {
+        Road road(r, roadLength, roadLanes, 20);
+        road.setCardinalCoordinates({0, y}, {2000, y});
+        y += 3 * roadLanes;
+        double vPos = 0;
+        for(unsigned v = 0; v < carsPerRoad; ++v) {
+            road.addVehicle({vPos, 5.0, 14.0 + v % 3}, v % 3);
+            if(v % 3 == 0)
+                vPos += 6.5;
+        }
+        cmap.push_back(road);
+    }
+    return cmap;
+}
+
 } // namespace simulator

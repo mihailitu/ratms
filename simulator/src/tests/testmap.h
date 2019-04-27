@@ -25,5 +25,7 @@ std::vector<Road> sigleVehicleTestMap();
 std::vector<Road> followingVehicleTestMap();
 std::vector<Road> testMap();
 
+std::vector<Road> performanceTest(unsigned roadsNo, unsigned carsPerRoad);
+
 } // namespace simulator
 #endif // TESTMAP_H

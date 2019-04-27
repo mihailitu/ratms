@@ -18,7 +18,7 @@ Simulator::Simulator()
 
 void Simulator::initSimulatorTestState()
 {
-    outputData = true;
+    Config::outputSimulationToDisk = true;
 }
 
 void Simulator::addRoadToMap(Road &r)
@@ -67,7 +67,7 @@ void Simulator::runTestSimulator()
 
     std::ofstream roadMap;
     std::ofstream output;
-    if (outputData) {
+    if (Config::outputSimulationToDisk) {
         roadMap.open(Config::simulatorMap);
         output.open(Config::simulatorOuput);
         serialize_roads_v2(roadMap);
@@ -81,12 +81,12 @@ void Simulator::runTestSimulator()
         for( auto &mapEl : cityMap )
             mapEl.second.update(dt, cityMap);
 
-        if (outputData)
+        if (Config::outputSimulationToDisk)
             serialize(runTime, output);
 
         runTime += dt;
     }
-    if (outputData)
+    if (Config::outputSimulationToDisk)
         output.close();
 }
 

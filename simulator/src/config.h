@@ -21,6 +21,7 @@ public:
     static std::string simulatorOuput;
     static std::string simulatorMap;
     static const double DT;// simulator will update at 0.5 seconds.
+    static bool outputSimulationToDisk;
 };
 
 } // namespace simulator
