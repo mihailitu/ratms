@@ -18,8 +18,8 @@ public:
                     };
 
 private:
-    static int idGen;
-    int id;
+    static unsigned idGen;
+    unsigned id;
     /* the length of the car.
      * We can have:
      *      - compact car - usual sedan 3.5 - 5 meters long
@@ -112,7 +112,7 @@ public:
 
     void printVehicle() const;
     void log() const;
-    int getId() const { return id; }
+    unsigned getId() const { return id; }
 
 private:
     void serialize_v1(std::ostream &out) const;

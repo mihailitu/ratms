@@ -96,15 +96,15 @@ bool Road::tryLaneChange(const Vehicle &currentVehicle, const Vehicle &currentLa
     }
 
     // prefer overtaking on the left
-    int nextLanesIdxs[2] = { currentLane + 1 < lanesNo  ? (int)currentLane + 1 : -1,
-                             (int)currentLane - 1  >= 0 ? (int)currentLane - 1 : -1 };
+    int nextLanesIdxs[2] = { currentLane + 1 < lanesNo  ? static_cast<int>(currentLane + 1) : -1,
+                             static_cast<int>(currentLane - 1)  >= 0 ? static_cast<int>(currentLane - 1) : -1 };
 
 
     for(int nextLaneIdx : nextLanesIdxs) {
         if ( nextLaneIdx < 0 )
             continue;
 
-        std::list<Vehicle> &nextLaneVehicles = vehicles[nextLaneIdx];
+        std::list<Vehicle> &nextLaneVehicles = vehicles[static_cast<unsigned>(nextLaneIdx)];
 
         auto nextLaneLeaderIterator = std::lower_bound(nextLaneVehicles.begin(), nextLaneVehicles.end(),
                                                currentVehicle, &vehicleComparer);
@@ -126,7 +126,7 @@ bool Road::tryLaneChange(const Vehicle &currentVehicle, const Vehicle &currentLa
                      currentVehicle.getId(), currentLane, nextLaneIdx,
                      currentLaneLeader.getId(), nextLaneLeader.getId(), nextLaneFollower.getId());
 
-            addVehicle(currentVehicle, nextLaneIdx);
+            addVehicle(currentVehicle, static_cast<unsigned>(nextLaneIdx));
             return true;
         }
     }
@@ -185,6 +185,7 @@ void Road::update(double dt, std::map<roadID, Road> &cityMap)
 
                     bool roadChanged = performRoadChange(*currentVehicle, currentLaneIndex, cityMap);
                     if (roadChanged) {
+                        log_info("Vehicle %ul left the simulation", currentVehicle->getId());
                         lane.erase(--currentVehicle.base());
                         continue;
                     }
@@ -234,10 +235,10 @@ roadPosCard Road::getEndPosCard()
  * @param connections   - possible connections
  * @return ID of the chosen connection
  */
-roadID selectConnection(std::vector<std::pair<roadID, double>> &connections)
+roadID selectConnection(std::vector<std::pair<roadID, double>> &connections) noexcept(false)
 {
     if (connections.empty())
-        return -1;
+        throw std::exception();
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -252,7 +253,7 @@ roadID selectConnection(std::vector<std::pair<roadID, double>> &connections)
             return r.first;
         beginInterval = r.second;
     }
-    return -1;
+    throw std::exception();
 }
 
 /**
@@ -269,7 +270,13 @@ bool Road::performRoadChange(Vehicle &currentVehicle,
     if (connections[laneIndex].size() == 0)
         return true; // return true only to remove currentVehicle from this road
 
-    roadID connectionID = selectConnection(connections[laneIndex]);
+    roadID connectionID;
+    try {
+        connectionID = selectConnection(connections[laneIndex]);
+    } catch(std::exception &) {
+        log_warning("");
+        return false;
+    }
     Road &r = cityMap[connectionID];
     currentVehicle.resetPosition(currentVehicle.getLength());
     r.addVehicle(currentVehicle, 0);

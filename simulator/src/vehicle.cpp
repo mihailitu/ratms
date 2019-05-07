@@ -7,7 +7,7 @@
 namespace simulator
 {
 
-int Vehicle::idGen = 0;
+unsigned Vehicle::idGen = 0;
 
 Vehicle::Vehicle( double _x_orig, double _length, double maxV, ElementType vType ) :
     length(_length), xOrig(_x_orig), xPos(_x_orig), v0(maxV), type(vType)
@@ -214,7 +214,7 @@ void Vehicle::log() const
 {
     double mv = mps_to_kmh(velocity);
     double maxv = mps_to_kmh(v0);
-    log_debug("id: %2d type: %d orig: %5.2f x: %5.2f v: %2.f max: %2.f a: %1.1f ", id, type, xOrig, xPos, mv, maxv, acceleration);
+    log_debug("id: %4ul type: %d orig: %5.2f x: %5.2f v: %2.f max: %2.f a: %1.1f ", id, type, xOrig, xPos, mv, maxv, acceleration);
 }
 
 } // namespace simulator
