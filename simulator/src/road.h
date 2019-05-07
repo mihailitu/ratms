@@ -74,7 +74,7 @@ private:
 
     /* road max speed m/s - if any or city speed limit -
      * this doesn't have to be strictly conformed by drivers */
-    unsigned maxSpeed;
+    double maxSpeed;
 
     /*
      * TODO - maybe use some reference to other roads instead of ids so we can access quicker?
@@ -84,7 +84,7 @@ private:
     // std::vector<std::vector<roadID>> connections;
     std::vector<std::vector<std::pair<roadID, double>>> connections;
 
-    /*
+    /*unsigned
      * Right side driving only for now (left side steering wheel)
      *      lane 0 is the most right ("slow lane"), whilst lane n is the most left ("fast lane")
      *  TODO: Arrange vehicles somehow before traffic lights so we have a distribution closer to
@@ -139,7 +139,7 @@ private:
 
 public:
     Road();
-    Road(roadID rId, double length, unsigned lanes, unsigned maxSpeed_mps);
+    Road(roadID rId, double length, unsigned lanes, double maxSpeed_mps);
 
     /**
      * @brief addVehicle - adds a new vehicle to this road, sorted by v.getPos() and if there is enough space for v.
@@ -169,8 +169,8 @@ public:
     void setTrafficLightSequence(unsigned lane, double g, double y, double r, TrafficLight::LightColor initialColor = TrafficLight::green_light, double startTime = 0);
 
     roadID getId() const;
-    unsigned getMaxSpeed() const;
-    unsigned getLength() const;
+    double getMaxSpeed() const;
+    double getLength() const;
     unsigned getLanesNo() const;
 
     /* Returns lane lights in format for each lane (G=green, Y=yellow and R=red) */

@@ -13,19 +13,19 @@ const Vehicle Road::noVehicle(0.0, 0.0, 0.0);
 const double Road::minChangeLaneDist = 1.0;
 const double Road::maxChangeLaneDist = 25.0;
 
-static long idSeed = 0;
+static unsigned long idSeed = 0;
 
 Road::Road()
 {
 }
 
-Road::Road(roadID /*rId*/, double rLength, unsigned lanes, unsigned maxSpeed_mps ) :
+Road::Road(roadID /*rId*/, double rLength, unsigned lanes, double maxSpeed_mps ) :
     id (idSeed++), length(rLength), lanesNo(lanes), maxSpeed(maxSpeed_mps)
 {
     log_info("New road added: \n"
-             "\t ID: %u \n"
+             "\t ID: %lu \n"
              "\t length: %.2f m\n"
-             "\t max_speed: %u \n"
+             "\t max_speed: %.2f \n"
              "\t lanes: %u \n",
              id, length, maxSpeed, lanesNo);
 
@@ -49,7 +49,7 @@ bool vehicleComparer(const Vehicle &v1, const Vehicle &v2)
 bool Road::addVehicle(Vehicle v, unsigned lane)
 {
     if(lane >= lanesNo) {
-        log_warning("Assigned vehicle to road %u on lane %d, where the road has only %d lanes.", id, lane, lanesNo);
+        log_warning("Assigned vehicle to road %lu on lane %d, where the road has only %d lanes.", id, lane, lanesNo);
         lane = 0; //TODO: throw exception?
     }
 
@@ -65,7 +65,7 @@ bool Road::addVehicle(Vehicle v, unsigned lane)
 void Road::addLaneConnection(unsigned lane, roadID road, double usageProb)
 {
     if (lane >= lanesNo) {
-        log_error("Cannot connect road %u with lane %d. Max lanes: %d", road, lane, lanesNo);
+        log_error("Cannot connect road %lu with lane %d. Max lanes: %d", road, lane, lanesNo);
         return;
     }
     connections[lane].push_back({road, usageProb});
@@ -74,7 +74,7 @@ void Road::addLaneConnection(unsigned lane, roadID road, double usageProb)
 void Road::addLaneConnection(unsigned lane, std::vector<std::pair<roadID, double>> connection)
 {
     if (lane >= lanesNo) {
-        log_error("Road %ul lane %u mismatch. Max lanes: %d", id, lane, lanesNo);
+        log_error("Road %lu lane %u mismatch. Max lanes: %d", id, lane, lanesNo);
         return;
     }
     for(auto c : connection)
@@ -273,7 +273,7 @@ bool Road::performRoadChange(Vehicle &currentVehicle,
     Road &r = cityMap[connectionID];
     currentVehicle.resetPosition(currentVehicle.getLength());
     r.addVehicle(currentVehicle, 0);
-    log_debug("Vehicle %u crossed to road: %u]", currentVehicle.getId(), r.getId());
+    log_debug("Vehicle %u crossed to road: %lu]", currentVehicle.getId(), r.getId());
 
     return true;
 }
@@ -326,7 +326,7 @@ roadID Road::getId() const
     return id;
 }
 
-unsigned Road::getMaxSpeed() const
+double Road::getMaxSpeed() const
 {
     return maxSpeed;
 }
@@ -336,7 +336,7 @@ unsigned Road::getLanesNo() const
     return lanesNo;
 }
 
-unsigned Road::getLength() const
+double Road::getLength() const
 {
     return length;
 }
@@ -344,14 +344,13 @@ unsigned Road::getLength() const
 void Road::printRoad() const
 {
 
-    log_info("Road ID:    %u\n"
-             "Length:       %d\n"
+    log_info("Road ID:    %lu\n"
+             "Length:       %.2f\n"
              "Lanes:        %d\n"
-             "Max speed:    %d\n"
-             "Vehicle No.:  %d\n"
+             "Max speed:    %.2f\n"
+             "Vehicle No.:  %lu\n"
              "Start:        (%f, %f)\n"
-             "End:          (%f, %f)\n"
-             "Connections:  %s\n",
+             "End:          (%f, %f)\n",
              id, length, lanesNo, maxSpeed, vehicles.size(),
              startPosGeo.first, startPosGeo.second, endPosGeo.first, endPosGeo.second);//, connections_str.c_str());
 

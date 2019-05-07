@@ -83,7 +83,7 @@ std::vector<Road> getTimeTestMap()
         r.setCardinalCoordinates({0, i}, {3000, i});
         int pos = 0;
         for(unsigned v = 0; v < 200; ++v ) {
-            r.addVehicle({static_cast<float>(pos + 5), 1.0, 20.0}, 0);
+            r.addVehicle({static_cast<double>(pos + 5), 1.0, 20.0}, 0);
             pos+=5;
         }
         cmap.push_back(r);
@@ -189,18 +189,18 @@ std::vector<Road> manyRandomVehicleTestMap(int numVehicles)
     std::random_device rd;
     std::mt19937 rng(rd());
 
-    std::uniform_int_distribution<int> posRnd(1, 500);
-    std::uniform_int_distribution<int> speedRnd(10, 15);
-    std::uniform_int_distribution<int> laneRnd(0, 2);
+    std::uniform_int_distribution<unsigned> posRnd(1, 500);
+    std::uniform_int_distribution<unsigned> speedRnd(10, 15);
+    std::uniform_int_distribution<unsigned> laneRnd(0, 2);
 
     Road r(0, 2000, 3, 20);
     r.setCardinalCoordinates({10, 100}, {2010, 100});
     log_info("Random test - vehicles: %d", numVehicles);
     for(int i = 0; i < numVehicles; ++i) {
 
-        int pos = posRnd(rng);
-        int speed = speedRnd(rng);
-        int lane = laneRnd(rng);
+        unsigned pos = posRnd(rng);
+        unsigned speed = speedRnd(rng);
+        unsigned lane = laneRnd(rng);
         Vehicle v(pos, 5.0, speed);
         v.log();
         r.addVehicle(v, lane);

@@ -21,11 +21,11 @@ int main( )
 
     Config::outputSimulationToDisk = true;
 
-    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+    auto start = std::chrono::system_clock::now();
     simulator.runTestSimulator();
-    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+    auto end = std::chrono::system_clock::now();
 
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( t2 - t1 ).count();
-    log_info("Simulation done in: %f seconds", (float)duration / 1000);
+    std::chrono::duration<double> elapsed_seconds = end-start;
+    log_info("Simulation done in: %f seconds", elapsed_seconds.count());
     return 0;
 }

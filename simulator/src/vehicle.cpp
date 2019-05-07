@@ -121,7 +121,7 @@ bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLead
     // incentive criterion
     double accNl = newLeader.getLength() > 0 ? getNewAcceleration(newLeader) : a;           // a = max acceleration
     double accCl = currentLeader.getLength() > 0 ? getNewAcceleration(currentLeader) : a;   // a = max acceleration
-    unsigned ll = newFollower.getLength();
+    double ll = newFollower.getLength();
     double newFollowerNewAcc = ll > 0 ? newFollower.getNewAcceleration(*this) : 0;
 
     bool changeWanted =

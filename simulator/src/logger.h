@@ -4,6 +4,8 @@
 #include <string>
 #include <cstring>
 #include <cstdio>
+#include <iomanip>
+#include <ctime>
 
 #pragma GCC system_header
 
@@ -14,11 +16,19 @@
 #define DEBUG_DBG 1
 #define DEBUG_MESSAGE
 
+static std::string Time() {
+    std::time_t t = std::time(nullptr);
+    std::tm tm = *std::localtime(&t);
+    std::stringstream tt;
+    tt << std::put_time(&tm, "%D %T");
+    return tt.str();
+}
+
 // with date, time, file:line
 #define log_info(fmt, ...) \
     do { \
             if ( DEBUG_INFO) { \
-                fprintf( stdout, "INFO: %s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
+                fprintf( stdout, "INFO: %s %s:%d: " fmt "\n", Time().c_str(), __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
             } \
        } while(0)
 
@@ -26,14 +36,14 @@
 #define log_error(fmt, ...) \
     do { \
             if ( DEBUG_ERROR) { \
-                fprintf( stderr, "ERROR: %s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
+                fprintf( stderr, "ERROR: %s %s:%d: " fmt "\n", Time().c_str(), __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
             } \
        } while(0)
 
 #define log_warning(fmt, ...) \
     do { \
             if ( DEBUG_WARNING) { \
-                fprintf( stdout, "WARNING: %s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
+                fprintf( stdout, "WARNING: %s %s:%d: " fmt "\n", Time().c_str(), __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
             } \
        } while(0)
 
@@ -41,7 +51,7 @@
 #define log_debug(fmt, ...) \
     do { \
             if ( DEBUG_DBG) { \
-                fprintf( stdout, "INFO: %s %s %s:%d: " fmt "\n", __DATE__, __TIME__, __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
+                fprintf( stdout, "INFO: %s %s:%d: " fmt "\n", Time().c_str(), __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
             } \
        } while(0)
 
