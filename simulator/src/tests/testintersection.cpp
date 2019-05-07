@@ -123,6 +123,10 @@ std::vector<Road> singleLaneIntersectionTest()
     Road r1(1, 750, 1, 20);
     r1.setCardinalCoordinates({510, 150}, {510 + 750, 150});
 
+    // Add a static vehicle on road 1 to test vehicle updates
+    Vehicle stoppedVehicle(5, 5, 0.1);
+    r1.addVehicle(stoppedVehicle, 0);
+
     r0.addLaneConnection(0, r1.getId(), 1.0);
 
     cmap.push_back(r0);

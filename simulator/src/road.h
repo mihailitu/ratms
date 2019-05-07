@@ -38,7 +38,8 @@ class Road
      */
 
 public:
-    static const roadID noConnection;
+    // represents error finding a road id
+    static const roadID noRoad = std::numeric_limits<unsigned long>::max();
 private:
     /*
      * road ID - OMS related.
