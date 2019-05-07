@@ -10,11 +10,16 @@
 #pragma GCC system_header
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
-#define DEBUG_INFO 1
-#define DEBUG_ERROR 1
-#define DEBUG_WARNING 1
-#define DEBUG_DBG 1
-#define DEBUG_MESSAGE
+
+enum class LogLevels {
+    debug = 0,
+    info = 1,
+    warning = 2,
+    error = 3,
+    none = 4
+};
+
+static const LogLevels log_level = LogLevels::debug;
 
 static std::string Time() {
     std::time_t t = std::time(nullptr);
@@ -24,10 +29,17 @@ static std::string Time() {
     return tt.str();
 }
 
+//void log_info(fmt, ...)
+//{
+//    if ( log_level >= LogLevels::info ) {
+//        fprintf( stdout, "INFO: %s %s:%d: " fmt "\n", Time().c_str(), __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
+//    }
+//}
+
 // with date, time, file:line
 #define log_info(fmt, ...) \
     do { \
-            if ( DEBUG_INFO) { \
+            if ( log_level <= LogLevels::info ) { \
                 fprintf( stdout, "INFO: %s %s:%d: " fmt "\n", Time().c_str(), __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
             } \
        } while(0)
@@ -35,14 +47,14 @@ static std::string Time() {
 // with date, time, file:line
 #define log_error(fmt, ...) \
     do { \
-            if ( DEBUG_ERROR) { \
+            if ( log_level <= LogLevels::error) { \
                 fprintf( stderr, "ERROR: %s %s:%d: " fmt "\n", Time().c_str(), __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
             } \
        } while(0)
 
 #define log_warning(fmt, ...) \
     do { \
-            if ( DEBUG_WARNING) { \
+            if ( log_level <= LogLevels::warning) { \
                 fprintf( stdout, "WARNING: %s %s:%d: " fmt "\n", Time().c_str(), __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
             } \
        } while(0)
@@ -50,8 +62,8 @@ static std::string Time() {
 // with date, time, file:line
 #define log_debug(fmt, ...) \
     do { \
-            if ( DEBUG_DBG) { \
-                fprintf( stdout, "INFO: %s %s:%d: " fmt "\n", Time().c_str(), __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
+            if ( log_level <= LogLevels::debug) { \
+                fprintf( stdout, "DEBUG: %s %s:%d: " fmt "\n", Time().c_str(), __FILENAME__, __LINE__, ##__VA_ARGS__ ); \
             } \
        } while(0)
 

@@ -202,7 +202,7 @@ void Vehicle::serialize_v1(std::ostream &out) const
 
 void Vehicle::printVehicle() const
 {
-    log_info("Vehicle: %d\n"
+    log_debug("Vehicle: %d\n"
              "Originated: %.2f\n"
              "Position:   %.2f m\n"
              "Length:     %.2f m\n"

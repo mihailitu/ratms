@@ -115,12 +115,13 @@ std::vector<Road> singleLaneIntersectionTest()
     //    Vehicle v3(5.0, 5.0, 17.0);
 
 
-    Road r0(0, 1000, 1, 20);
-    r0.setCardinalCoordinates( {0, 100}, {1000, 100});
+    Road r0(0, 500, 1, 20);
+    r0.setTrafficLightSequence(0, 100, 0, 0);
+    r0.setCardinalCoordinates( {0, 100}, {500, 100});
     r0.addVehicle(Vehicle(0.0, 5.0, 20.0), 0);
     r0.addVehicle(Vehicle(30.0, 5.0, 15), 0);
-    Road r1(1, 1000, 1, 20);
-    r1.setCardinalCoordinates({1010, 150}, {2010, 150});
+    Road r1(1, 750, 1, 20);
+    r1.setCardinalCoordinates({510, 150}, {510 + 750, 150});
 
     r0.addLaneConnection(0, r1.getId(), 1.0);
 

@@ -25,7 +25,7 @@ Road::Road()
 Road::Road(roadID /*rId*/, double rLength, unsigned lanes, double maxSpeed_mps ) :
     id (idSeed++), length(rLength), lanesNo(lanes), maxSpeed(maxSpeed_mps)
 {
-    log_info("New road added: \n"
+    log_debug("New road added: \n"
              "\t ID: %lu \n"
              "\t length: %.2f m\n"
              "\t max_speed: %.2f \n"
@@ -124,7 +124,7 @@ bool Road::tryLaneChange(const Vehicle &currentVehicle, const Vehicle &currentLa
                     noVehicle : *nextLaneFollowerIterator;
 
         if(currentVehicle.canChangeLane(currentLaneLeader, nextLaneLeader, nextLaneFollower)) {
-            log_info("Vehicle %d switched lanes (%d -> %d).\n "
+            log_debug("Vehicle %d switched lanes (%d -> %d).\n "
                      "\tCurrent leader: %d, next leader: %d, nextFolower: %d",
                      currentVehicle.getId(), currentLane, nextLaneIdx,
                      currentLaneLeader.getId(), nextLaneLeader.getId(), nextLaneFollower.getId());
@@ -188,7 +188,7 @@ void Road::update(double dt, std::map<roadID, Road> &cityMap)
 
                     bool roadChanged = performRoadChange(*currentVehicle, currentLaneIndex, cityMap);
                     if (roadChanged) {
-                        log_info("Vehicle %ul left the simulation", currentVehicle->getId());
+                        log_debug("Vehicle %u left the simulation", currentVehicle->getId());
                         lane.erase(--currentVehicle.base());
                         continue;
                     }
@@ -281,7 +281,7 @@ bool Road::performRoadChange(Vehicle &currentVehicle,
     Road &r = cityMap[connectionID];
     currentVehicle.resetPosition(currentVehicle.getLength());
     r.addVehicle(currentVehicle, 0);
-    log_debug("Vehicle %u crossed to road: %lu]", currentVehicle.getId(), r.getId());
+    log_debug("Vehicle %u crossed to road: %lu", currentVehicle.getId(), r.getId());
 
     return true;
 }
@@ -352,7 +352,7 @@ double Road::getLength() const
 void Road::printRoad() const
 {
 
-    log_info("Road ID:    %lu\n"
+    log_debug("Road ID:    %lu\n"
              "Length:       %.2f\n"
              "Lanes:        %d\n"
              "Max speed:    %.2f\n"
