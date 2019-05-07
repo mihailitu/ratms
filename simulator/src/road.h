@@ -37,7 +37,8 @@ class Road
      * Right and ahead are usually together; also, right turn can be always green, yielding vehicles comming from left.
      */
 
-
+public:
+    static const roadID noConnection;
 private:
     /*
      * road ID - OMS related.

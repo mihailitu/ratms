@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <functional>
 #include <random>
+#include <limits>
 
 namespace simulator
 {
@@ -14,6 +15,8 @@ const double Road::minChangeLaneDist = 1.0;
 const double Road::maxChangeLaneDist = 25.0;
 
 static unsigned long idSeed = 0;
+
+const roadID Road::noConnection = std::numeric_limits<unsigned long>::max();
 
 Road::Road()
 {
@@ -235,10 +238,10 @@ roadPosCard Road::getEndPosCard()
  * @param connections   - possible connections
  * @return ID of the chosen connection
  */
-roadID selectConnection(std::vector<std::pair<roadID, double>> &connections) noexcept(false)
+roadID selectConnection(std::vector<std::pair<roadID, double>> &connections)
 {
     if (connections.empty())
-        throw std::exception();
+        return Road::noConnection;
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -253,7 +256,7 @@ roadID selectConnection(std::vector<std::pair<roadID, double>> &connections) noe
             return r.first;
         beginInterval = r.second;
     }
-    throw std::exception();
+    return Road::noConnection;
 }
 
 /**
@@ -270,13 +273,11 @@ bool Road::performRoadChange(Vehicle &currentVehicle,
     if (connections[laneIndex].size() == 0)
         return true; // return true only to remove currentVehicle from this road
 
-    roadID connectionID;
-    try {
-        connectionID = selectConnection(connections[laneIndex]);
-    } catch(std::exception &) {
-        log_warning("");
+    roadID connectionID = selectConnection(connections[laneIndex]);
+
+    if (connectionID == noConnection)
         return false;
-    }
+
     Road &r = cityMap[connectionID];
     currentVehicle.resetPosition(currentVehicle.getLength());
     r.addVehicle(currentVehicle, 0);
