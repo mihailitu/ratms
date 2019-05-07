@@ -11,10 +11,10 @@ namespace simulator
 std::vector<Road> buildWebTestMap()
 {
     // Baba Novac: Mihai Bravu - Campia Libertatii
-    Road r1(0, 993, 2, 50);
+    Road r1(0, 993, 2, 17.0);
     r1.setCardinalCoordinates({0, 0}, {0, 0});
     // Baba Novac: Campia Libertatii - Mihai Bravu
-    Road r2(1, 993, 2, 50);
+    Road r2(1, 993, 2, 17.0);
     r2.setCardinalCoordinates({0, 0}, {0, 0});
 
     std::vector<Road> cmap = { r1, r2 };
