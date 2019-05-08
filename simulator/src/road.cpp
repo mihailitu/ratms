@@ -174,7 +174,7 @@ void Road::update(double dt, std::map<roadID, Road> &cityMap)
         for(std::list<Vehicle>::reverse_iterator currentVehicle = lane.rbegin(); currentVehicle != lane.rend(); ++currentVehicle) {
 
             // If a road change is opportune but not possible, update against traffic light
-            // If is yellow light and we are too close to stop, cross on yellow
+            // If is yellow light and we are too close to stop, force cross on yellow
 
             bool canChangeLane = true;
             bool canChangeRoad = true;
@@ -186,14 +186,13 @@ void Road::update(double dt, std::map<roadID, Road> &cityMap)
 
                     bool roadChanged = performRoadChange(*currentVehicle, currentLaneIndex, cityMap);
                     if (roadChanged) {
-                        log_debug("Vehicle %u left the simulation", currentVehicle->getId());
                         lane.erase(--currentVehicle.base());
                         continue;
                     }
             }
 
             if (canChangeLane && currentVehicle->isSlowingDown() &&
-                    !nextVehicle.get().isTrafficLight()) { // take over or pass obstacle
+                    !nextVehicle.get().isTrafficLight()) { // take over or pass an obstacle
 
                 bool laneChanged = tryLaneChange(*currentVehicle, nextVehicle, currentLaneIndex);
 

@@ -19,7 +19,7 @@ enum class LogLevels {
     none = 4
 };
 
-static const LogLevels log_level = LogLevels::debug;
+static LogLevels log_level = LogLevels::debug;
 
 static std::string Time() {
     std::time_t t = std::time(nullptr);

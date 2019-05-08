@@ -65,7 +65,7 @@ double Vehicle::getNewAcceleration(const Vehicle &nextVehicle) const
 
 void Vehicle::update(double dt, const Vehicle &nextVehicle)
 {
-    if (isTrafficLight())
+    if (isTrafficLight() || isObstacle())
         return;
 
     roadTime += dt;

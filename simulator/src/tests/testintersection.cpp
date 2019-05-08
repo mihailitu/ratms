@@ -124,7 +124,8 @@ std::vector<Road> singleLaneIntersectionTest()
     r1.setCardinalCoordinates({510, 150}, {510 + 750, 150});
 
     // Add a static vehicle on road 1 to test vehicle updates
-    Vehicle stoppedVehicle(5, 5, 0.1);
+    Vehicle stoppedVehicle(5, 5, 0.1, Vehicle::obstacle);
+
     r1.addVehicle(stoppedVehicle, 0);
 
     r0.addLaneConnection(0, r1.getId(), 1.0);

@@ -13,13 +13,14 @@ int main( )
 {
     Simulator simulator;
 
-    std::vector<Road> roadMap = singleLaneIntersectionTest(); // performanceTest(500, 500);
+    std::vector<Road> roadMap = performanceTest(500, 500); //singleLaneIntersectionTest(); // performanceTest(500, 500);
     // setDummyMapSize(500, 500, roadMap);
 
     simulator.addRoadNetToMap( roadMap );
     log_info("Start running simulation");
+    log_level = LogLevels::info;
 
-    Config::outputSimulationToDisk = true;
+    Config::outputSimulationToDisk = false;
 
     auto start = std::chrono::system_clock::now();
     simulator.runTestSimulator();
