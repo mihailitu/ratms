@@ -7,6 +7,30 @@ namespace simulator {
  *
  */
 
+std::vector<Road> threeRoadIntersectionTest()
+{
+    Road r0(0, 500, 2, 16.7);
+    r0.setCardinalCoordinates({0, 500}, {500, 500});
+
+    Road r1(1, 500, 2, 16.7);
+    r1.setCardinalCoordinates({500, 500}, {500, 0});
+
+    Road r2(2, 500, 2, 16.7);
+    r2.setCardinalCoordinates({500, 500}, {500, 1000});
+
+    r0.addVehicle({10, 5.0, 17}, 0);
+    r0.addVehicle({0, 5.0, 16}, 0);
+    r0.addVehicle({10, 5.0, 17}, 1);
+    r0.addVehicle({0, 5.0, 16}, 1);
+
+    r0.addLaneConnection(0, r1.getId(), 50);
+    r0.addLaneConnection(1, r2.getId(), 50);
+
+    std::vector<Road> cmap = {r0, r1, r2};
+    setDummyMapSize(1000, 1200, cmap);
+    return cmap;
+}
+
 std::vector<Road> intersectionTest()
 {
     unsigned rId = 0;

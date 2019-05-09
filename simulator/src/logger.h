@@ -2,6 +2,7 @@
 #define LOGGER_H
 
 #include <string>
+#include <vector>
 #include <cstring>
 #include <cstdio>
 #include <iomanip>
@@ -11,15 +12,16 @@
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 
-enum class LogLevels {
-    debug = 0,
-    info = 1,
-    warning = 2,
-    error = 3,
-    none = 4
+enum LogLevels {
+    all = 0,
+    debug = 1,
+    info = 2,
+    warning = 3,
+    error = 4,
+    none = 5
 };
 
-static LogLevels log_level = LogLevels::debug;
+volatile static LogLevels log_level = LogLevels::debug;
 
 static std::string Time() {
     std::time_t t = std::time(nullptr);
@@ -27,6 +29,25 @@ static std::string Time() {
     std::stringstream tt;
     tt << std::put_time(&tm, "%D %T");
     return tt.str();
+}
+
+static const std::vector<std::string> logStrType = {
+    "ALL",
+    "DEBUG",
+    "INFO",
+    "WARNING",
+    "ERROR",
+    "NONE"
+};
+
+template <typename... Args>
+void doPrint(std::ostream& out, LogLevels l, Args&&... args)
+{
+    if (log_level >= l) {
+        out << logStrType[l] << ": " << Time() << ' ' << __FILENAME__ << ':' << __LINE__ << ": ";
+        ((out << ' ' << std::forward<Args>(args)), ...);
+        out << '\n';
+    }
 }
 
 //void log_info(fmt, ...)

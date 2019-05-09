@@ -9,6 +9,7 @@
 namespace simulator
 {
 
+std::vector<Road> threeRoadIntersectionTest();
 std::vector<Road> singleLaneIntersectionTest();
 
 std::vector<Road> intersectionTest();
