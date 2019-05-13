@@ -263,8 +263,8 @@ std::vector<Road> followingVehicleTestMap()
 std::vector<Road> performanceTest(unsigned roadsNo, unsigned carsPerRoad)
 {
     std::vector<Road> cmap;
-    const unsigned roadLength = 2000;
-    const unsigned roadLanes = 3;
+    const unsigned roadLength = 15000;
+    const unsigned roadLanes = 5;
     unsigned y = 0;
 
     for(unsigned r = 0; r < roadsNo; ++r) {

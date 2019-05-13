@@ -14,7 +14,7 @@ public:
     static const std::string simpleRoadTestFName;
     static const std::string simpleMapTestFName;
 
-    static const int simulationTestTime = 60 * 2 * 2; //
+    static const int simulationTestTime = 60 * 2 * 30; //
 
     // general values
     static const int simulationTime = simulationTestTime;
