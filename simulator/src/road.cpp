@@ -54,6 +54,7 @@ bool Road::addVehicle(Vehicle v, unsigned lane)
         lane = 0; //TODO: throw exception?
     }
 
+    // Keep the lane sorted on vehicle's xPos
     auto vehiclePos = std::lower_bound(vehicles[lane].begin(), vehicles[lane].end(), v, &vehicleComparer);
 
     vehicles[lane].insert(vehiclePos, v);
