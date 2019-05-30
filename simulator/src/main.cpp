@@ -13,7 +13,7 @@ int main( )
 {
     Simulator simulator;
 
-    std::vector<Road> roadMap = performanceTest(4000, 100); //threeRoadIntersectionTest(); //singleLaneIntersectionTest(); // performanceTest(500, 500);
+    std::vector<Road> roadMap = singleLaneIntersectionTest(); //threeRoadIntersectionTest(); //; // performanceTest(500, 500);
     // setDummyMapSize(500, 500, roadMap);
 
     ::log_level = LogLevels::info;
