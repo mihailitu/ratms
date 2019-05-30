@@ -249,7 +249,7 @@ roadID selectConnection(std::vector<std::pair<roadID, double>> &connections)
     double distribution = posRnd(gen);
 
     double beginInterval = 0;
-    for(auto r : connections) {
+    for(auto &r : connections) {
         if (distribution > beginInterval && distribution <= r.second)
             return r.first;
         beginInterval = r.second;

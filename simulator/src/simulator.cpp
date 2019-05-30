@@ -54,7 +54,7 @@ void log_map(const Simulator::CityMap &cityMap, double dt)
             ++vLane;
         }
         std::sort(vectorRoad.begin(), vectorRoad.end(),[](const Vehicle &v1, const Vehicle &v2){return v1.getId() < v2.getId();});
-        for(auto v : vectorRoad)
+        for(auto &v : vectorRoad)
             fprintf(stdout, "\t\t\t{id: %3d d: %6.2f a: %2.2f v: %2.2f}\n", v.getId(), v.getPos(), v.getAcceleration(), v.getVelocity());
         fprintf(stdout, "\n\n");
     }
