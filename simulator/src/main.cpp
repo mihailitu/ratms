@@ -21,7 +21,7 @@ int main( )
     simulator.addRoadNetToMap( roadMap );
     log_info("Start running simulation");
 
-    Config::outputSimulationToDisk = false;
+    Config::outputSimulationToDisk = true;
 
     auto start = std::chrono::system_clock::now();
     simulator.runTestSimulator();
