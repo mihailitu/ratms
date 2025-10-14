@@ -4,7 +4,7 @@ from shapely.geometry import mapping
 from tqdm import tqdm
 
 # Define the city
-city = "Segarcea, Romania"
+city = "Munich, Germany"
 
 # Retrieve the street network for the city
 print("Retrieving street network...")

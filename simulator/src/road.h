@@ -139,10 +139,11 @@ private:
 
     /**
      * @brief vehicleCanJoinThisRoad - returns true if there is room for another vehicle
-     * @param vehicle - vehicle that wants to cross
-     * @return true if new vehicle with a certain length can cross roads
+     * @param vehicle - vehicle that wants to join
+     * @param lane - lane to join
+     * @return true if new vehicle can safely join at position 0 on the specified lane
      */
-    bool vehicleCanJoinThisRoad(const Vehicle &vehicle);
+    bool vehicleCanJoinThisRoad(const Vehicle &vehicle, unsigned lane) const;
 
 public:
     Road();

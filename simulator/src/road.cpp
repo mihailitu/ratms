@@ -53,11 +53,11 @@ bool Road::addVehicle(Vehicle v, unsigned lane)
         lane = 0; //TODO: throw exception?
     }
 
-    auto vehiclePos = std::lower_bound(vehicles[lane].begin(), vehicles[lane].end(), v, &vehicleComparer);
-
-    vehicles[lane].insert(vehiclePos, v);
-
+    // Add road to itinerary BEFORE inserting (since v is passed by value)
     v.addRoadToItinerary(id);
+
+    auto vehiclePos = std::lower_bound(vehicles[lane].begin(), vehicles[lane].end(), v, &vehicleComparer);
+    vehicles[lane].insert(vehiclePos, v);
 
     return true;
 }
@@ -218,28 +218,67 @@ roadPosCard Road::getEndPosCard()
 /**
  * @brief selectConnection - given connections and their probabilities,
  *                           choose one weighted connection
- * @param connections   - possible connections
+ * @param connections   - possible connections (roadID, probability pairs)
  * @return ID of the chosen connection
+ *
+ * Probabilities are normalized to sum to 1.0, so you can pass {A:0.7, B:0.3}
+ * or {A:7, B:3} and both will work correctly.
  */
 roadID selectConnection(std::vector<std::pair<roadID, double>> &connections)
 {
     if (connections.empty())
         return -1;
 
+    // Normalize probabilities to ensure they sum to 1.0
+    double sum = 0.0;
+    for(const auto& r : connections) {
+        sum += r.second;
+    }
+
+    if (sum <= 0.0) {
+        log_warning("selectConnection: probabilities sum to zero, choosing first connection");
+        return connections[0].first;
+    }
+
     std::random_device rd;
     std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+    double rand = dist(gen);
 
-    std::uniform_real_distribution<double> posRnd(0, 1);
-
-    double distribution = posRnd(gen);
-
-    double beginInterval = 0;
-    for(auto r : connections) {
-        if (distribution > beginInterval && distribution <= r.second)
+    // Select road based on cumulative probability
+    double cumulative = 0.0;
+    for(const auto& r : connections) {
+        cumulative += r.second / sum;
+        if (rand <= cumulative) {
             return r.first;
-        beginInterval = r.second;
+        }
     }
-    return -1;
+
+    // Fallback to last connection (handles floating point rounding)
+    return connections.back().first;
+}
+
+/**
+ * @brief Road::vehicleCanJoinThisRoad - Check if vehicle can safely join this road
+ * @param vehicle - vehicle attempting to join
+ * @param lane - lane to check
+ * @return true if there's sufficient space at the start of the lane
+ */
+bool Road::vehicleCanJoinThisRoad(const Vehicle &vehicle, unsigned lane) const
+{
+    if (lane >= lanesNo) {
+        return false;
+    }
+
+    if (vehicles[lane].empty()) {
+        return true;
+    }
+
+    // Check if first vehicle on lane is far enough ahead
+    const Vehicle& firstVehicle = vehicles[lane].front();
+    double requiredGap = vehicle.getLength() + minChangeLaneDist; // Use minimum safe distance
+
+    return (firstVehicle.getPos() >= requiredGap);
 }
 
 /**
@@ -289,6 +328,13 @@ bool Road::performRoadChange(const Vehicle &currentVehicle,
     if (nextRoad.getLanesNo() > 1) {
         // Prefer rightmost lane for now (lane 0)
         destLane = 0;
+    }
+
+    // Check if destination road has capacity
+    if (!nextRoad.vehicleCanJoinThisRoad(currentVehicle, destLane)) {
+        log_info("Vehicle %d blocked at intersection - destination road %lu lane %u is full",
+                 currentVehicle.getId(), nextRoadID, destLane);
+        return false; // Keep vehicle on current road (waiting at traffic light)
     }
 
     log_info("Vehicle %d transitioning from road %lu (lane %u) to road %lu (lane %u)",
