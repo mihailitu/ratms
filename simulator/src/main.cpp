@@ -12,7 +12,8 @@ int main( )
 {
     Simulator simulator;
 
-    std::vector<Road> roadMap = singleLaneIntersectionTest(); // Test road transitions
+    std::vector<Road> roadMap = fourWayIntersectionTest(); // Test 4-way intersection with routing
+    // singleLaneIntersectionTest(); // Test road transitions
     // testIntersectionTest();// laneChangeTest(); //getTestMap(); //getSmallerTestMap();
     // semaphoreTest();// manyRandomVehicleTestMap(30);//laneChangeTest();
 

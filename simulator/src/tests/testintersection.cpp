@@ -65,4 +65,61 @@ std::vector<Road> singleLaneIntersectionTest()
     return cmap;
 }
 
+/*
+ * Four-way intersection test with probabilistic routing
+ *
+ * Layout:
+ *                  Road 1
+ *                    ↓
+ *      Road 0  →  [CENTER]  →  Road 2
+ *                    ↓
+ *                  Road 3
+ *
+ * - Road 0 (West approach): vehicles can go straight (Road 2) or turn right (Road 3)
+ * - Road 1 (North approach): vehicles go straight (Road 3)
+ */
+std::vector<Road> fourWayIntersectionTest()
+{
+    std::vector<Road> cmap;
+
+    // Road 0: West approach (0, 1000) → (900, 1000)
+    Road r0(0, 400, 1, 20);
+    r0.setCardinalCoordinates({0, 1000}, {400, 1000});
+    // Add vehicles starting close to end so they reach intersection quickly
+    r0.addVehicle(Vehicle(250.0, 5.0, 20.0), 0);
+    r0.addVehicle(Vehicle(280.0, 5.0, 18.0), 0);
+    r0.addVehicle(Vehicle(310.0, 5.0, 15.0), 0);
+
+    // Road 1: North approach (1000, 0) → (1000, 900)
+    Road r1(1, 400, 1, 20);
+    r1.setCardinalCoordinates({1000, 0}, {1000, 400});
+    r1.addVehicle(Vehicle(250.0, 5.0, 20.0), 0);
+    r1.addVehicle(Vehicle(280.0, 5.0, 16.0), 0);
+
+    // Road 2: East exit (1100, 1000) → (2000, 1000)
+    Road r2(2, 1000, 1, 20);
+    r2.setCardinalCoordinates({1100, 1000}, {2100, 1000});
+
+    // Road 3: South exit (1000, 1100) → (1000, 2000)
+    Road r3(3, 1000, 1, 20);
+    r3.setCardinalCoordinates({1000, 1100}, {1000, 2100});
+
+    // Set up connections with probabilities
+    // Road 0 can go to Road 2 (70% - straight east) or Road 3 (30% - right turn south)
+    r0.addLaneConnection(0, r2.getId(), 0.7);
+    r0.addLaneConnection(0, r3.getId(), 0.3);
+
+    // Road 1 goes to Road 3 (100% - straight south)
+    r1.addLaneConnection(0, r3.getId(), 1.0);
+
+    cmap.push_back(r0);
+    cmap.push_back(r1);
+    cmap.push_back(r2);
+    cmap.push_back(r3);
+
+    setDummyMapSize(2500, 2500, cmap);
+
+    return cmap;
+}
+
 } // namespace simulator
