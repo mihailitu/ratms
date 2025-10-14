@@ -85,6 +85,7 @@ public:
     void addRoadToItinerary(roadID rId);
 
     double getPos() const;
+    void setPos(double newPos);
     double getAcceleration() const;
     bool isSlowingDown() const;
     double getLength() const;

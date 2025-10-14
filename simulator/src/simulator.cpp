@@ -78,8 +78,25 @@ void Simulator::runTestSimulator()
         // log_map(cityMap, runTime);
 
         ++iter;
+
+        // PHASE 1: Update all roads and collect pending transitions
+        std::vector<RoadTransition> pendingTransitions;
         for( auto &mapEl : cityMap )
-            mapEl.second.update(dt, cityMap);
+            mapEl.second.update(dt, cityMap, pendingTransitions);
+
+        // PHASE 2: Execute road transitions
+        for(const auto& transition : pendingTransitions) {
+            Vehicle transitioningVehicle = std::get<0>(transition);
+            roadID destRoadID = std::get<1>(transition);
+            unsigned destLane = std::get<2>(transition);
+
+            auto destRoadIt = cityMap.find(destRoadID);
+            if (destRoadIt != cityMap.end()) {
+                // Reset vehicle position to start of new road
+                transitioningVehicle.setPos(0.0);
+                destRoadIt->second.addVehicle(transitioningVehicle, destLane);
+            }
+        }
 
         if (outputData)
             serialize(runTime, output);

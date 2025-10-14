@@ -154,6 +154,12 @@ double Vehicle::getPos() const
     return xPos;
 }
 
+void Vehicle::setPos(double newPos)
+{
+    xPos = newPos;
+    xOrig = newPos;
+}
+
 double Vehicle::getLength() const
 {
     return length;

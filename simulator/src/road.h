@@ -9,9 +9,13 @@
 #include <vector>
 #include <list>
 #include <map>
+#include <tuple>
 
 namespace simulator
 {
+
+// Transition tuple: (Vehicle, destination roadID, destination lane)
+typedef std::tuple<Vehicle, roadID, unsigned> RoadTransition;
 
 class Road
 {
@@ -126,9 +130,12 @@ private:
      * @param currentVehicle - current updated vehicle
      * @param laneIndex      - current's vehicle lane on the road
      * @param cityMap        - all roads from this city
+     * @param pendingTransitions - vector to store transitions for two-phase update
      * @return true if currentVehicle moved to another road, false otherwise
      */
-    bool performRoadChange(const Vehicle &currentVehicle, unsigned laneIndex, const std::map<roadID, Road> &cityMap);
+    bool performRoadChange(const Vehicle &currentVehicle, unsigned laneIndex,
+                          const std::map<roadID, Road> &cityMap,
+                          std::vector<RoadTransition> &pendingTransitions);
 
     /**
      * @brief vehicleCanJoinThisRoad - returns true if there is room for another vehicle
@@ -170,7 +177,8 @@ public:
     std::vector<char> getCurrentLightConfig() const;
     const std::vector<std::list<Vehicle>>& getVehicles() const;
 
-    void update(double dt, const std::map<roadID, Road> &cityMap );
+    void update(double dt, const std::map<roadID, Road> &cityMap,
+               std::vector<RoadTransition> &pendingTransitions);
 
     void setCardinalCoordinates(roadPosCard startPos, roadPosCard endPosCard);
     roadPosCard getStartPosCard();

@@ -128,8 +128,10 @@ bool Road::tryLaneChange(const Vehicle &currentVehicle, const Vehicle &currentLa
  *                     - perfome lane changes according to MOBIL lane change equations
  * @param dt - update time
  * @param cityMap - all the roads from the city
+ * @param pendingTransitions - vector to collect road transitions for two-phase update
  */
-void Road::update(double dt, const std::map<roadID, Road> &cityMap)
+void Road::update(double dt, const std::map<roadID, Road> &cityMap,
+                 std::vector<RoadTransition> &pendingTransitions)
 {
 /* - canCrossRoad ?
  *      - crossRoad() if:
@@ -173,7 +175,7 @@ void Road::update(double dt, const std::map<roadID, Road> &cityMap)
             if (canChangeRoad && currentVehicle == lane.rbegin() && // first vehicle - get into another road
                     currentVehicle->getPos() >= length) { // is at the end of the road
 
-                    bool roadChanged = performRoadChange(*currentVehicle, currentLaneIndex, cityMap);
+                    bool roadChanged = performRoadChange(*currentVehicle, currentLaneIndex, cityMap, pendingTransitions);
                     if (roadChanged) {
                         lane.erase(--currentVehicle.base());
                         continue;
@@ -241,22 +243,61 @@ roadID selectConnection(std::vector<std::pair<roadID, double>> &connections)
 }
 
 /**
- * @brief Road::performRoadChange
- * @param currentVehicle
- * @param laneIndex
- * @param cityMap
- * @return
+ * @brief Road::performRoadChange - Handle vehicle transition to next road
+ * @param currentVehicle - vehicle attempting to change roads
+ * @param laneIndex - current lane of the vehicle
+ * @param cityMap - all roads in the city
+ * @param pendingTransitions - vector to collect transitions for two-phase update
+ * @return true if vehicle should be removed from current road
  */
-bool Road::performRoadChange(const Vehicle &/*currentVehicle*/,
+bool Road::performRoadChange(const Vehicle &currentVehicle,
                              unsigned laneIndex,
-                             const std::map<roadID, Road> &/*cityMap*/)
+                             const std::map<roadID, Road> &cityMap,
+                             std::vector<RoadTransition> &pendingTransitions)
 {
-    if (connections[laneIndex].size() == 0)
-        return true; // return true only to remove currentVehicle from this road
+    // No connections -> vehicle leaves simulation
+    if (connections[laneIndex].size() == 0) {
+        log_info("Vehicle %d leaving simulation (no connections from road %lu, lane %u)",
+                 currentVehicle.getId(), id, laneIndex);
+        return true; // Remove vehicle
+    }
 
     auto laneConnections = connections[laneIndex];
 
-    return false;
+    // Select next road based on probability weights
+    roadID nextRoadID = selectConnection(laneConnections);
+
+    if (nextRoadID == (roadID)-1) {
+        log_error("Failed to select connection for vehicle %d on road %lu, lane %u",
+                  currentVehicle.getId(), id, laneIndex);
+        return true; // Remove vehicle to avoid stuck state
+    }
+
+    // Check if next road exists in cityMap
+    auto nextRoadIt = cityMap.find(nextRoadID);
+    if (nextRoadIt == cityMap.end()) {
+        log_warning("Vehicle %d cannot transition - destination road %lu not in cityMap",
+                    currentVehicle.getId(), nextRoadID);
+        return true; // Remove vehicle
+    }
+
+    const Road& nextRoad = nextRoadIt->second;
+
+    // For now, choose lane 0 on destination road
+    // TODO: Smart lane selection based on downstream connections
+    unsigned destLane = 0;
+    if (nextRoad.getLanesNo() > 1) {
+        // Prefer rightmost lane for now (lane 0)
+        destLane = 0;
+    }
+
+    log_info("Vehicle %d transitioning from road %lu (lane %u) to road %lu (lane %u)",
+             currentVehicle.getId(), id, laneIndex, nextRoadID, destLane);
+
+    // Add transition to pending list
+    pendingTransitions.push_back(std::make_tuple(currentVehicle, nextRoadID, destLane));
+
+    return true; // Remove from current road
 }
 
 void Road::serialize(std::ostream &out) const
