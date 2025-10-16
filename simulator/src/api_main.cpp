@@ -29,7 +29,7 @@ int main() {
     }
 
     // Run database migrations
-    if (!database->runMigrations("../database/migrations")) {
+    if (!database->runMigrations("../../database/migrations")) {
         log_error("Failed to run database migrations");
         return 1;
     }
