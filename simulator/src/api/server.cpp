@@ -1,7 +1,11 @@
 #include "server.h"
 #include "optimization_controller.h"
 #include "../utils/logger.h"
+#include "../optimization/metrics.h"
+#include "../core/defs.h"
 #include <nlohmann/json.hpp>
+#include <chrono>
+#include <thread>
 
 using json = nlohmann::json;
 
@@ -13,6 +17,14 @@ Server::Server(int port) : port_(port) {
 }
 
 Server::~Server() {
+    // Stop simulation thread first
+    if (simulation_running_) {
+        simulation_should_stop_ = true;
+        if (simulation_thread_ && simulation_thread_->joinable()) {
+            simulation_thread_->join();
+        }
+    }
+
     stop();
 }
 
@@ -170,8 +182,6 @@ void Server::handleSimulationStart(const httplib::Request& req, httplib::Respons
         return;
     }
 
-    simulation_running_ = true;
-
     // Create database record if database is available
     if (database_ && database_->isConnected()) {
         int sim_id = database_->createSimulation(
@@ -187,6 +197,15 @@ void Server::handleSimulationStart(const httplib::Request& req, httplib::Respons
         }
     }
 
+    // Reset simulation state
+    simulation_should_stop_ = false;
+    simulation_steps_ = 0;
+    simulation_time_ = 0.0;
+    simulation_running_ = true;
+
+    // Start simulation in background thread
+    simulation_thread_ = std::make_unique<std::thread>(&Server::runSimulationLoop, this);
+
     log_info("Simulation started via API");
 
     json response = {
@@ -201,26 +220,42 @@ void Server::handleSimulationStart(const httplib::Request& req, httplib::Respons
 }
 
 void Server::handleSimulationStop(const httplib::Request& req, httplib::Response& res) {
-    std::lock_guard<std::mutex> lock(sim_mutex_);
+    {
+        std::lock_guard<std::mutex> lock(sim_mutex_);
 
-    if (!simulation_running_) {
-        json response = {
-            {"error", "Simulation not running"},
-            {"status", "stopped"}
-        };
-        res.set_content(response.dump(2), "application/json");
-        res.status = 400;
-        return;
+        if (!simulation_running_) {
+            json response = {
+                {"error", "Simulation not running"},
+                {"status", "stopped"}
+            };
+            res.set_content(response.dump(2), "application/json");
+            res.status = 400;
+            return;
+        }
+
+        // Signal simulation thread to stop
+        simulation_should_stop_ = true;
+        log_info("Sent stop signal to simulation thread");
     }
 
-    simulation_running_ = false;
+    // Wait for simulation thread to complete (outside the lock to avoid deadlock)
+    if (simulation_thread_ && simulation_thread_->joinable()) {
+        simulation_thread_->join();
+        simulation_thread_.reset();
+        log_info("Simulation thread joined");
+    }
 
-    // Complete database record if database is available
-    if (database_ && database_->isConnected() && current_simulation_id_ > 0) {
-        long end_time = std::time(nullptr);
-        database_->completeSimulation(current_simulation_id_, end_time, 0.0);
-        log_info("Simulation record %d completed", current_simulation_id_.load());
-        current_simulation_id_ = -1;
+    {
+        std::lock_guard<std::mutex> lock(sim_mutex_);
+        simulation_running_ = false;
+
+        // Complete database record if database is available
+        if (database_ && database_->isConnected() && current_simulation_id_ > 0) {
+            long end_time = std::time(nullptr);
+            database_->completeSimulation(current_simulation_id_, end_time, simulation_time_.load());
+            log_info("Simulation record %d completed", current_simulation_id_.load());
+            current_simulation_id_ = -1;
+        }
     }
 
     log_info("Simulation stopped via API");
@@ -228,6 +263,8 @@ void Server::handleSimulationStop(const httplib::Request& req, httplib::Response
     json response = {
         {"message", "Simulation stopped successfully"},
         {"status", "stopped"},
+        {"steps", simulation_steps_.load()},
+        {"time", simulation_time_.load()},
         {"timestamp", std::time(nullptr)}
     };
 
@@ -247,6 +284,11 @@ void Server::handleSimulationStatus(const httplib::Request& req, httplib::Respon
 
     if (simulator_) {
         response["road_count"] = simulator_->cityMap.size();
+    }
+
+    if (simulation_running_) {
+        response["simulation_steps"] = simulation_steps_.load();
+        response["simulation_time"] = simulation_time_.load();
     }
 
     res.set_content(response.dump(2), "application/json");
@@ -379,6 +421,131 @@ void Server::handleGetNetworks(const httplib::Request& req, httplib::Response& r
 
     res.set_content(response.dump(2), "application/json");
     res.status = 200;
+}
+
+void Server::runSimulationLoop() {
+    log_info("Simulation loop started");
+
+    const double dt = 0.1;  // Time step
+    const int maxSteps = 10000;  // Maximum steps
+    const int metricsInterval = 10;  // Collect metrics every 10 steps
+    const int dbWriteInterval = 100;  // Write to DB every 100 steps
+
+    simulator::MetricsCollector metricsCollector;
+
+    try {
+        while (!simulation_should_stop_ && simulation_steps_ < maxSteps) {
+            int currentStep = simulation_steps_;
+
+            // PHASE 1: Update all roads and collect pending transitions
+            std::vector<simulator::RoadTransition> pendingTransitions;
+            {
+                std::lock_guard<std::mutex> lock(sim_mutex_);
+                if (!simulator_) {
+                    log_error("Simulator became null during simulation");
+                    break;
+                }
+
+                for (auto& roadPair : simulator_->cityMap) {
+                    roadPair.second.update(dt, simulator_->cityMap, pendingTransitions);
+                }
+            }
+
+            // PHASE 2: Execute road transitions
+            {
+                std::lock_guard<std::mutex> lock(sim_mutex_);
+                if (!simulator_) break;
+
+                for (const auto& transition : pendingTransitions) {
+                    simulator::Vehicle transitioningVehicle = std::get<0>(transition);
+                    simulator::roadID destRoadID = std::get<1>(transition);
+                    unsigned destLane = std::get<2>(transition);
+
+                    auto destRoadIt = simulator_->cityMap.find(destRoadID);
+                    if (destRoadIt != simulator_->cityMap.end()) {
+                        transitioningVehicle.setPos(0.0);
+                        destRoadIt->second.addVehicle(transitioningVehicle, destLane);
+                    } else {
+                        // Vehicle exited the network
+                        metricsCollector.getMetricsMutable().vehiclesExited += 1.0;
+                    }
+                }
+            }
+
+            // PHASE 3: Collect metrics periodically
+            if (currentStep % metricsInterval == 0) {
+                std::lock_guard<std::mutex> lock(sim_mutex_);
+                if (simulator_) {
+                    metricsCollector.collectMetrics(simulator_->cityMap, dt);
+                }
+            }
+
+            // PHASE 4: Write metrics to database periodically
+            if (currentStep % dbWriteInterval == 0 && currentStep > 0) {
+                std::lock_guard<std::mutex> lock(sim_mutex_);
+                if (database_ && database_->isConnected() && current_simulation_id_ > 0) {
+                    // Get current metrics
+                    simulator::SimulationMetrics metrics = metricsCollector.getMetrics();
+                    double avgQueueLength = metrics.sampleCount > 0
+                        ? metrics.averageQueueLength / metrics.sampleCount
+                        : 0.0;
+                    double avgSpeed = metrics.sampleCount > 0
+                        ? metrics.averageSpeed / metrics.sampleCount
+                        : 0.0;
+
+                    // Save metrics to database
+                    long timestamp = std::time(nullptr);
+                    database_->insertMetric(current_simulation_id_, timestamp, "avg_queue_length", 0, avgQueueLength, "vehicles");
+                    database_->insertMetric(current_simulation_id_, timestamp, "avg_speed", 0, avgSpeed, "m/s");
+                    database_->insertMetric(current_simulation_id_, timestamp, "vehicles_exited", 0, metrics.vehiclesExited, "count");
+                    database_->insertMetric(current_simulation_id_, timestamp, "max_queue_length", 0, metrics.maxQueueLength, "vehicles");
+
+                    log_info("Saved metrics at step %d: avg_queue=%.2f, avg_speed=%.2f, exited=%.0f",
+                             currentStep, avgQueueLength, avgSpeed, metrics.vehiclesExited);
+                }
+            }
+
+            // Update counters
+            simulation_steps_++;
+            simulation_time_ = simulation_time_.load() + dt;
+
+            // Small sleep to avoid CPU spinning (optional, can be removed for max speed)
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+
+        // Final metrics write
+        {
+            std::lock_guard<std::mutex> lock(sim_mutex_);
+            if (database_ && database_->isConnected() && current_simulation_id_ > 0) {
+                simulator::SimulationMetrics metrics = metricsCollector.getMetrics();
+                double avgQueueLength = metrics.sampleCount > 0
+                    ? metrics.averageQueueLength / metrics.sampleCount
+                    : 0.0;
+                double avgSpeed = metrics.sampleCount > 0
+                    ? metrics.averageSpeed / metrics.sampleCount
+                    : 0.0;
+
+                long timestamp = std::time(nullptr);
+                database_->insertMetric(current_simulation_id_, timestamp, "final_avg_queue_length", 0, avgQueueLength, "vehicles");
+                database_->insertMetric(current_simulation_id_, timestamp, "final_avg_speed", 0, avgSpeed, "m/s");
+                database_->insertMetric(current_simulation_id_, timestamp, "final_vehicles_exited", 0, metrics.vehiclesExited, "count");
+
+                log_info("Final metrics saved: avg_queue=%.2f, avg_speed=%.2f, exited=%.0f",
+                         avgQueueLength, avgSpeed, metrics.vehiclesExited);
+            }
+        }
+
+        if (simulation_should_stop_) {
+            log_info("Simulation stopped by user request at step %d", simulation_steps_.load());
+        } else {
+            log_info("Simulation completed naturally at step %d", simulation_steps_.load());
+        }
+
+    } catch (const std::exception& e) {
+        log_error("Exception in simulation loop: %s", e.what());
+    }
+
+    log_info("Simulation loop ended: steps=%d, time=%.2f", simulation_steps_.load(), simulation_time_.load());
 }
 
 } // namespace api

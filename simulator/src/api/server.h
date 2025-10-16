@@ -70,6 +70,15 @@ private:
 
     // Controllers
     std::unique_ptr<OptimizationController> optimization_controller_;
+
+    // Simulation thread management
+    std::unique_ptr<std::thread> simulation_thread_;
+    std::atomic<bool> simulation_should_stop_{false};
+    std::atomic<int> simulation_steps_{0};
+    std::atomic<double> simulation_time_{0.0};
+
+    // Simulation execution
+    void runSimulationLoop();
 };
 
 } // namespace api
