@@ -2,7 +2,7 @@
 #define OPTIMIZATION_CONTROLLER_H
 
 #include "../external/httplib.h"
-#include "../external/json.hpp"
+#include <nlohmann/json.hpp>
 #include "../optimization/genetic_algorithm.h"
 #include "../optimization/metrics.h"
 #include "../core/simulator.h"

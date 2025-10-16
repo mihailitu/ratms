@@ -60,6 +60,12 @@ void Server::setSimulator(std::shared_ptr<simulator::Simulator> sim) {
 void Server::setDatabase(std::shared_ptr<data::DatabaseManager> db) {
     database_ = db;
     log_info("Database manager attached to API server");
+
+    // Initialize optimization controller
+    if (database_) {
+        optimization_controller_ = std::make_unique<OptimizationController>(database_);
+        log_info("Optimization controller initialized");
+    }
 }
 
 void Server::setupMiddleware() {
@@ -119,6 +125,12 @@ void Server::setupRoutes() {
     http_server_.Get("/api/networks", [this](const httplib::Request& req, httplib::Response& res) {
         handleGetNetworks(req, res);
     });
+
+    // Register optimization routes if controller is initialized
+    if (optimization_controller_) {
+        optimization_controller_->registerRoutes(http_server_);
+        log_info("Optimization routes registered");
+    }
 
     log_info("API routes configured");
 }
