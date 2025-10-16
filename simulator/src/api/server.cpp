@@ -121,6 +121,10 @@ void Server::setupRoutes() {
         handleSimulationStatus(req, res);
     });
 
+    http_server_.Get("/api/simulation/stream", [this](const httplib::Request& req, httplib::Response& res) {
+        handleSimulationStream(req, res);
+    });
+
     // Database query endpoints
     http_server_.Get("/api/simulations", [this](const httplib::Request& req, httplib::Response& res) {
         handleGetSimulations(req, res);
@@ -293,6 +297,82 @@ void Server::handleSimulationStatus(const httplib::Request& req, httplib::Respon
 
     res.set_content(response.dump(2), "application/json");
     res.status = 200;
+}
+
+void Server::handleSimulationStream(const httplib::Request& req, httplib::Response& res) {
+    // Set up Server-Sent Events (SSE)
+    res.set_header("Content-Type", "text/event-stream");
+    res.set_header("Cache-Control", "no-cache");
+    res.set_header("Connection", "keep-alive");
+    res.set_header("Access-Control-Allow-Origin", "*");
+
+    log_info("Client connected to simulation stream");
+
+    res.set_chunked_content_provider(
+        "text/event-stream",
+        [this](size_t offset, httplib::DataSink &sink) {
+            // Check if simulation is running
+            if (!simulation_running_) {
+                // Send a message that simulation is not running
+                std::string msg = "event: status\ndata: {\"status\":\"stopped\"}\n\n";
+                sink.write(msg.c_str(), msg.size());
+                return false;  // Close connection
+            }
+
+            // Wait for new snapshot
+            if (has_new_snapshot_) {
+                SimulationSnapshot snapshot;
+                {
+                    std::lock_guard<std::mutex> lock(snapshot_mutex_);
+                    snapshot = latest_snapshot_;
+                    has_new_snapshot_ = false;
+                }
+
+                // Convert snapshot to JSON
+                json data = {
+                    {"step", snapshot.step},
+                    {"time", snapshot.time},
+                    {"vehicles", json::array()},
+                    {"trafficLights", json::array()}
+                };
+
+                for (const auto& v : snapshot.vehicles) {
+                    data["vehicles"].push_back({
+                        {"id", v.id},
+                        {"roadId", v.roadId},
+                        {"lane", v.lane},
+                        {"position", v.position},
+                        {"velocity", v.velocity},
+                        {"acceleration", v.acceleration}
+                    });
+                }
+
+                for (const auto& tl : snapshot.trafficLights) {
+                    data["trafficLights"].push_back({
+                        {"roadId", tl.roadId},
+                        {"lane", tl.lane},
+                        {"state", std::string(1, tl.state)}
+                    });
+                }
+
+                // Send as SSE
+                std::string msg = "event: update\ndata: " + data.dump() + "\n\n";
+                if (!sink.write(msg.c_str(), msg.size())) {
+                    log_info("Client disconnected from simulation stream");
+                    return false;
+                }
+            }
+
+            // Small sleep to avoid busy-waiting
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            return true;  // Continue streaming
+        },
+        [](bool success) {
+            // Cleanup callback
+        }
+    );
+
+    log_info("Simulation stream handler completed");
 }
 
 // Database query handlers
@@ -480,6 +560,11 @@ void Server::runSimulationLoop() {
                 }
             }
 
+            // PHASE 3.5: Capture snapshot for streaming (every 5 steps for ~2 updates/sec)
+            if (currentStep % 5 == 0) {
+                captureSimulationSnapshot();
+            }
+
             // PHASE 4: Write metrics to database periodically
             if (currentStep % dbWriteInterval == 0 && currentStep > 0) {
                 std::lock_guard<std::mutex> lock(sim_mutex_);
@@ -546,6 +631,56 @@ void Server::runSimulationLoop() {
     }
 
     log_info("Simulation loop ended: steps=%d, time=%.2f", simulation_steps_.load(), simulation_time_.load());
+}
+
+void Server::captureSimulationSnapshot() {
+    SimulationSnapshot snapshot;
+    snapshot.step = simulation_steps_;
+    snapshot.time = simulation_time_;
+
+    // Capture vehicle positions
+    {
+        std::lock_guard<std::mutex> lock(sim_mutex_);
+        if (!simulator_) return;
+
+        for (const auto& roadPair : simulator_->cityMap) {
+            const auto& road = roadPair.second;
+            int roadId = road.getId();
+
+            // Capture vehicles
+            unsigned laneIdx = 0;
+            for (const auto& lane : road.getVehicles()) {
+                for (const auto& vehicle : lane) {
+                    VehicleSnapshot vSnap;
+                    vSnap.id = vehicle.getId();
+                    vSnap.roadId = roadId;
+                    vSnap.lane = laneIdx;
+                    vSnap.position = vehicle.getPos();
+                    vSnap.velocity = vehicle.getVelocity();
+                    vSnap.acceleration = vehicle.getAcceleration();
+                    snapshot.vehicles.push_back(vSnap);
+                }
+                ++laneIdx;
+            }
+
+            // Capture traffic light states
+            auto trafficLights = road.getCurrentLightConfig();
+            for (unsigned i = 0; i < trafficLights.size(); ++i) {
+                TrafficLightSnapshot tlSnap;
+                tlSnap.roadId = roadId;
+                tlSnap.lane = i;
+                tlSnap.state = trafficLights[i];
+                snapshot.trafficLights.push_back(tlSnap);
+            }
+        }
+    }
+
+    // Store snapshot
+    {
+        std::lock_guard<std::mutex> lock(snapshot_mutex_);
+        latest_snapshot_ = std::move(snapshot);
+        has_new_snapshot_ = true;
+    }
 }
 
 } // namespace api

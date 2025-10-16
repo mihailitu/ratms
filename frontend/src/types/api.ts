@@ -149,3 +149,26 @@ export interface StopOptimizationResponse {
   success: boolean;
   message: string;
 }
+
+// Real-time streaming types
+export interface VehiclePosition {
+  id: number;
+  roadId: number;
+  lane: number;
+  position: number;
+  velocity: number;
+  acceleration: number;
+}
+
+export interface TrafficLightState {
+  roadId: number;
+  lane: number;
+  state: 'R' | 'Y' | 'G';
+}
+
+export interface SimulationUpdate {
+  step: number;
+  time: number;
+  vehicles: VehiclePosition[];
+  trafficLights: TrafficLightState[];
+}

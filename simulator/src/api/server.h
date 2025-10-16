@@ -17,6 +17,37 @@ namespace api {
 class OptimizationController;
 
 /**
+ * @brief VehicleSnapshot - Real-time vehicle position data
+ */
+struct VehicleSnapshot {
+    int id;
+    int roadId;
+    unsigned lane;
+    double position;
+    double velocity;
+    double acceleration;
+};
+
+/**
+ * @brief TrafficLightSnapshot - Real-time traffic light state
+ */
+struct TrafficLightSnapshot {
+    int roadId;
+    unsigned lane;
+    char state;  // 'R', 'Y', 'G'
+};
+
+/**
+ * @brief SimulationSnapshot - Complete simulation state at a point in time
+ */
+struct SimulationSnapshot {
+    int step;
+    double time;
+    std::vector<VehicleSnapshot> vehicles;
+    std::vector<TrafficLightSnapshot> trafficLights;
+};
+
+/**
  * @brief HTTP API Server for RATMS
  *
  * Provides REST API endpoints for:
@@ -47,6 +78,7 @@ private:
     void handleSimulationStart(const httplib::Request& req, httplib::Response& res);
     void handleSimulationStop(const httplib::Request& req, httplib::Response& res);
     void handleSimulationStatus(const httplib::Request& req, httplib::Response& res);
+    void handleSimulationStream(const httplib::Request& req, httplib::Response& res);
 
     // Database query handlers
     void handleGetSimulations(const httplib::Request& req, httplib::Response& res);
@@ -77,8 +109,14 @@ private:
     std::atomic<int> simulation_steps_{0};
     std::atomic<double> simulation_time_{0.0};
 
+    // Real-time streaming
+    SimulationSnapshot latest_snapshot_;
+    std::mutex snapshot_mutex_;
+    std::atomic<bool> has_new_snapshot_{false};
+
     // Simulation execution
     void runSimulationLoop();
+    void captureSimulationSnapshot();
 };
 
 } // namespace api
