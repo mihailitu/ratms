@@ -272,6 +272,170 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 
 ---
 
+### ✅ Phase 7: Simulation Loop Integration (Option A)
+**Branch:** `master` (committed directly)
+
+**Accomplishments:**
+- Real simulation execution through API (not just stubs)
+- Background thread simulation with metrics collection
+- Periodic database persistence
+- Graceful shutdown handling
+
+**Simulation Thread Management (server.h/cpp):**
+- Dedicated simulation_thread_ for background execution
+- Atomic flags: simulation_should_stop_, simulation_steps_, simulation_time_
+- Thread-safe with mutex protection
+- Proper cleanup in destructor
+
+**Simulation Loop (`runSimulationLoop`):**
+- 4-phase simulation cycle:
+  1. Update all roads (IDM physics, lane changes, traffic lights)
+  2. Execute road transitions (vehicles moving between roads)
+  3. Collect metrics every 10 steps
+  4. Write to database every 100 steps
+- Maximum 10,000 steps with dt=0.1s time step
+- Graceful stop on signal
+- Final metrics write on completion
+
+**API Handler Updates:**
+- `POST /api/simulation/start` - Launches simulation thread (non-blocking)
+- `POST /api/simulation/stop` - Gracefully stops and waits for completion
+- `GET /api/simulation/status` - Includes simulation_steps and simulation_time
+
+**Metrics Collection:**
+- Average queue length at traffic lights
+- Average vehicle speed
+- Vehicles exited (completed routes)
+- Maximum queue length observed
+- Periodic database writes (every 100 steps)
+
+**Technical Details:**
+- dt = 0.1s time step
+- 10ms sleep per step to prevent CPU spinning
+- Thread-safe with std::lock_guard
+- Exception handling in simulation loop
+- Builds successfully with no errors
+
+---
+
+### ✅ Phase 8: Real-time Streaming (Option B)
+**Branch:** `master` (committed directly)
+
+**Accomplishments:**
+- Live vehicle position and traffic light state streaming
+- Server-Sent Events (SSE) implementation
+- Real-time frontend updates (~2 updates/second)
+- Connection status monitoring
+
+**Backend Streaming (server.h/cpp):**
+
+Data Structures:
+- VehicleSnapshot: id, roadId, lane, position, velocity, acceleration
+- TrafficLightSnapshot: roadId, lane, state (R/Y/G)
+- SimulationSnapshot: step, time, vehicles[], trafficLights[]
+
+SSE Endpoint:
+- `GET /api/simulation/stream` - Server-Sent Events endpoint
+- Uses cpp-httplib's set_chunked_content_provider
+- Event types: "update" (simulation data), "status" (stopped)
+- ~50ms streaming interval
+- CORS-enabled for web dashboard
+- Automatic cleanup on simulation stop
+
+Snapshot Capture:
+- captureSimulationSnapshot() captures complete state
+- Called every 5 simulation steps (~2 updates/sec)
+- Thread-safe with snapshot_mutex_
+- Atomic has_new_snapshot_ flag
+
+**Frontend Streaming:**
+
+Custom Hook (`useSimulationStream.ts`):
+- React hook for consuming SSE stream
+- Uses browser EventSource API
+- Returns: latestUpdate, isConnected, error
+- Automatic reconnection handling
+- Cleanup on unmount
+
+MapView Integration:
+- Live vehicle markers on Leaflet map
+- Real-time position updates
+- Connection status indicator (green dot when live)
+- Start/Stop streaming button
+- Live stats display (step, time, vehicle count, traffic light count)
+- Error handling and display
+
+**Technical Details:**
+- SSE preferred over WebSocket (simpler, server-to-client only)
+- ~2 updates/second for smooth visualization
+- No impact on simulation when no clients connected
+- Thread-safe snapshot capture with minimal locking
+
+---
+
+### ✅ Phase 9: Advanced Map Visualization (Option C)
+**Branch:** `master` (committed directly)
+
+**Accomplishments:**
+- Complete road network visualization with geographic coordinates
+- Road polyline rendering on Leaflet map
+- Proper vehicle placement along roads
+- Speed-based vehicle coloring
+- Interactive road and vehicle popups
+
+**Backend Changes (C++):**
+
+Road Class (road.h/cpp):
+- Added getStartPosGeo() getter (lat/lon)
+- Added getEndPosGeo() getter (lat/lon)
+- Exposes existing geographic coordinate data
+- roadPosGeo is std::pair<double, double> (lon, lat)
+
+API Server (server.h/cpp):
+- New endpoint: `GET /api/simulation/roads`
+- Returns JSON array of all roads with geometry
+- Fields: id, length, maxSpeed, lanes, startLat, startLon, endLat, endLon
+- Thread-safe access to simulator->cityMap
+
+**Frontend Visualization:**
+
+Road Rendering:
+- Fetches roads on component mount
+- Renders roads as Leaflet polylines (blue, weight: 3)
+- Road popups with id, length, lanes, max speed
+- Auto-fits map bounds to show entire network
+- Polyline caching in roadPolylinesRef
+
+Vehicle Placement:
+- Position interpolation along roads
+- Formula: lat = startLat + (endLat - startLat) * (position / length)
+- Lane offset perpendicular to road direction (0.00001° per lane)
+- Fallback to grid placement if road not found
+
+Speed-Based Coloring:
+- Green: Fast (>70% of 20 m/s reference speed)
+- Blue: Medium (30-70%)
+- Red: Slow (<30%)
+- Real-time color updates as vehicles accelerate/decelerate
+
+Interactive Features:
+- Clickable roads with detail popups
+- Clickable vehicles with speed/acceleration/position
+- Automatic map centering on road network
+- Proper geographic coordinate handling
+
+**Technical Details:**
+- Linear interpolation for vehicle position
+- Efficient marker updates (update vs recreate)
+- Supports OpenStreetMap data via existing newmap.hpp
+- Straight-line road segments (polyline curves possible in future)
+
+**Notes:**
+- Roads need lat/lon data to be set (may be 0,0 for simple test maps)
+- Real-world maps work with OSM import functionality
+
+---
+
 ## Current System State
 
 ### ✅ Working Features
@@ -289,54 +453,68 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 12. ✓ Standalone GA optimizer tool with CSV export
 13. ✓ Web-based GA optimization interface with real-time progress
 14. ✓ Fitness evolution visualization and results analysis
+15. ✓ Real simulation execution through API with background threads
+16. ✓ Periodic metrics collection and database persistence
+17. ✓ Server-Sent Events (SSE) for live vehicle streaming
+18. ✓ Real-time vehicle position and traffic light state updates
+19. ✓ Road network visualization with geographic coordinates
+20. ✓ Interactive map with vehicle markers and speed-based coloring
 
 ### 🔄 Limitations & TODOs
-1. Simulation loop not integrated with API (start/stop creates DB records but doesn't run actual simulation)
-2. No real-time vehicle position updates
-3. No WebSocket support for live streaming
-4. Map view shows placeholder (no actual road network rendering)
-5. GA optimization results not persisted to database (in-memory only)
-6. No pedestrian interactions
-7. Lane selection logic needs refinement
+1. GA optimization results not persisted to database (in-memory only)
+2. No pedestrian interactions
+3. Lane selection logic needs refinement
+4. Road polylines are straight (curved segments possible in future)
+5. Traffic light indicators on map not yet implemented
 
 ---
 
-## Next Steps
+## Future Enhancements
 
-### Option A: Integrate Simulation Loop with API (Recommended)
-**Goal:** Make start/stop actually run the simulation
+### Option D: Database Persistence for GA Optimization
+**Goal:** Persist optimization results to database
 
 **Tasks:**
-1. Add simulation thread to API server
-2. Real-time metrics collection during simulation
-3. Periodic database writes
-4. Status updates
-5. Graceful stop handling
+1. Implement saveOptimizationResults() method
+2. Store runs, generations, and solutions in database
+3. Load optimization history on server restart
+4. Export/import optimization configurations
 
 ---
 
-### Option B: Real-time Vehicle Updates via WebSocket
-**Goal:** Live vehicle position streaming to frontend
+### Option E: Traffic Light Indicators on Map
+**Goal:** Visual representation of traffic light states
 
 **Tasks:**
-1. Add WebSocket support to cpp-httplib server
-2. Vehicle position broadcast on each timestep
-3. Frontend WebSocket client
-4. Real-time map updates with vehicle markers
-5. Traffic light state visualization
+1. Add traffic light markers at intersection entry points
+2. Color-coded indicators (red/yellow/green)
+3. Real-time state updates via SSE stream
+4. Click-to-inspect traffic light details
+5. Phase timing display
 
 ---
 
-### Option C: Advanced Map Visualization
-**Goal:** Render actual road network on map
+### Option F: Advanced Network Editing
+**Goal:** Create/edit road networks through web interface
 
 **Tasks:**
-1. Export road geometry (lat/lon coordinates)
-2. Leaflet polyline rendering
-3. Intersection markers
-4. Traffic light indicators
-5. Vehicle position overlays
-6. Click-to-inspect road details
+1. Interactive map editor for road placement
+2. Traffic light configuration UI
+3. Vehicle spawn point definition
+4. Network validation and testing
+5. Save/load custom networks
+
+---
+
+### Option G: Performance Analytics Dashboard
+**Goal:** Comprehensive traffic analysis tools
+
+**Tasks:**
+1. Time-series charts for multiple simulations
+2. Comparative analysis (baseline vs optimized)
+3. Heatmaps for congestion hotspots
+4. Statistical summaries (percentiles, distributions)
+5. Export reports (PDF, CSV)
 
 ---
 
@@ -459,10 +637,13 @@ ratms/
 - ✅ Phase 3: Database integration
 - ✅ Phase 4: Frontend dashboard
 - ✅ Phase 5: Genetic algorithm optimization
-- ✅ Phase 6: Frontend GA integration
+- ✅ Phase 6: Frontend GA integration (backend API + frontend components)
+- ✅ Phase 7: Simulation loop integration (Option A - real execution)
+- ✅ Phase 8: Real-time streaming (Option B - SSE vehicle updates)
+- ✅ Phase 9: Advanced map visualization (Option C - road rendering)
 
 **Current Branch:** `master`
-**Commits Ahead of Origin:** 8 (local changes not pushed)
+**Commits Ahead of Origin:** 11 (local changes not pushed)
 
 ---
 
@@ -487,21 +668,21 @@ ratms/
 
 ## Recommendations
 
-**Immediate Next Step:** **Integrate Simulation Loop with API** (Option A from "Next Steps")
+**Immediate Next Step:** **Option D: Database Persistence for GA Optimization**
 
 **Rationale:**
-1. ✅ Phase 6 (Frontend GA Integration) complete
-2. Current limitation: API start/stop creates DB records but doesn't run actual simulation
-3. Need to connect simulation engine with API server for real execution
-4. Enables real-time metrics collection during simulation runs
-5. Required for testing GA optimization with actual running simulations
-6. Foundation for WebSocket streaming (Option B)
+1. ✅ Phases 7-9 complete (simulation loop, streaming, map visualization)
+2. Current limitation: GA optimization results stored in-memory only
+3. Results lost on server restart
+4. Database schema already exists (002_optimization_runs.sql)
+5. Implementation is straightforward with existing DatabaseManager
 
-**Estimated Effort:** 1-2 development sessions
+**Estimated Effort:** 1 development session
 
 **Alternatives:**
-- **Option B** (WebSocket): Real-time vehicle streaming (requires Option A first)
-- **Option C** (Map Viz): Enhanced map rendering (independent of Options A/B)
+- **Option E** (Traffic Light Map Indicators): Visual traffic light states on map
+- **Option F** (Network Editor): Interactive road network creation
+- **Option G** (Analytics Dashboard): Advanced performance analysis
 
 ---
 
@@ -510,11 +691,13 @@ ratms/
 - Both servers currently running (api_server on 8080, frontend on 5173)
 - Database initialized with 1 test network
 - `ga_optimizer` tool available for offline optimization
-- No simulations run yet (empty history)
 - All API endpoints tested and working
-- Frontend fully functional with mock/empty data
+- Frontend fully functional with real-time data
 - CSV export available: `evolution_history.csv`, `best_solution.csv`
+- Live simulation streaming operational via SSE
+- Road network visualization with vehicle tracking
+- Simulation execution integrated with API server
 
 ---
 
-**Status:** ✅ Phase 6 Complete! Ready for Option A: Integrate Simulation Loop with API.
+**Status:** ✅ Phase 9 Complete! Core system fully operational with real-time visualization. Next: Database persistence for GA optimization results.
