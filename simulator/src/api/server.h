@@ -3,6 +3,7 @@
 
 #include "../external/httplib.h"
 #include "../core/simulator.h"
+#include "../data/storage/database_manager.h"
 #include <memory>
 #include <string>
 #include <atomic>
@@ -32,6 +33,7 @@ public:
 
     // Simulation control
     void setSimulator(std::shared_ptr<simulator::Simulator> sim);
+    void setDatabase(std::shared_ptr<data::DatabaseManager> db);
 
 private:
     void setupRoutes();
@@ -43,15 +45,23 @@ private:
     void handleSimulationStop(const httplib::Request& req, httplib::Response& res);
     void handleSimulationStatus(const httplib::Request& req, httplib::Response& res);
 
+    // Database query handlers
+    void handleGetSimulations(const httplib::Request& req, httplib::Response& res);
+    void handleGetSimulation(const httplib::Request& req, httplib::Response& res);
+    void handleGetMetrics(const httplib::Request& req, httplib::Response& res);
+    void handleGetNetworks(const httplib::Request& req, httplib::Response& res);
+
     // Middleware
     void corsMiddleware(const httplib::Request& req, httplib::Response& res);
     void loggingMiddleware(const httplib::Request& req, httplib::Response& res);
 
     httplib::Server http_server_;
     std::shared_ptr<simulator::Simulator> simulator_;
+    std::shared_ptr<data::DatabaseManager> database_;
     std::unique_ptr<std::thread> server_thread_;
     std::atomic<bool> running_{false};
     std::atomic<bool> simulation_running_{false};
+    std::atomic<int> current_simulation_id_{-1};
     std::mutex sim_mutex_;
     int port_;
 };

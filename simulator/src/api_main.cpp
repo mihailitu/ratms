@@ -1,5 +1,6 @@
 #include "api/server.h"
 #include "core/simulator.h"
+#include "data/storage/database_manager.h"
 #include "tests/testintersection.h"
 #include "utils/logger.h"
 #include <memory>
@@ -20,6 +21,32 @@ int main() {
 
     log_info("Starting RATMS API Server");
 
+    // Initialize database
+    auto database = std::make_shared<ratms::data::DatabaseManager>("ratms.db");
+    if (!database->initialize()) {
+        log_error("Failed to initialize database");
+        return 1;
+    }
+
+    // Run database migrations
+    if (!database->runMigrations("../database/migrations")) {
+        log_error("Failed to run database migrations");
+        return 1;
+    }
+
+    log_info("Database initialized successfully");
+
+    // Create default network in database
+    int network_id = database->createNetwork(
+        "Test 4-Way Intersection",
+        "Simple 4-way intersection for testing",
+        5,  // road count
+        1,  // intersection count
+        "{}" // config JSON
+    );
+
+    log_info("Default network created with ID: %d", network_id);
+
     // Create simulator instance with test network
     auto simulator = std::make_shared<simulator::Simulator>();
     std::vector<simulator::Road> roadMap = simulator::fourWayIntersectionTest();
@@ -30,6 +57,7 @@ int main() {
     // Create and start API server
     ratms::api::Server api_server(8080);
     api_server.setSimulator(simulator);
+    api_server.setDatabase(database);
     api_server.start();
 
     log_info("RATMS API Server running on http://localhost:8080");

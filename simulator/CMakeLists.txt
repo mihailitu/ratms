@@ -15,6 +15,7 @@ file(GLOB UTILS_SOURCES "src/utils/*.cpp")
 file(GLOB MAPPING_SOURCES "src/mapping/*.cpp")
 file(GLOB OPTIMIZATION_SOURCES "src/optimization/*.cpp")
 file(GLOB API_SOURCES "src/api/*.cpp")
+file(GLOB DATA_SOURCES "src/data/storage/*.cpp")
 file(GLOB TEST_SOURCES "src/tests/*.cpp")
 
 # Shared library sources (used by both executables)
@@ -23,6 +24,7 @@ set(SHARED_SOURCES
     ${UTILS_SOURCES}
     ${MAPPING_SOURCES}
     ${OPTIMIZATION_SOURCES}
+    ${DATA_SOURCES}
     ${TEST_SOURCES}
 )
 
@@ -43,7 +45,13 @@ set(API_SERVER_SOURCES
 
 add_executable(api_server ${API_SERVER_SOURCES})
 
-# Link pthread for threading support (required by httplib)
+# Find required libraries
 find_package(Threads REQUIRED)
-target_link_libraries(api_server Threads::Threads)
+find_package(SQLite3 REQUIRED)
+
+# Link libraries for API server
+target_link_libraries(api_server
+    Threads::Threads
+    SQLite::SQLite3
+)
 
