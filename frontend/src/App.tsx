@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Simulations from './pages/Simulations';
 import SimulationDetail from './pages/SimulationDetail';
 import MapView from './pages/MapView';
+import Optimization from './pages/Optimization';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="/simulations" element={<Simulations />} />
           <Route path="/simulations/:id" element={<SimulationDetail />} />
           <Route path="/map" element={<MapView />} />
+          <Route path="/optimization" element={<Optimization />} />
         </Routes>
       </Layout>
     </Router>

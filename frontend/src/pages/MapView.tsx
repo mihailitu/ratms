@@ -9,7 +9,6 @@ export default function MapView() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [networks, setNetworks] = useState<NetworkRecord[]>([]);
   const [selectedNetwork, setSelectedNetwork] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchNetworks = async () => {
@@ -21,8 +20,6 @@ export default function MapView() {
         }
       } catch (err) {
         console.error('Failed to fetch networks:', err);
-      } finally {
-        setLoading(false);
       }
     };
 

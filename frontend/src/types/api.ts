@@ -56,3 +56,96 @@ export interface NetworkRecord {
   intersection_count: number;
   config?: string;
 }
+
+// Optimization API types
+export interface GAParameters {
+  populationSize: number;
+  generations: number;
+  mutationRate: number;
+  mutationStdDev?: number;
+  crossoverRate: number;
+  tournamentSize?: number;
+  elitismRate: number;
+  minGreenTime?: number;
+  maxGreenTime?: number;
+  minRedTime?: number;
+  maxRedTime?: number;
+  simulationSteps: number;
+  dt: number;
+}
+
+export interface TrafficLightGene {
+  greenTime: number;
+  redTime: number;
+}
+
+export interface OptimizationProgress {
+  currentGeneration: number;
+  totalGenerations: number;
+  percentComplete: number;
+}
+
+export interface OptimizationResults {
+  baselineFitness: number;
+  bestFitness: number;
+  improvementPercent: number;
+  completedAt: number;
+  durationSeconds: number;
+  bestChromosome: TrafficLightGene[];
+  fitnessHistory?: number[];
+  fitnessHistorySample?: number[];
+}
+
+export interface OptimizationRun {
+  id: number;
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'stopped';
+  parameters: GAParameters;
+  progress: OptimizationProgress;
+  startedAt: number;
+  results?: OptimizationResults;
+}
+
+export interface StartOptimizationRequest {
+  populationSize?: number;
+  generations?: number;
+  mutationRate?: number;
+  mutationStdDev?: number;
+  crossoverRate?: number;
+  tournamentSize?: number;
+  elitismRate?: number;
+  minGreenTime?: number;
+  maxGreenTime?: number;
+  minRedTime?: number;
+  maxRedTime?: number;
+  simulationSteps?: number;
+  dt?: number;
+  networkId?: number;
+}
+
+export interface StartOptimizationResponse {
+  success: boolean;
+  runId: number;
+  message: string;
+  run: OptimizationRun;
+}
+
+export interface OptimizationStatusResponse {
+  success: boolean;
+  run: OptimizationRun;
+}
+
+export interface OptimizationResultsResponse {
+  success: boolean;
+  run: OptimizationRun;
+}
+
+export interface OptimizationHistoryResponse {
+  success: boolean;
+  runs: OptimizationRun[];
+  total: number;
+}
+
+export interface StopOptimizationResponse {
+  success: boolean;
+  message: string;
+}
