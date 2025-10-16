@@ -55,3 +55,17 @@ target_link_libraries(api_server
     SQLite::SQLite3
 )
 
+# GA Optimizer executable
+set(GA_OPTIMIZER_SOURCES
+    src/ga_optimizer.cpp
+    ${SHARED_SOURCES}
+)
+
+add_executable(ga_optimizer ${GA_OPTIMIZER_SOURCES})
+
+# Link libraries for GA optimizer
+target_link_libraries(ga_optimizer
+    Threads::Threads
+    SQLite::SQLite3
+)
+
