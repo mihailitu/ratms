@@ -1,0 +1,36 @@
+{
+  "name": "Weekday Morning Rush",
+  "description": "Traffic demand profile for weekday morning peak (7-9 AM)",
+  "time_periods": [
+    {
+      "start_time": "07:00",
+      "end_time": "07:30",
+      "demand_multiplier": 0.6,
+      "vehicle_spawn_rate": 0.1
+    },
+    {
+      "start_time": "07:30",
+      "end_time": "08:30",
+      "demand_multiplier": 1.0,
+      "vehicle_spawn_rate": 0.2
+    },
+    {
+      "start_time": "08:30",
+      "end_time": "09:00",
+      "demand_multiplier": 0.7,
+      "vehicle_spawn_rate": 0.15
+    }
+  ],
+  "road_specific_demand": [
+    {
+      "road_id": 0,
+      "multiplier": 1.5,
+      "description": "Higher demand on west approach"
+    },
+    {
+      "road_id": 1,
+      "multiplier": 1.2,
+      "description": "Moderate demand on north approach"
+    }
+  ]
+}

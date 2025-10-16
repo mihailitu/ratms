@@ -1,7 +1,7 @@
 #include "simulator.h"
-#include "logger.h"
+#include "../utils/logger.h"
 #include "road.h"
-#include "config.h"
+#include "../utils/config.h"
 
 #include <iostream>
 #include <fstream>

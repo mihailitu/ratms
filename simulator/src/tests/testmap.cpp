@@ -1,6 +1,6 @@
 #include "testmap.h"
-#include "../config.h"
-#include "../logger.h"
+#include "../utils/config.h"
+#include "../utils/logger.h"
 
 #include <random>
 namespace simulator

@@ -1,7 +1,7 @@
-#include "simulator.h"
+#include "core/simulator.h"
 #include "tests/testmap.h"
 #include "tests/testintersection.h"
-#include "logger.h"
+#include "utils/logger.h"
 
 #include <iostream>
 #include <chrono>

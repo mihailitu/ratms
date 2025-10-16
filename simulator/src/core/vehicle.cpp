@@ -1,8 +1,8 @@
 #include <cmath>
 
 #include "vehicle.h"
-#include "logger.h"
-#include "utils.h"
+#include "../utils/logger.h"
+#include "../utils/utils.h"
 
 namespace simulator
 {
