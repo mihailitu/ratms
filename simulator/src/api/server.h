@@ -13,6 +13,9 @@
 namespace ratms {
 namespace api {
 
+// Forward declaration
+class OptimizationController;
+
 /**
  * @brief HTTP API Server for RATMS
  *
@@ -64,6 +67,9 @@ private:
     std::atomic<int> current_simulation_id_{-1};
     std::mutex sim_mutex_;
     int port_;
+
+    // Controllers
+    std::unique_ptr<OptimizationController> optimization_controller_;
 };
 
 } // namespace api

@@ -1,4 +1,5 @@
 #include "server.h"
+#include "optimization_controller.h"
 #include "../utils/logger.h"
 #include <nlohmann/json.hpp>
 
