@@ -125,6 +125,10 @@ void Server::setupRoutes() {
         handleSimulationStream(req, res);
     });
 
+    http_server_.Get("/api/simulation/roads", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetRoads(req, res);
+    });
+
     // Database query endpoints
     http_server_.Get("/api/simulations", [this](const httplib::Request& req, httplib::Response& res) {
         handleGetSimulations(req, res);
@@ -294,6 +298,47 @@ void Server::handleSimulationStatus(const httplib::Request& req, httplib::Respon
         response["simulation_steps"] = simulation_steps_.load();
         response["simulation_time"] = simulation_time_.load();
     }
+
+    res.set_content(response.dump(2), "application/json");
+    res.status = 200;
+}
+
+void Server::handleGetRoads(const httplib::Request& req, httplib::Response& res) {
+    std::lock_guard<std::mutex> lock(sim_mutex_);
+
+    if (!simulator_) {
+        json response = {
+            {"error", "Simulator not initialized"},
+            {"roads", json::array()}
+        };
+        res.set_content(response.dump(2), "application/json");
+        res.status = 500;
+        return;
+    }
+
+    json roads = json::array();
+
+    for (const auto& roadPair : simulator_->cityMap) {
+        const auto& road = roadPair.second;
+        auto startGeo = road.getStartPosGeo();
+        auto endGeo = road.getEndPosGeo();
+
+        roads.push_back({
+            {"id", road.getId()},
+            {"length", road.getLength()},
+            {"maxSpeed", road.getMaxSpeed()},
+            {"lanes", road.getLanesNo()},
+            {"startLat", startGeo.second},
+            {"startLon", startGeo.first},
+            {"endLat", endGeo.second},
+            {"endLon", endGeo.first}
+        });
+    }
+
+    json response = {
+        {"roads", roads},
+        {"count", roads.size()}
+    };
 
     res.set_content(response.dump(2), "application/json");
     res.status = 200;

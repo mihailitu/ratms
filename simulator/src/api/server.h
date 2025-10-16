@@ -79,6 +79,7 @@ private:
     void handleSimulationStop(const httplib::Request& req, httplib::Response& res);
     void handleSimulationStatus(const httplib::Request& req, httplib::Response& res);
     void handleSimulationStream(const httplib::Request& req, httplib::Response& res);
+    void handleGetRoads(const httplib::Request& req, httplib::Response& res);
 
     // Database query handlers
     void handleGetSimulations(const httplib::Request& req, httplib::Response& res);

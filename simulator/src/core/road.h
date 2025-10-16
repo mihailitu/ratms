@@ -173,6 +173,8 @@ public:
     unsigned getMaxSpeed() const;
     unsigned getLength() const;
     unsigned getLanesNo() const;
+    roadPosGeo getStartPosGeo() const;
+    roadPosGeo getEndPosGeo() const;
 
     /* Returns lane lights in format for each lane (G=green, Y=yellow and R=red) */
     std::vector<char> getCurrentLightConfig() const;

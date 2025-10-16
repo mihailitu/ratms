@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiClient } from '../services/apiClient';
-import type { NetworkRecord } from '../types/api';
+import type { NetworkRecord, RoadGeometry } from '../types/api';
 import { useSimulationStream } from '../hooks/useSimulationStream';
 
 export default function MapView() {
@@ -11,7 +11,9 @@ export default function MapView() {
   const [networks, setNetworks] = useState<NetworkRecord[]>([]);
   const [selectedNetwork, setSelectedNetwork] = useState<number | null>(null);
   const [streamEnabled, setStreamEnabled] = useState(false);
+  const [roads, setRoads] = useState<RoadGeometry[]>([]);
   const vehicleMarkersRef = useRef<Map<number, L.CircleMarker>>(new Map());
+  const roadPolylinesRef = useRef<Map<number, L.Polyline>>(new Map());
 
   // Subscribe to simulation stream
   const { latestUpdate, isConnected, error: streamError } = useSimulationStream(streamEnabled);
@@ -29,8 +31,63 @@ export default function MapView() {
       }
     };
 
+    const fetchRoads = async () => {
+      try {
+        const response = await apiClient.getRoads();
+        setRoads(response.roads);
+      } catch (err) {
+        console.error('Failed to fetch roads:', err);
+      }
+    };
+
     fetchNetworks();
+    fetchRoads();
   }, []);
+
+  // Render roads as polylines on map
+  useEffect(() => {
+    if (!mapRef.current || roads.length === 0) return;
+
+    const map = mapRef.current;
+
+    // Remove old polylines
+    roadPolylinesRef.current.forEach((polyline) => {
+      map.removeLayer(polyline);
+    });
+    roadPolylinesRef.current.clear();
+
+    // Add new polylines for each road
+    roads.forEach((road) => {
+      const polyline = L.polyline(
+        [[road.startLat, road.startLon], [road.endLat, road.endLon]],
+        {
+          color: '#3b82f6',
+          weight: 3,
+          opacity: 0.7,
+        }
+      ).addTo(map);
+
+      polyline.bindPopup(`
+        <div>
+          <strong>Road ${road.id}</strong><br/>
+          Length: ${road.length}m<br/>
+          Lanes: ${road.lanes}<br/>
+          Max Speed: ${road.maxSpeed} m/s
+        </div>
+      `);
+
+      roadPolylinesRef.current.set(road.id, polyline);
+    });
+
+    // Fit map to show all roads
+    if (roads.length > 0) {
+      const bounds = L.latLngBounds(
+        roads.map(r => [r.startLat, r.startLon] as [number, number])
+      );
+      roads.forEach(r => bounds.extend([r.endLat, r.endLon]));
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [roads]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -75,22 +132,41 @@ export default function MapView() {
 
     // Add or update vehicle markers
     latestUpdate.vehicles.forEach((vehicle) => {
-      // For demo purposes, place vehicles on a simple grid based on roadId
-      // In a real implementation, you'd use actual road coordinates
-      const lat = 48.1351 + (vehicle.roadId * 0.001);
-      const lng = 11.582 + (vehicle.position * 0.0001);
+      // Find the road this vehicle is on
+      const road = roads.find(r => r.id === vehicle.roadId);
+
+      let lat, lng;
+      if (road) {
+        // Interpolate position along the road
+        const ratio = Math.min(vehicle.position / road.length, 1.0);
+        lat = road.startLat + (road.endLat - road.startLat) * ratio;
+        lng = road.startLon + (road.endLon - road.startLon) * ratio;
+
+        // Offset by lane (perpendicular to road direction)
+        if (vehicle.lane > 0) {
+          const perpOffset = 0.00001 * vehicle.lane; // Small offset per lane
+          lat += perpOffset;
+        }
+      } else {
+        // Fallback to grid placement if road not found
+        lat = 48.1351 + (vehicle.roadId * 0.001);
+        lng = 11.582 + (vehicle.position * 0.0001);
+      }
 
       let marker = vehicleMarkersRef.current.get(vehicle.id);
 
       if (!marker) {
-        // Create new marker
+        // Create new marker with color based on speed
+        const speedRatio = Math.min(vehicle.velocity / 20, 1.0); // Normalize to 20 m/s
+        const color = speedRatio > 0.7 ? '#22c55e' : speedRatio > 0.3 ? '#3b82f6' : '#ef4444';
+
         marker = L.circleMarker([lat, lng], {
-          radius: 6,
-          fillColor: '#3b82f6',
-          color: '#1e40af',
-          weight: 2,
+          radius: 5,
+          fillColor: color,
+          color: '#ffffff',
+          weight: 1,
           opacity: 1,
-          fillOpacity: 0.8,
+          fillOpacity: 0.9,
         }).addTo(map);
 
         marker.bindPopup(() => {
@@ -98,6 +174,7 @@ export default function MapView() {
             <strong>Vehicle ${vehicle.id}</strong><br/>
             Road: ${vehicle.roadId}<br/>
             Lane: ${vehicle.lane}<br/>
+            Position: ${vehicle.position.toFixed(1)}m<br/>
             Speed: ${vehicle.velocity.toFixed(1)} m/s<br/>
             Accel: ${vehicle.acceleration.toFixed(2)} m/s²
           </div>`;
@@ -105,11 +182,16 @@ export default function MapView() {
 
         vehicleMarkersRef.current.set(vehicle.id, marker);
       } else {
-        // Update existing marker position
+        // Update existing marker position and color
         marker.setLatLng([lat, lng]);
+
+        // Update color based on speed
+        const speedRatio = Math.min(vehicle.velocity / 20, 1.0);
+        const color = speedRatio > 0.7 ? '#22c55e' : speedRatio > 0.3 ? '#3b82f6' : '#ef4444';
+        marker.setStyle({ fillColor: color });
       }
     });
-  }, [latestUpdate]);
+  }, [latestUpdate, roads]);
 
   const selectedNetworkData = networks.find((n) => n.id === selectedNetwork);
 

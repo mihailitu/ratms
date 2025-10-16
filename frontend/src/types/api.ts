@@ -172,3 +172,20 @@ export interface SimulationUpdate {
   vehicles: VehiclePosition[];
   trafficLights: TrafficLightState[];
 }
+
+// Road geometry types
+export interface RoadGeometry {
+  id: number;
+  length: number;
+  maxSpeed: number;
+  lanes: number;
+  startLat: number;
+  startLon: number;
+  endLat: number;
+  endLon: number;
+}
+
+export interface RoadsResponse {
+  roads: RoadGeometry[];
+  count: number;
+}

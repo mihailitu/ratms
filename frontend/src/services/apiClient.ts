@@ -106,6 +106,12 @@ class ApiClient {
     const response = await this.client.post<StopOptimizationResponse>(`/api/optimization/stop/${runId}`);
     return response.data;
   }
+
+  // Road geometry
+  async getRoads(): Promise<import('../types/api').RoadsResponse> {
+    const response = await this.client.get<import('../types/api').RoadsResponse>('/api/simulation/roads');
+    return response.data;
+  }
 }
 
 export const apiClient = new ApiClient();

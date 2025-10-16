@@ -409,6 +409,16 @@ unsigned Road::getLength() const
     return length;
 }
 
+roadPosGeo Road::getStartPosGeo() const
+{
+    return startPosGeo;
+}
+
+roadPosGeo Road::getEndPosGeo() const
+{
+    return endPosGeo;
+}
+
 void Road::printRoad() const
 {
 
