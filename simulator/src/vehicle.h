@@ -12,7 +12,10 @@ namespace simulator
 class Vehicle
 {
 public:
-    enum ElementType{ vehicle, traffic_light, obstacle };
+    enum ElementType{ vehicle,
+                      traffic_light,
+                      obstacle,
+                    };
 
 private:
     static int idGen;
@@ -28,7 +31,7 @@ private:
      *      in a regular city, sedans (or shorter should be more probable than trucks, etc
      *
      * NOTE: Use Vehicle class to represent traffic lights for now.
-     *       We identify them as zero or negavice length vehicles with zero speed.
+     *       We identify them as zero or negavice length vehicles with zero speed and acceleration.
      *
      */
     double  length = { 5.0 };   // vechile length - see above
@@ -38,7 +41,9 @@ private:
 
     double  s = { -1.0 };       // net distance to vehicle in front of this one (0 = accident, -1 = no vehicle in front
                                 // for large values of net distance, we should enter in free road mode
-    double acceleration = { 0 };// vehicle acceleration (meters per second square)
+    double acceleration = { 0 };// vehicle acceleration (meters per sqaured second)
+
+    bool slowingDown = false;   // if velocity decreases, it's slowing down.
 
     /* Model parameters are here, as we make most of it dependent on this driver's aggressivity */
     double aggressivity = { 0.5 };  // aggressivity factor of this driver.
@@ -70,6 +75,7 @@ private:
     /* compute new acceleration considering next vehicle */
     double getNewAcceleration(const Vehicle &nextVehicle) const;
 public:
+    Vehicle() {}
     Vehicle( double _x_orig, double _length, double maxV, ElementType vType = vehicle );
 
     void update(double dt, const Vehicle &nextVehicle); // update position, acceleration and velocity
@@ -79,7 +85,9 @@ public:
     void addRoadToItinerary(roadID rId);
 
     double getPos() const;
+    void setPos(double newPos);
     double getAcceleration() const;
+    bool isSlowingDown() const;
     double getLength() const;
     double getVelocity() const;
     roadID getCurrentRoad() const;
@@ -90,11 +98,12 @@ public:
 
     void serialize(std::ostream &out) const;
 
-    void serialize_v1(std::ostream &out) const;
-
     void printVehicle() const;
     void log() const;
     int getId() const { return id; }
+
+private:
+    void serialize_v1(std::ostream &out) const;
 };
 
 } // simulator

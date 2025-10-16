@@ -13,7 +13,13 @@ Vehicle::Vehicle( double _x_orig, double _length, double maxV, ElementType vType
     length(_length), xOrig(_x_orig), xPos(_x_orig), v0(maxV), type(vType)
 {
     id = idGen++;
-    // log_info("New vehicle: ID: %d Pos: %2.f V: %.2f L: %.2f", id, xOrig, v0, length);
+    std::string typeStr = "Vehicle";
+    if(type == traffic_light)
+        typeStr = "Traffic light";
+    else if (type == obstacle)
+        typeStr = "obstacle";
+
+    // log_debug("New vehicle: ID: %d type: %s Pos: %2.f V: %.2f L: %.2f", id, typeStr.c_str(), xOrig, v0, length);
 }
 
 /*
@@ -52,21 +58,22 @@ double Vehicle::getNewAcceleration(const Vehicle &nextVehicle) const
 
 void Vehicle::update(double dt, const Vehicle &nextVehicle)
 {
-    roadTime += dt;
-
-    // treat traffic lights as standing vehicles for now.
-    // We identify traffic lights as zero length vehicles.
-    // Zero speed vehicles will affect "real" vehicles.
-    if (length <= 0)
+    if (isTrafficLight())
         return;
+
+    roadTime += dt;
 
     acceleration = getNewAcceleration(nextVehicle);
 
     // advance
     xPos += velocity * dt + (acceleration * std::pow(dt, 2)) / 2;
 
+    double currentVelocity = velocity;
+
     // increase/decrease velocity
     velocity += acceleration * dt;
+
+    slowingDown = velocity < currentVelocity;
 }
 
 /* Lane change model:
@@ -78,9 +85,6 @@ void Vehicle::update(double dt, const Vehicle &nextVehicle)
  */
 bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLeader, const Vehicle &newFollower) const
 {
-//    if (currentLeader.getLength() <= 0 )
-//        return false;
-
     // gap check
     bool hasGap = true;
     if (newLeader.getLength() > 0)
@@ -93,9 +97,9 @@ bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLead
         return false;
 
     // MOBIL
-    double p = 0.3; // politeness factor TODO: make this the same as aggresivity
-    double b_safe = 4.0; // maximum safe deceleration
-    double a_thr = 0.2; // acceleration threshold: To avoid lane-change maneoeuvres triggered by marginal advantages
+    double p = 0.3;         // politeness factor TODO: make this the same as aggresivity
+    double b_safe = 4.0;    // maximum safe deceleration
+    double a_thr = 0.2;     // acceleration threshold: To avoid lane-change maneoeuvres triggered by marginal advantages
 
     // safety criterion
     bool isSafe = true;
@@ -108,8 +112,8 @@ bool Vehicle::canChangeLane(const Vehicle &currentLeader, const Vehicle &newLead
         return false;
 
     // incentive criterion
-    double accNl = newLeader.getLength() > 0 ? getNewAcceleration(newLeader) : a; // a = max acceleration
-    double accCl = currentLeader.getLength() > 0 ? getNewAcceleration(currentLeader) : a; // a = max acceleration
+    double accNl = newLeader.getLength() > 0 ? getNewAcceleration(newLeader) : a;           // a = max acceleration
+    double accCl = currentLeader.getLength() > 0 ? getNewAcceleration(currentLeader) : a;   // a = max acceleration
     unsigned ll = newFollower.getLength();
     double newFollowerNewAcc = ll > 0 ? newFollower.getNewAcceleration(*this) : 0;
 
@@ -140,9 +144,20 @@ double Vehicle::getAcceleration() const
     return acceleration;
 }
 
+bool Vehicle::isSlowingDown() const
+{
+    return slowingDown;
+}
+
 double Vehicle::getPos() const
 {
     return xPos;
+}
+
+void Vehicle::setPos(double newPos)
+{
+    xPos = newPos;
+    xOrig = newPos;
 }
 
 double Vehicle::getLength() const
@@ -173,27 +188,27 @@ void Vehicle::serialize(std::ostream &out) const
 // version 1:
 void Vehicle::serialize_v1(std::ostream &out) const
 {
-    out << xPos << " " <<
+    out << " " << xPos << " " <<
            velocity << " " <<
-           acceleration << " ";
-
+           acceleration << " "<<
+           id;
 }
 
 void Vehicle::printVehicle() const
 {
-    log_info("Vehicle:\n"
+    log_info("Vehicle: %d\n"
              "Originated: %.2f\n"
              "Position:   %.2f m\n"
              "Length:     %.2f m\n"
              "Velocity:   %.2f m/s\n",
-             xOrig, xPos, length, velocity);
+             type, xOrig, xPos, length, velocity);
 }
 
 void Vehicle::log() const
 {
     double mv = mps_to_kmh(velocity);
     double maxv = mps_to_kmh(v0);
-    log_debug("id: %2d orig: %5.2f x: %5.2f v: %2.f max: %2.f a: %1.1f ", id, xOrig, xPos, mv, maxv, acceleration);
+    log_debug("id: %2d type: %d orig: %5.2f x: %5.2f v: %2.f max: %2.f a: %1.1f ", id, type, xOrig, xPos, mv, maxv, acceleration);
 }
 
 } // namespace simulator

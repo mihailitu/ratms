@@ -6,6 +6,12 @@
 namespace simulator
 {
 
+void setDummyMapSize(unsigned x, unsigned y, std::vector<Road> &map) {
+    Road r(0xffff, x, 0, 0);
+    r.setCardinalCoordinates({0, y}, {x, y});
+    map.push_back(r);
+}
+
 /*
  * Construct a simple road network for dev and testing purposes:
  * r1 -> r2
@@ -23,25 +29,28 @@ namespace simulator
  */
 std::vector<Road> getTestMap()
 {
+    Road r(0, 500, 2, 20);
+    r.setCardinalCoordinates({0, 100}, {500, 100});
+
+    r.addVehicle({1.0, 5.0, 20.0}, 0);
+    r.addVehicle({10.0, 5.0, 17.0}, 0);
+    r.addVehicle({20.0, 5.0, 15.0}, 0);
+    r.addVehicle({30.0, 5.0, 13.0}, 0);
+//    r.addVehicle({1.0, 5.0, 20.0}, 0);
+//    r.addVehicle({10.0, 5.0, 10.0}, 0);
     std::vector<Road> cmap = {
-    Road(0, 1500, 1, 50),
-    Road(1,  750, 1, 50),
-    Road(2,  750, 1, 50),
-    Road(3, 1500, 1, 50),
-    Road(4,  750, 1, 50),
-    Road(5,  750, 1, 50),
-    Road(6, 1500, 1, 70),
-    Road(7, 1500, 1, 70)
+        r
     };
 
-//    cmap[0].addConnection( cmap[1] );
-//    cmap[1].addConnections({ cmap[2], cmap[7] });
-//    cmap[2].addConnection( cmap[3] );
-//    cmap[3].addConnection( cmap[4] );
-//    cmap[4].addConnections({ cmap[5], cmap[6] });
-//    cmap[5].addConnection( cmap[0] );
-//    cmap[6].addConnection( cmap[2]);
-//    cmap[7].addConnection( cmap[5] );
+    setDummyMapSize(1000, 500, cmap);
+    //    cmap[0].addConnection( cmap[1] );
+    //    cmap[1].addConnections({ cmap[2], cmap[7] });
+    //    cmap[2].addConnection( cmap[3] );
+    //    cmap[3].addConnection( cmap[4] );
+    //    cmap[4].addConnections({ cmap[5], cmap[6] });
+    //    cmap[5].addConnection( cmap[0] );
+    //    cmap[6].addConnection( cmap[2]);
+    //    cmap[7].addConnection( cmap[5] );
 
     /* Add some hardcoded cars on the road, so we test equations */
 
@@ -50,13 +59,41 @@ std::vector<Road> getTestMap()
     return cmap;
 }
 
+std::vector<Road> getSmallerTestMap()
+{
+    std::vector<Road> cmap;
+    for(unsigned i = 0; i < 100; ++i) {
+        Road r(0, 200, 2, 50);
+        r.setCardinalCoordinates({0, 100}, {200, 100});
 
+        cmap.push_back(r);
+
+    }
+    setDummyMapSize(250, 500, cmap);
+    return cmap;
+}
+
+std::vector<Road> getTimeTestMap()
+{
+    std::vector<Road> cmap;
+    for(unsigned i = 0; i < 100; ++i){
+        Road r(0, 3000, 1, 50);
+        r.setCardinalCoordinates({0, i}, {3000, i});
+        int pos = 0;
+        for(unsigned v = 0; v < 200; ++v ) {
+            r.addVehicle({static_cast<float>(pos + 5), 1.0, 20.0}, 0);
+            pos+=5;
+        }
+        cmap.push_back(r);
+    }
+
+    setDummyMapSize(5000, 500, cmap);
+    return cmap;
+}
 
 std::vector<Road> semaphoreTest() {
-
-    Config::simulatorOuput = Config::simpleRoadTestFName;
-
-    Road r(0, 1000, 2, 20);
+    Road r(0, 500, 2, 20);
+    r.setCardinalCoordinates({0, 0}, {0, 500});
 
     Vehicle v(0.0, 5.0, 20.0);
     Vehicle v1(30.0, 5.0, 15);
@@ -76,27 +113,46 @@ std::vector<Road> semaphoreTest() {
 /*
  * Lane change test
  * Road:
- *      - length: 2000 m
+ *      - length: 1500 m
  *      - max speed: 20 meters/second (app. 70 km/h)
  */
 std::vector<Road> laneChangeTest()
 {
-    Config::simulatorOuput = Config::simpleRoadTestFName;
+    Road r1(0, 1500, 2, 20);
+    r1.setCardinalCoordinates({0, 100}, {1500, 100});
+    {
+        Vehicle v(0.0, 5.0, 20.0);
+        Vehicle v1(20.0, 5.0, 15);
+        Vehicle v2(20.0, 5.0, 18.0);
+        Vehicle v3(5.0, 5.0, 17.0);
 
-    Road r(0, 2000, 2, 20);
+        r1.addVehicle(v, 0);
+        r1.addVehicle(v1, 0);
+        r1.addVehicle(v2, 1);
+        r1.addVehicle(v3, 1);
+    }
 
-    Vehicle v(0.0, 5.0, 20.0);
-    Vehicle v1(20.0, 5.0, 15);
-    Vehicle v2(20.0, 5.0, 18.0);
-    Vehicle v3(5.0, 5.0, 17.0);
-
-    r.addVehicle(v, 0);
-    r.addVehicle(v1, 0);
-    r.addVehicle(v2, 1);
-    r.addVehicle(v3, 1);
     std::vector<Road> smap = {
-        r
+        r1
     };
+
+//    Road r2(1, 1400, 3, 20);
+//    r2.setCardinalCoordinates({1500, 90}, {100, 90});
+//    {
+//        Vehicle v(0.0, 5.0, 20.0);
+//        Vehicle v1(20.0, 5.0, 15);
+//        Vehicle v2(20.0, 5.0, 18.0);
+//        Vehicle v3(5.0, 5.0, 17.0);
+
+//        r2.addVehicle(v, 0);
+//        r2.addVehicle(v1, 0);
+//        r2.addVehicle(v2, 1);
+//        r2.addVehicle(v3, 1);
+//    }
+
+//    smap.push_back(r2);
+
+    setDummyMapSize(2200, 500, smap);
     return smap;
 }
 
@@ -108,7 +164,6 @@ std::vector<Road> laneChangeTest()
  */
 std::vector<Road> twoLanesTestMap()
 {
-    Config::simulatorOuput = Config::simpleRoadTestFName;
     Vehicle v(0.0, 5.0, 20.0);
     Vehicle v1(100.0, 5.0, 18);
     Vehicle v2(0.0, 5.0, 22);
@@ -129,8 +184,6 @@ std::vector<Road> twoLanesTestMap()
  */
 std::vector<Road> manyRandomVehicleTestMap(int numVehicles)
 {
-    Config::simulatorOuput = Config::simpleRoadTestFName;
-
     std::random_device rd;
     std::mt19937 rng(rd());
 
@@ -139,6 +192,7 @@ std::vector<Road> manyRandomVehicleTestMap(int numVehicles)
     std::uniform_int_distribution<int> laneRnd(0, 2);
 
     Road r(0, 2000, 3, 20);
+    r.setCardinalCoordinates({10, 100}, {2010, 100});
     log_info("Random test - vehicles: %d", numVehicles);
     for(int i = 0; i < numVehicles; ++i) {
 
@@ -153,6 +207,9 @@ std::vector<Road> manyRandomVehicleTestMap(int numVehicles)
     std::vector<Road> smap = {
         r
     };
+
+    setDummyMapSize(2000, 500, smap);
+
     return smap;
 }
 
@@ -164,7 +221,6 @@ std::vector<Road> manyRandomVehicleTestMap(int numVehicles)
  */
 std::vector<Road> sigleVehicleTestMap()
 {
-    Config::simulatorOuput = Config::simpleRoadTestFName;
     // add one vehicle at the beginning of the road for free road tests
     double vLength = 5.0; // medium sedane
     double vPos = 0.0;
@@ -184,7 +240,6 @@ std::vector<Road> sigleVehicleTestMap()
  */
 std::vector<Road> followingVehicleTestMap()
 {
-    Config::simulatorOuput = Config::simpleRoadTestFName;
     Vehicle v(0.0, 5.0, 20.0);
     Vehicle v1(100.0, 5.0, 18);
     Vehicle v2(150.0, 5.0, 15.0);

@@ -9,9 +9,13 @@
 #include <vector>
 #include <list>
 #include <map>
+#include <tuple>
 
 namespace simulator
 {
+
+// Transition tuple: (Vehicle, destination roadID, destination lane)
+typedef std::tuple<Vehicle, roadID, unsigned> RoadTransition;
 
 class Road
 {
@@ -64,22 +68,9 @@ private:
 
 
     /* Cartesian coordinates - for easier visual 2D representation */
+    /* The Cartesian coordinates are set in meters for now */
     roadPosCard startPosCard;
     roadPosCard endPosCard;
-
-
-    /*
-     * TODO - maybe use some reference to other roads instead of ids so we can access quicker?
-     * TODO - each lane has a connection to another road
-     * this road's connections - id's of other roads.
-     */
-    std::vector<std::vector<roadID>> connections;
-
-    /*
-     * the preference probability for this road - how much it is used.
-     * when a car passes the intersection, it will use this probability to choose the next road.
-     */
-    float usageProb;
 
     /* TODO: assign vehicles to lanes on the road!!!
      * the number of lanes */
@@ -90,26 +81,34 @@ private:
     unsigned maxSpeed;
 
     /*
+     * TODO - maybe use some reference to other roads instead of ids so we can access quicker?
+     * this road's connections - id's of other roads and the probability that a connection is chosen over other.
+     * Each lane has a list of possible connections. For each lane, connections' probabilities must sum to 1.0
+     */
+    // std::vector<std::vector<roadID>> connections;
+    std::vector<std::vector<std::pair<roadID, double>>> connections;
+
+    /*
      * Right side driving only for now (left side steering wheel)
      *      lane 0 is the most right ("slow lane"), whilst lane n is the most left ("fast lane")
-     * TODO - use a linked list instead of vector.
-     *      - That way we can keep vehicles sorted and we don't have to sort the lane at each time step
-     * Vehicles on this road, assigned to lanes
+     *  TODO: Arrange vehicles somehow before traffic lights so we have a distribution closer to
+     *        to reality. Maybe consider connection usage probability
      */
-    std::vector<std::vector<Vehicle>> vehicles;
+    std::vector<std::list<Vehicle>> vehicles;
 
     /* Every lane from a road has a TrafficLight object associated with it.
      * Each traffic light is updated independently.
      * With first vehicle, if the light on it's lane is Red, then that vehicle
      * will have it's next vehicle (the leader) the static TrafficLight object (zero speed, zero length, etc).
      * If the light is green, then the first vehicle's leader will be none
+     * NOTE: the simulator does not verify the safey of traffic light configuration.
      */
     std::vector<TrafficLight> trafficLights;
 
-    static Vehicle trafficLightObject;
+    Vehicle trafficLightObject;
 
     /* Don't consider lane change when leader is more than minChangeLaneDist ahead.
-     * This is a minor optimization - we don't do all the math for lane change if it's no needed */
+     * This is a minor optimization - we don't do all the math for lane change if it's not needed */
     static const double maxChangeLaneDist; // 25 meters
     static const double minChangeLaneDist; // 1 meters
 
@@ -118,28 +117,45 @@ private:
 private:
 
     /**
-     * @brief changeLane     - perform a lane change of currentVehicle, if it's phisically possible and if can gain some acceleration
-     * @param laneIndex      - the index of the lane that the current vehicle is driving on
-     * @param currentVehicle - a reference to currentVehicle object
-     * @param vehicleIndex   - currentVehicle's index on the current lane
-     * @return true if vehicle has changed lane or false if not
+     * @brief tryLaneChange     - perform a lane change of currentVehicle, if it's phisically possible and if can gain some acceleration
+     * @param currentLaneIndex  - the index of the lane that the current vehicle is driving on
+     * @param currentVehicle    - a reference to currentVehicle object
+     * @param nextVehicle       - next leading vehicle on current lane
+     * @return true if vehicle has changed lane
      */
-    bool performLaneChange(unsigned laneIndex, const Vehicle &currentVehicle, unsigned vehicleIndex);
+     bool tryLaneChange(const Vehicle &currentVehicle, const Vehicle &nextVehicle, unsigned currentLane);
 
     /**
      * @brief performRoadChange - change the road that currentVehicle is driving on, if necessary
      * @param currentVehicle - current updated vehicle
-     * @param laneIndex      - lane being processed
+     * @param laneIndex      - current's vehicle lane on the road
      * @param cityMap        - all roads from this city
+     * @param pendingTransitions - vector to store transitions for two-phase update
      * @return true if currentVehicle moved to another road, false otherwise
      */
-    bool performRoadChange(const Vehicle &currentVehicle, unsigned laneIndex, const std::map<roadID, Road> &cityMap);
+    bool performRoadChange(const Vehicle &currentVehicle, unsigned laneIndex,
+                          const std::map<roadID, Road> &cityMap,
+                          std::vector<RoadTransition> &pendingTransitions);
+
+    /**
+     * @brief vehicleCanJoinThisRoad - returns true if there is room for another vehicle
+     * @param vehicle - vehicle that wants to join
+     * @param lane - lane to join
+     * @return true if new vehicle can safely join at position 0 on the specified lane
+     */
+    bool vehicleCanJoinThisRoad(const Vehicle &vehicle, unsigned lane) const;
 
 public:
     Road();
-    Road(roadID id, double length, unsigned lanes, double maxSpeed_mps);
+    Road(roadID rId, double length, unsigned lanes, unsigned maxSpeed_mps);
 
-    void addVehicle(Vehicle v, unsigned lane);
+    /**
+     * @brief addVehicle - adds a new vehicle to this road, sorted by v.getPos() and if there is enough space for v.
+     * @param v - vehicle to be added
+     * @param lane - lane on which this vehicle will join.
+     * @return true if vehicle was added
+     */
+    bool addVehicle(Vehicle v, unsigned lane);
 
     /**
      * Each lane from a road has it's own connection to a road.
@@ -149,26 +165,32 @@ public:
      * @brief addLaneConnection - makes the connection between a lane the road that vehicles might take
      * @param lane - lane number
      * @param road - road ID the the vehicles on this current lane might use
+     * @param usageProb - probability that this road is used
      */
-    void addLaneConnection(unsigned lane, roadID road);
-
-    // We need to sort vehicles on the road based on their position/lane
-    // We need to to this every time before updating vehicle position,
-    // because some vehicles might change lanes, some might arrive at their destination,
-    // some may enter the road.
-    void indexRoad();
+    void addLaneConnection(unsigned lane, roadID road, double usageProb);
 
     roadID getId() const;
     unsigned getMaxSpeed() const;
     unsigned getLength() const;
     unsigned getLanesNo() const;
-    const std::vector<std::vector<Vehicle>>& getVehicles() const;
 
-    void update(double dt, const std::map<roadID, Road> &cityMap );
+    /* Returns lane lights in format for each lane (G=green, Y=yellow and R=red) */
+    std::vector<char> getCurrentLightConfig() const;
+    const std::vector<std::list<Vehicle>>& getVehicles() const;
+
+    void update(double dt, const std::map<roadID, Road> &cityMap,
+               std::vector<RoadTransition> &pendingTransitions);
+
+    void setCardinalCoordinates(roadPosCard startPos, roadPosCard endPosCard);
+    roadPosCard getStartPosCard();
+    roadPosCard getEndPosCard();
+
+    void serialize(std::ostream &out) const;
 
     void printRoad() const;
 
 private:
+    void serialize_v2(std::ostream &out) const;
 
 };
 
