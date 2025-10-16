@@ -1,0 +1,196 @@
+#include "server.h"
+#include "../utils/logger.h"
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
+
+namespace ratms {
+namespace api {
+
+Server::Server(int port) : port_(port) {
+    log_info("API Server initialized on port %d", port_);
+}
+
+Server::~Server() {
+    stop();
+}
+
+void Server::start() {
+    if (running_) {
+        log_warning("Server already running");
+        return;
+    }
+
+    setupMiddleware();
+    setupRoutes();
+
+    running_ = true;
+
+    // Start server in separate thread
+    server_thread_ = std::make_unique<std::thread>([this]() {
+        log_info("Starting HTTP server on http://localhost:%d", port_);
+        http_server_.listen("0.0.0.0", port_);
+    });
+
+    log_info("API Server started successfully");
+}
+
+void Server::stop() {
+    if (!running_) {
+        return;
+    }
+
+    running_ = false;
+    http_server_.stop();
+
+    if (server_thread_ && server_thread_->joinable()) {
+        server_thread_->join();
+    }
+
+    log_info("API Server stopped");
+}
+
+void Server::setSimulator(std::shared_ptr<simulator::Simulator> sim) {
+    std::lock_guard<std::mutex> lock(sim_mutex_);
+    simulator_ = sim;
+    log_info("Simulator instance attached to API server");
+}
+
+void Server::setupMiddleware() {
+    // CORS middleware for web dashboard
+    http_server_.set_pre_routing_handler([this](const httplib::Request& req, httplib::Response& res) {
+        res.set_header("Access-Control-Allow-Origin", "*");
+        res.set_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        res.set_header("Access-Control-Allow-Headers", "Content-Type");
+
+        // Handle preflight requests
+        if (req.method == "OPTIONS") {
+            res.status = 200;
+            return httplib::Server::HandlerResponse::Handled;
+        }
+
+        return httplib::Server::HandlerResponse::Unhandled;
+    });
+
+    // Logging middleware
+    http_server_.set_logger([](const httplib::Request& req, const httplib::Response& res) {
+        log_info("HTTP %s %s - %d", req.method.c_str(), req.path.c_str(), res.status);
+    });
+}
+
+void Server::setupRoutes() {
+    // Health check endpoint
+    http_server_.Get("/api/health", [this](const httplib::Request& req, httplib::Response& res) {
+        handleHealth(req, res);
+    });
+
+    // Simulation control endpoints
+    http_server_.Post("/api/simulation/start", [this](const httplib::Request& req, httplib::Response& res) {
+        handleSimulationStart(req, res);
+    });
+
+    http_server_.Post("/api/simulation/stop", [this](const httplib::Request& req, httplib::Response& res) {
+        handleSimulationStop(req, res);
+    });
+
+    http_server_.Get("/api/simulation/status", [this](const httplib::Request& req, httplib::Response& res) {
+        handleSimulationStatus(req, res);
+    });
+
+    log_info("API routes configured");
+}
+
+void Server::handleHealth(const httplib::Request& req, httplib::Response& res) {
+    json response = {
+        {"status", "healthy"},
+        {"service", "RATMS API Server"},
+        {"version", "0.1.0"},
+        {"timestamp", std::time(nullptr)}
+    };
+
+    res.set_content(response.dump(2), "application/json");
+    res.status = 200;
+}
+
+void Server::handleSimulationStart(const httplib::Request& req, httplib::Response& res) {
+    std::lock_guard<std::mutex> lock(sim_mutex_);
+
+    if (simulation_running_) {
+        json response = {
+            {"error", "Simulation already running"},
+            {"status", "running"}
+        };
+        res.set_content(response.dump(2), "application/json");
+        res.status = 400;
+        return;
+    }
+
+    if (!simulator_) {
+        json response = {
+            {"error", "Simulator not initialized"},
+            {"status", "error"}
+        };
+        res.set_content(response.dump(2), "application/json");
+        res.status = 500;
+        return;
+    }
+
+    simulation_running_ = true;
+    log_info("Simulation started via API");
+
+    json response = {
+        {"message", "Simulation started successfully"},
+        {"status", "running"},
+        {"timestamp", std::time(nullptr)}
+    };
+
+    res.set_content(response.dump(2), "application/json");
+    res.status = 200;
+}
+
+void Server::handleSimulationStop(const httplib::Request& req, httplib::Response& res) {
+    std::lock_guard<std::mutex> lock(sim_mutex_);
+
+    if (!simulation_running_) {
+        json response = {
+            {"error", "Simulation not running"},
+            {"status", "stopped"}
+        };
+        res.set_content(response.dump(2), "application/json");
+        res.status = 400;
+        return;
+    }
+
+    simulation_running_ = false;
+    log_info("Simulation stopped via API");
+
+    json response = {
+        {"message", "Simulation stopped successfully"},
+        {"status", "stopped"},
+        {"timestamp", std::time(nullptr)}
+    };
+
+    res.set_content(response.dump(2), "application/json");
+    res.status = 200;
+}
+
+void Server::handleSimulationStatus(const httplib::Request& req, httplib::Response& res) {
+    std::lock_guard<std::mutex> lock(sim_mutex_);
+
+    json response = {
+        {"status", simulation_running_ ? "running" : "stopped"},
+        {"simulator_initialized", simulator_ != nullptr},
+        {"server_running", running_.load()},
+        {"timestamp", std::time(nullptr)}
+    };
+
+    if (simulator_) {
+        response["road_count"] = simulator_->cityMap.size();
+    }
+
+    res.set_content(response.dump(2), "application/json");
+    res.status = 200;
+}
+
+} // namespace api
+} // namespace ratms
