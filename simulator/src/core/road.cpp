@@ -203,6 +203,24 @@ void Road::setCardinalCoordinates(roadPosCard startPos, roadPosCard endPos)
 {
     startPosCard = startPos;
     endPosCard = endPos;
+
+    // Convert Cartesian coordinates (meters) to geographic coordinates (lat/lon)
+    // Using Munich as reference point: 48.1351°N, 11.582°E
+    // At this latitude:
+    //   1 degree latitude ≈ 111,000 meters
+    //   1 degree longitude ≈ 71,500 meters (adjusted for latitude)
+    const double REF_LAT = 48.1351;
+    const double REF_LON = 11.582;
+    const double METERS_PER_DEG_LAT = 111000.0;
+    const double METERS_PER_DEG_LON = 71500.0;
+
+    // Convert start position
+    startPosGeo.first = REF_LON + (startPos.first / METERS_PER_DEG_LON);  // longitude
+    startPosGeo.second = REF_LAT + (startPos.second / METERS_PER_DEG_LAT); // latitude
+
+    // Convert end position
+    endPosGeo.first = REF_LON + (endPos.first / METERS_PER_DEG_LON);
+    endPosGeo.second = REF_LAT + (endPos.second / METERS_PER_DEG_LAT);
 }
 
 roadPosCard Road::getStartPosCard()

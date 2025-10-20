@@ -19,9 +19,9 @@ simulator/ga_optimizer
 *.dat
 *.csv
 *.txt
-!README.txt
-!TODO.txt
-!CMakeLists.txt
+README.txt
+TODO.txt
+CMakeLists.txt
 
 # Python cache
 __pycache__/
@@ -47,12 +47,9 @@ Thumbs.db
 *.bak
 *.log
 
-# JSON data files (may contain large OSM data)
-simulator/pytest/*.json
-!simulator/pytest/map.json
-
 # Frontend (to be added later)
 node_modules/
 dist/
 .env
 .env.local
+frontend/.vite/
