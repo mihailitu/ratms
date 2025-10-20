@@ -383,6 +383,17 @@ MapView Integration:
 - Speed-based vehicle coloring
 - Interactive road and vehicle popups
 
+---
+
+### ✅ Phase 10: Database Persistence for GA Optimization (Option D)
+**Branch:** `master` (committed directly)
+
+**Accomplishments:**
+- Complete SQLite database persistence for optimization results
+- Automatic loading of optimization history on server startup
+- Three-table schema for comprehensive data storage
+- Thread-safe database operations with prepared statements
+
 **Backend Changes (C++):**
 
 Road Class (road.h/cpp):
@@ -436,6 +447,60 @@ Interactive Features:
 
 ---
 
+**Backend Implementation (database_manager.h/cpp):**
+
+New Database Methods:
+- `createOptimizationRun()` - Insert new optimization run record
+- `updateOptimizationRunStatus()` - Update run status (running/completed/failed)
+- `completeOptimizationRun()` - Mark run complete with fitness results
+- `getOptimizationRun()` - Fetch single run by ID
+- `getAllOptimizationRuns()` - Fetch all runs (sorted by start time)
+- `getOptimizationRunsByStatus()` - Filter by status
+
+Generation Tracking:
+- `insertOptimizationGeneration()` - Store single generation fitness
+- `insertOptimizationGenerationsBatch()` - Batch insert with transaction
+- `getOptimizationGenerations()` - Load fitness history for run
+
+Solution Storage:
+- `insertOptimizationSolution()` - Store chromosome as JSON
+- `getBestOptimizationSolution()` - Retrieve best solution for run
+- `getOptimizationSolutions()` - Get all solutions (sorted by fitness)
+
+**OptimizationController Enhancements:**
+
+Database Integration:
+- `createOptimizationRun()` now creates DB record immediately
+- `runOptimizationBackground()` updates status throughout lifecycle
+- `saveOptimizationResults()` persists complete results after completion
+- `loadOptimizationHistory()` restores runs on server startup
+
+Data Persistence:
+- Optimization runs: Status, parameters, timestamps, fitness results
+- Generations: Per-generation fitness evolution tracking
+- Solutions: Best chromosome stored as JSON with traffic light timings
+
+**Migration System:**
+- Updated `runMigrations()` to apply both 001 and 002 schemas
+- 002_optimization_runs.sql creates three tables with proper indexes
+- Foreign key constraints ensure referential integrity
+- Automatic schema creation on first server startup
+
+**Technical Details:**
+- Prepared statements prevent SQL injection
+- Transaction-based batch inserts for performance
+- Thread-safe database access with mutex protection
+- Chromosome serialized as JSON array of {greenTime, redTime} objects
+- Unix timestamps for all time fields
+
+**Benefits:**
+- Optimization history survives server restarts
+- Historical analysis of optimization performance
+- Export/import capability via database backup
+- Foundation for optimization comparison features
+
+---
+
 ## Current System State
 
 ### ✅ Working Features
@@ -459,28 +524,17 @@ Interactive Features:
 18. ✓ Real-time vehicle position and traffic light state updates
 19. ✓ Road network visualization with geographic coordinates
 20. ✓ Interactive map with vehicle markers and speed-based coloring
+21. ✓ GA optimization database persistence with automatic history loading
 
 ### 🔄 Limitations & TODOs
-1. GA optimization results not persisted to database (in-memory only)
-2. No pedestrian interactions
-3. Lane selection logic needs refinement
-4. Road polylines are straight (curved segments possible in future)
-5. Traffic light indicators on map not yet implemented
+1. No pedestrian interactions
+2. Lane selection logic needs refinement
+3. Road polylines are straight (curved segments possible in future)
+4. Traffic light indicators on map not yet implemented
 
 ---
 
 ## Future Enhancements
-
-### Option D: Database Persistence for GA Optimization
-**Goal:** Persist optimization results to database
-
-**Tasks:**
-1. Implement saveOptimizationResults() method
-2. Store runs, generations, and solutions in database
-3. Load optimization history on server restart
-4. Export/import optimization configurations
-
----
 
 ### Option E: Traffic Light Indicators on Map
 **Goal:** Visual representation of traffic light states
@@ -641,9 +695,10 @@ ratms/
 - ✅ Phase 7: Simulation loop integration (Option A - real execution)
 - ✅ Phase 8: Real-time streaming (Option B - SSE vehicle updates)
 - ✅ Phase 9: Advanced map visualization (Option C - road rendering)
+- ✅ Phase 10: GA optimization database persistence (Option D - SQLite storage)
 
 **Current Branch:** `master`
-**Commits Ahead of Origin:** 11 (local changes not pushed)
+**Commits Ahead of Origin:** 12 (local changes not pushed)
 
 ---
 
@@ -668,19 +723,18 @@ ratms/
 
 ## Recommendations
 
-**Immediate Next Step:** **Option D: Database Persistence for GA Optimization**
+**Immediate Next Step:** **Option E: Traffic Light Indicators on Map**
 
 **Rationale:**
-1. ✅ Phases 7-9 complete (simulation loop, streaming, map visualization)
-2. Current limitation: GA optimization results stored in-memory only
-3. Results lost on server restart
-4. Database schema already exists (002_optimization_runs.sql)
-5. Implementation is straightforward with existing DatabaseManager
+1. ✅ Phases 7-10 complete (simulation, streaming, map, GA persistence)
+2. Map visualization is functional but missing traffic light indicators
+3. Enhances real-time monitoring capabilities
+4. Visual feedback for optimization results
+5. SSE stream already includes traffic light states
 
 **Estimated Effort:** 1 development session
 
 **Alternatives:**
-- **Option E** (Traffic Light Map Indicators): Visual traffic light states on map
 - **Option F** (Network Editor): Interactive road network creation
 - **Option G** (Analytics Dashboard): Advanced performance analysis
 
@@ -697,7 +751,9 @@ ratms/
 - Live simulation streaming operational via SSE
 - Road network visualization with vehicle tracking
 - Simulation execution integrated with API server
+- GA optimization results persisted to SQLite database
+- Optimization history survives server restarts
 
 ---
 
-**Status:** ✅ Phase 9 Complete! Core system fully operational with real-time visualization. Next: Database persistence for GA optimization results.
+**Status:** ✅ Phase 10 Complete! Core system fully operational with persistent optimization storage. Next: Traffic light indicators on map visualization.

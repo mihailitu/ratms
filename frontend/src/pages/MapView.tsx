@@ -14,6 +14,7 @@ export default function MapView() {
   const [roads, setRoads] = useState<RoadGeometry[]>([]);
   const vehicleMarkersRef = useRef<Map<number, L.CircleMarker>>(new Map());
   const roadPolylinesRef = useRef<Map<number, L.Polyline>>(new Map());
+  const trafficLightMarkersRef = useRef<Map<string, L.CircleMarker>>(new Map());
 
   // Subscribe to simulation stream
   const { latestUpdate, isConnected, error: streamError } = useSimulationStream(streamEnabled);
@@ -193,6 +194,73 @@ export default function MapView() {
     });
   }, [latestUpdate, roads]);
 
+  // Update traffic light markers when receiving simulation updates
+  useEffect(() => {
+    if (!mapRef.current || !latestUpdate) return;
+
+    const map = mapRef.current;
+
+    // Create a unique key for each traffic light (roadId + lane)
+    const currentTrafficLightKeys = new Set(
+      latestUpdate.trafficLights.map(tl => `${tl.roadId}-${tl.lane}`)
+    );
+
+    // Remove traffic lights that no longer exist
+    trafficLightMarkersRef.current.forEach((marker, key) => {
+      if (!currentTrafficLightKeys.has(key)) {
+        map.removeLayer(marker);
+        trafficLightMarkersRef.current.delete(key);
+      }
+    });
+
+    // Add or update traffic light markers
+    latestUpdate.trafficLights.forEach((trafficLight) => {
+      const key = `${trafficLight.roadId}-${trafficLight.lane}`;
+      const { lat, lon, state } = trafficLight;
+
+      // Determine color based on state
+      const stateColors: Record<string, string> = {
+        'R': '#ef4444', // Red
+        'Y': '#eab308', // Yellow
+        'G': '#22c55e'  // Green
+      };
+      const color = stateColors[state] || '#94a3b8'; // Gray fallback
+
+      let marker = trafficLightMarkersRef.current.get(key);
+
+      if (!marker) {
+        // Create new traffic light marker (square shape)
+        marker = L.circleMarker([lat, lon], {
+          radius: 6,
+          fillColor: color,
+          color: '#000000',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 1,
+        }).addTo(map);
+
+        marker.bindPopup(() => {
+          const stateNames: Record<string, string> = {
+            'R': 'Red',
+            'Y': 'Yellow',
+            'G': 'Green'
+          };
+          return `<div>
+            <strong>Traffic Light</strong><br/>
+            Road: ${trafficLight.roadId}<br/>
+            Lane: ${trafficLight.lane}<br/>
+            State: <span style="color: ${color}; font-weight: bold;">${stateNames[state] || state}</span>
+          </div>`;
+        });
+
+        trafficLightMarkersRef.current.set(key, marker);
+      } else {
+        // Update existing marker color based on state
+        marker.setStyle({ fillColor: color });
+      }
+    });
+  }, [latestUpdate]);
+
   const selectedNetworkData = networks.find((n) => n.id === selectedNetwork);
 
   return (
@@ -272,11 +340,39 @@ export default function MapView() {
           />
         </div>
 
-        <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <p className="text-sm text-yellow-800">
-            <strong>Note:</strong> Map visualization will be enhanced in future iterations with real-time
-            traffic data, vehicle positions, and traffic light states from the simulation.
-          </p>
+        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="text-sm text-blue-800">
+            <strong>Map Legend:</strong>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div>
+                <span className="inline-block w-3 h-3 rounded-full bg-green-500 mr-2"></span>
+                Fast vehicles (&gt;70% max speed)
+              </div>
+              <div>
+                <span className="inline-block w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
+                Medium vehicles (30-70% max speed)
+              </div>
+              <div>
+                <span className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span>
+                Slow vehicles (&lt;30% max speed)
+              </div>
+              <div>
+                <span className="inline-block w-3 h-3 rounded-full bg-green-500 border-2 border-black mr-2"></span>
+                Green traffic lights
+              </div>
+              <div>
+                <span className="inline-block w-3 h-3 rounded-full bg-yellow-500 border-2 border-black mr-2"></span>
+                Yellow traffic lights
+              </div>
+              <div>
+                <span className="inline-block w-3 h-3 rounded-full bg-red-500 border-2 border-black mr-2"></span>
+                Red traffic lights
+              </div>
+            </div>
+            <p className="mt-3">
+              Click on any vehicle or traffic light to see detailed information.
+            </p>
+          </div>
         </div>
       </div>
     </div>

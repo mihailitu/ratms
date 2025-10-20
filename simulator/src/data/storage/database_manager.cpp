@@ -28,11 +28,21 @@ bool DatabaseManager::initialize() {
 }
 
 bool DatabaseManager::runMigrations(const std::string& migrations_dir) {
-    std::string migration_file = migrations_dir + "/001_initial_schema.sql";
-    log_info("Running database migration: %s", migration_file.c_str());
+    // Run migration 001
+    std::string migration_file_001 = migrations_dir + "/001_initial_schema.sql";
+    log_info("Running database migration: %s", migration_file_001.c_str());
 
-    if (!executeSQLFile(migration_file)) {
-        log_error("Migration failed: %s", last_error_.c_str());
+    if (!executeSQLFile(migration_file_001)) {
+        log_error("Migration 001 failed: %s", last_error_.c_str());
+        return false;
+    }
+
+    // Run migration 002 (optimization runs)
+    std::string migration_file_002 = migrations_dir + "/002_optimization_runs.sql";
+    log_info("Running database migration: %s", migration_file_002.c_str());
+
+    if (!executeSQLFile(migration_file_002)) {
+        log_error("Migration 002 failed: %s", last_error_.c_str());
         return false;
     }
 
@@ -376,6 +386,449 @@ std::vector<DatabaseManager::NetworkRecord> DatabaseManager::getAllNetworks() {
         record.road_count = sqlite3_column_int(stmt, 3);
         record.intersection_count = sqlite3_column_int(stmt, 4);
         record.config_json = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5));
+        results.push_back(record);
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+// Optimization operations
+int DatabaseManager::createOptimizationRun(const OptimizationRunRecord& record) {
+    std::string sql = "INSERT INTO optimization_runs (network_id, status, population_size, "
+                     "generations, mutation_rate, crossover_rate, elitism_rate, "
+                     "min_green_time, max_green_time, min_red_time, max_red_time, "
+                     "simulation_steps, dt, started_at, created_by, notes) "
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        log_error("Failed to prepare optimization run insert: %s", last_error_.c_str());
+        return -1;
+    }
+
+    sqlite3_bind_int(stmt, 1, record.network_id);
+    sqlite3_bind_text(stmt, 2, record.status.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 3, record.population_size);
+    sqlite3_bind_int(stmt, 4, record.generations);
+    sqlite3_bind_double(stmt, 5, record.mutation_rate);
+    sqlite3_bind_double(stmt, 6, record.crossover_rate);
+    sqlite3_bind_double(stmt, 7, record.elitism_rate);
+    sqlite3_bind_double(stmt, 8, record.min_green_time);
+    sqlite3_bind_double(stmt, 9, record.max_green_time);
+    sqlite3_bind_double(stmt, 10, record.min_red_time);
+    sqlite3_bind_double(stmt, 11, record.max_red_time);
+    sqlite3_bind_int(stmt, 12, record.simulation_steps);
+    sqlite3_bind_double(stmt, 13, record.dt);
+    sqlite3_bind_int64(stmt, 14, record.started_at);
+    sqlite3_bind_text(stmt, 15, record.created_by.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 16, record.notes.c_str(), -1, SQLITE_TRANSIENT);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (rc != SQLITE_DONE) {
+        last_error_ = sqlite3_errmsg(db_);
+        log_error("Failed to insert optimization run: %s", last_error_.c_str());
+        return -1;
+    }
+
+    int run_id = sqlite3_last_insert_rowid(db_);
+    log_info("Created optimization run with ID: %d", run_id);
+    return run_id;
+}
+
+bool DatabaseManager::updateOptimizationRunStatus(int run_id, const std::string& status) {
+    std::string sql = "UPDATE optimization_runs SET status = ? WHERE id = ?";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, status.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 2, run_id);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (rc != SQLITE_DONE) {
+        last_error_ = sqlite3_errmsg(db_);
+        return false;
+    }
+
+    log_info("Updated optimization run %d status to: %s", run_id, status.c_str());
+    return true;
+}
+
+bool DatabaseManager::completeOptimizationRun(int run_id, long completed_at, long duration_seconds,
+                                             double baseline_fitness, double best_fitness,
+                                             double improvement_percent) {
+    std::string sql = "UPDATE optimization_runs SET status = 'completed', completed_at = ?, "
+                     "duration_seconds = ?, baseline_fitness = ?, best_fitness = ?, "
+                     "improvement_percent = ? WHERE id = ?";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return false;
+    }
+
+    sqlite3_bind_int64(stmt, 1, completed_at);
+    sqlite3_bind_int64(stmt, 2, duration_seconds);
+    sqlite3_bind_double(stmt, 3, baseline_fitness);
+    sqlite3_bind_double(stmt, 4, best_fitness);
+    sqlite3_bind_double(stmt, 5, improvement_percent);
+    sqlite3_bind_int(stmt, 6, run_id);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    return (rc == SQLITE_DONE);
+}
+
+DatabaseManager::OptimizationRunRecord DatabaseManager::getOptimizationRun(int run_id) {
+    std::string sql = "SELECT id, network_id, status, population_size, generations, "
+                     "mutation_rate, crossover_rate, elitism_rate, min_green_time, "
+                     "max_green_time, min_red_time, max_red_time, simulation_steps, dt, "
+                     "baseline_fitness, best_fitness, improvement_percent, started_at, "
+                     "completed_at, duration_seconds, created_by, notes "
+                     "FROM optimization_runs WHERE id = ?";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    OptimizationRunRecord record = {};
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return record;
+    }
+
+    sqlite3_bind_int(stmt, 1, run_id);
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        record.id = sqlite3_column_int(stmt, 0);
+        record.network_id = sqlite3_column_int(stmt, 1);
+        record.status = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        record.population_size = sqlite3_column_int(stmt, 3);
+        record.generations = sqlite3_column_int(stmt, 4);
+        record.mutation_rate = sqlite3_column_double(stmt, 5);
+        record.crossover_rate = sqlite3_column_double(stmt, 6);
+        record.elitism_rate = sqlite3_column_double(stmt, 7);
+        record.min_green_time = sqlite3_column_double(stmt, 8);
+        record.max_green_time = sqlite3_column_double(stmt, 9);
+        record.min_red_time = sqlite3_column_double(stmt, 10);
+        record.max_red_time = sqlite3_column_double(stmt, 11);
+        record.simulation_steps = sqlite3_column_int(stmt, 12);
+        record.dt = sqlite3_column_double(stmt, 13);
+        record.baseline_fitness = sqlite3_column_double(stmt, 14);
+        record.best_fitness = sqlite3_column_double(stmt, 15);
+        record.improvement_percent = sqlite3_column_double(stmt, 16);
+        record.started_at = sqlite3_column_int64(stmt, 17);
+        record.completed_at = sqlite3_column_int64(stmt, 18);
+        record.duration_seconds = sqlite3_column_int64(stmt, 19);
+
+        const char* created_by_text = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 20));
+        if (created_by_text) record.created_by = created_by_text;
+
+        const char* notes_text = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 21));
+        if (notes_text) record.notes = notes_text;
+    }
+
+    sqlite3_finalize(stmt);
+    return record;
+}
+
+std::vector<DatabaseManager::OptimizationRunRecord> DatabaseManager::getAllOptimizationRuns() {
+    std::vector<OptimizationRunRecord> results;
+    std::string sql = "SELECT id, network_id, status, population_size, generations, "
+                     "mutation_rate, crossover_rate, elitism_rate, min_green_time, "
+                     "max_green_time, min_red_time, max_red_time, simulation_steps, dt, "
+                     "baseline_fitness, best_fitness, improvement_percent, started_at, "
+                     "completed_at, duration_seconds, created_by, notes "
+                     "FROM optimization_runs ORDER BY started_at DESC";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return results;
+    }
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        OptimizationRunRecord record;
+        record.id = sqlite3_column_int(stmt, 0);
+        record.network_id = sqlite3_column_int(stmt, 1);
+        record.status = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        record.population_size = sqlite3_column_int(stmt, 3);
+        record.generations = sqlite3_column_int(stmt, 4);
+        record.mutation_rate = sqlite3_column_double(stmt, 5);
+        record.crossover_rate = sqlite3_column_double(stmt, 6);
+        record.elitism_rate = sqlite3_column_double(stmt, 7);
+        record.min_green_time = sqlite3_column_double(stmt, 8);
+        record.max_green_time = sqlite3_column_double(stmt, 9);
+        record.min_red_time = sqlite3_column_double(stmt, 10);
+        record.max_red_time = sqlite3_column_double(stmt, 11);
+        record.simulation_steps = sqlite3_column_int(stmt, 12);
+        record.dt = sqlite3_column_double(stmt, 13);
+        record.baseline_fitness = sqlite3_column_double(stmt, 14);
+        record.best_fitness = sqlite3_column_double(stmt, 15);
+        record.improvement_percent = sqlite3_column_double(stmt, 16);
+        record.started_at = sqlite3_column_int64(stmt, 17);
+        record.completed_at = sqlite3_column_int64(stmt, 18);
+        record.duration_seconds = sqlite3_column_int64(stmt, 19);
+
+        const char* created_by_text = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 20));
+        if (created_by_text) record.created_by = created_by_text;
+
+        const char* notes_text = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 21));
+        if (notes_text) record.notes = notes_text;
+
+        results.push_back(record);
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+std::vector<DatabaseManager::OptimizationRunRecord> DatabaseManager::getOptimizationRunsByStatus(const std::string& status) {
+    std::vector<OptimizationRunRecord> results;
+    std::string sql = "SELECT id, network_id, status, population_size, generations, "
+                     "mutation_rate, crossover_rate, elitism_rate, min_green_time, "
+                     "max_green_time, min_red_time, max_red_time, simulation_steps, dt, "
+                     "baseline_fitness, best_fitness, improvement_percent, started_at, "
+                     "completed_at, duration_seconds, created_by, notes "
+                     "FROM optimization_runs WHERE status = ? ORDER BY started_at DESC";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return results;
+    }
+
+    sqlite3_bind_text(stmt, 1, status.c_str(), -1, SQLITE_TRANSIENT);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        OptimizationRunRecord record;
+        record.id = sqlite3_column_int(stmt, 0);
+        record.network_id = sqlite3_column_int(stmt, 1);
+        record.status = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        record.population_size = sqlite3_column_int(stmt, 3);
+        record.generations = sqlite3_column_int(stmt, 4);
+        record.mutation_rate = sqlite3_column_double(stmt, 5);
+        record.crossover_rate = sqlite3_column_double(stmt, 6);
+        record.elitism_rate = sqlite3_column_double(stmt, 7);
+        record.min_green_time = sqlite3_column_double(stmt, 8);
+        record.max_green_time = sqlite3_column_double(stmt, 9);
+        record.min_red_time = sqlite3_column_double(stmt, 10);
+        record.max_red_time = sqlite3_column_double(stmt, 11);
+        record.simulation_steps = sqlite3_column_int(stmt, 12);
+        record.dt = sqlite3_column_double(stmt, 13);
+        record.baseline_fitness = sqlite3_column_double(stmt, 14);
+        record.best_fitness = sqlite3_column_double(stmt, 15);
+        record.improvement_percent = sqlite3_column_double(stmt, 16);
+        record.started_at = sqlite3_column_int64(stmt, 17);
+        record.completed_at = sqlite3_column_int64(stmt, 18);
+        record.duration_seconds = sqlite3_column_int64(stmt, 19);
+
+        const char* created_by_text = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 20));
+        if (created_by_text) record.created_by = created_by_text;
+
+        const char* notes_text = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 21));
+        if (notes_text) record.notes = notes_text;
+
+        results.push_back(record);
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+// Optimization generation operations
+bool DatabaseManager::insertOptimizationGeneration(const OptimizationGenerationRecord& record) {
+    std::string sql = "INSERT INTO optimization_generations (optimization_run_id, generation_number, "
+                     "best_fitness, average_fitness, worst_fitness, timestamp) "
+                     "VALUES (?, ?, ?, ?, ?, ?)";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, record.optimization_run_id);
+    sqlite3_bind_int(stmt, 2, record.generation_number);
+    sqlite3_bind_double(stmt, 3, record.best_fitness);
+    sqlite3_bind_double(stmt, 4, record.average_fitness);
+    sqlite3_bind_double(stmt, 5, record.worst_fitness);
+    sqlite3_bind_int64(stmt, 6, record.timestamp);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    return (rc == SQLITE_DONE);
+}
+
+bool DatabaseManager::insertOptimizationGenerationsBatch(const std::vector<OptimizationGenerationRecord>& records) {
+    // Start transaction
+    if (!executeSQL("BEGIN TRANSACTION")) {
+        return false;
+    }
+
+    for (const auto& record : records) {
+        if (!insertOptimizationGeneration(record)) {
+            executeSQL("ROLLBACK");
+            return false;
+        }
+    }
+
+    if (!executeSQL("COMMIT")) {
+        executeSQL("ROLLBACK");
+        return false;
+    }
+
+    return true;
+}
+
+std::vector<DatabaseManager::OptimizationGenerationRecord> DatabaseManager::getOptimizationGenerations(int run_id) {
+    std::vector<OptimizationGenerationRecord> results;
+    std::string sql = "SELECT id, optimization_run_id, generation_number, best_fitness, "
+                     "average_fitness, worst_fitness, timestamp FROM optimization_generations "
+                     "WHERE optimization_run_id = ? ORDER BY generation_number ASC";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return results;
+    }
+
+    sqlite3_bind_int(stmt, 1, run_id);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        OptimizationGenerationRecord record;
+        record.id = sqlite3_column_int(stmt, 0);
+        record.optimization_run_id = sqlite3_column_int(stmt, 1);
+        record.generation_number = sqlite3_column_int(stmt, 2);
+        record.best_fitness = sqlite3_column_double(stmt, 3);
+        record.average_fitness = sqlite3_column_double(stmt, 4);
+        record.worst_fitness = sqlite3_column_double(stmt, 5);
+        record.timestamp = sqlite3_column_int64(stmt, 6);
+        results.push_back(record);
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+// Optimization solution operations
+int DatabaseManager::insertOptimizationSolution(const OptimizationSolutionRecord& record) {
+    std::string sql = "INSERT INTO optimization_solutions (optimization_run_id, is_best_solution, "
+                     "fitness, chromosome_json, traffic_light_count, created_at) "
+                     "VALUES (?, ?, ?, ?, ?, ?)";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        log_error("Failed to prepare solution insert: %s", last_error_.c_str());
+        return -1;
+    }
+
+    sqlite3_bind_int(stmt, 1, record.optimization_run_id);
+    sqlite3_bind_int(stmt, 2, record.is_best_solution ? 1 : 0);
+    sqlite3_bind_double(stmt, 3, record.fitness);
+    sqlite3_bind_text(stmt, 4, record.chromosome_json.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 5, record.traffic_light_count);
+    sqlite3_bind_int64(stmt, 6, record.created_at);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (rc != SQLITE_DONE) {
+        last_error_ = sqlite3_errmsg(db_);
+        log_error("Failed to insert optimization solution: %s", last_error_.c_str());
+        return -1;
+    }
+
+    int solution_id = sqlite3_last_insert_rowid(db_);
+    return solution_id;
+}
+
+DatabaseManager::OptimizationSolutionRecord DatabaseManager::getBestOptimizationSolution(int run_id) {
+    std::string sql = "SELECT id, optimization_run_id, is_best_solution, fitness, "
+                     "chromosome_json, traffic_light_count, created_at "
+                     "FROM optimization_solutions WHERE optimization_run_id = ? "
+                     "AND is_best_solution = 1 LIMIT 1";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    OptimizationSolutionRecord record = {};
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return record;
+    }
+
+    sqlite3_bind_int(stmt, 1, run_id);
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        record.id = sqlite3_column_int(stmt, 0);
+        record.optimization_run_id = sqlite3_column_int(stmt, 1);
+        record.is_best_solution = sqlite3_column_int(stmt, 2) == 1;
+        record.fitness = sqlite3_column_double(stmt, 3);
+        record.chromosome_json = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
+        record.traffic_light_count = sqlite3_column_int(stmt, 5);
+        record.created_at = sqlite3_column_int64(stmt, 6);
+    }
+
+    sqlite3_finalize(stmt);
+    return record;
+}
+
+std::vector<DatabaseManager::OptimizationSolutionRecord> DatabaseManager::getOptimizationSolutions(int run_id) {
+    std::vector<OptimizationSolutionRecord> results;
+    std::string sql = "SELECT id, optimization_run_id, is_best_solution, fitness, "
+                     "chromosome_json, traffic_light_count, created_at "
+                     "FROM optimization_solutions WHERE optimization_run_id = ? "
+                     "ORDER BY fitness ASC";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return results;
+    }
+
+    sqlite3_bind_int(stmt, 1, run_id);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        OptimizationSolutionRecord record;
+        record.id = sqlite3_column_int(stmt, 0);
+        record.optimization_run_id = sqlite3_column_int(stmt, 1);
+        record.is_best_solution = sqlite3_column_int(stmt, 2) == 1;
+        record.fitness = sqlite3_column_double(stmt, 3);
+        record.chromosome_json = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4));
+        record.traffic_light_count = sqlite3_column_int(stmt, 5);
+        record.created_at = sqlite3_column_int64(stmt, 6);
         results.push_back(record);
     }
 

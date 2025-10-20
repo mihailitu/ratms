@@ -396,7 +396,9 @@ void Server::handleSimulationStream(const httplib::Request& req, httplib::Respon
                     data["trafficLights"].push_back({
                         {"roadId", tl.roadId},
                         {"lane", tl.lane},
-                        {"state", std::string(1, tl.state)}
+                        {"state", std::string(1, tl.state)},
+                        {"lat", tl.lat},
+                        {"lon", tl.lon}
                     });
                 }
 
@@ -710,11 +712,24 @@ void Server::captureSimulationSnapshot() {
 
             // Capture traffic light states
             auto trafficLights = road.getCurrentLightConfig();
+            auto endPosGeo = road.getEndPosGeo();  // Traffic lights at end of road
+
             for (unsigned i = 0; i < trafficLights.size(); ++i) {
                 TrafficLightSnapshot tlSnap;
                 tlSnap.roadId = roadId;
                 tlSnap.lane = i;
                 tlSnap.state = trafficLights[i];
+
+                // Position traffic light at end of road with lane offset
+                tlSnap.lon = endPosGeo.first;
+                tlSnap.lat = endPosGeo.second;
+
+                // Apply lane offset perpendicular to road direction
+                // Use same offset as vehicles (0.00001° per lane)
+                if (i > 0) {
+                    tlSnap.lat += 0.00001 * i;
+                }
+
                 snapshot.trafficLights.push_back(tlSnap);
             }
         }

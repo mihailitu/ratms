@@ -35,6 +35,8 @@ struct TrafficLightSnapshot {
     int roadId;
     unsigned lane;
     char state;  // 'R', 'Y', 'G'
+    double lat;
+    double lon;
 };
 
 /**

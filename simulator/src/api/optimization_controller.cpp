@@ -1,5 +1,6 @@
 #include "optimization_controller.h"
 #include "../tests/testmap.h"
+#include "../utils/logger.h"
 #include <chrono>
 #include <sstream>
 
@@ -10,6 +11,8 @@ using json = nlohmann::json;
 
 OptimizationController::OptimizationController(std::shared_ptr<ratms::data::DatabaseManager> dbManager)
     : dbManager_(dbManager) {
+    // Load optimization history from database on startup
+    loadOptimizationHistory();
 }
 
 OptimizationController::~OptimizationController() {
@@ -260,26 +263,57 @@ int OptimizationController::createOptimizationRun(const simulator::GeneticAlgori
                                                    int simulationSteps, double dt, int networkId) {
     std::lock_guard<std::mutex> lock(runsMutex_);
 
-    int runId = nextRunId_++;
+    // Create database record
+    ratms::data::DatabaseManager::OptimizationRunRecord dbRecord;
+    dbRecord.network_id = networkId;
+    dbRecord.status = "pending";
+    dbRecord.population_size = params.populationSize;
+    dbRecord.generations = params.generations;
+    dbRecord.mutation_rate = params.mutationRate;
+    dbRecord.crossover_rate = params.crossoverRate;
+    dbRecord.elitism_rate = params.elitismRate;
+    dbRecord.min_green_time = params.minGreenTime;
+    dbRecord.max_green_time = params.maxGreenTime;
+    dbRecord.min_red_time = params.minRedTime;
+    dbRecord.max_red_time = params.maxRedTime;
+    dbRecord.simulation_steps = simulationSteps;
+    dbRecord.dt = dt;
+    dbRecord.started_at = std::chrono::system_clock::now().time_since_epoch().count() / 1000000000;
+    dbRecord.created_by = "web_dashboard";
+    dbRecord.notes = "";
+
+    int dbRunId = dbManager_->createOptimizationRun(dbRecord);
+    if (dbRunId < 0) {
+        throw std::runtime_error("Failed to create optimization run in database");
+    }
+
+    // Create in-memory run
     auto run = std::make_shared<OptimizationRun>();
-    run->id = runId;
+    run->id = dbRunId;  // Use database ID
     run->status = "pending";
     run->gaParams = params;
     run->simulationSteps = simulationSteps;
     run->dt = dt;
-    run->startedAt = std::chrono::system_clock::now().time_since_epoch().count() / 1000000000;
+    run->startedAt = dbRecord.started_at;
     run->currentGeneration = 0;
     run->isRunning = false;
 
-    activeRuns_[runId] = run;
+    activeRuns_[dbRunId] = run;
 
-    return runId;
+    // Update nextRunId to be at least dbRunId + 1
+    if (dbRunId >= nextRunId_) {
+        nextRunId_ = dbRunId + 1;
+    }
+
+    return dbRunId;
 }
 
 void OptimizationController::runOptimizationBackground(std::shared_ptr<OptimizationRun> run, int networkId) {
+    int dbRunId = run->id;
     try {
         run->status = "running";
         run->isRunning = true;
+        dbManager_->updateOptimizationRunStatus(dbRunId, "running");
 
         // Create test network
         std::vector<simulator::Road> testNetwork = simulator::manyRandomVehicleTestMap(10);
@@ -356,19 +390,162 @@ void OptimizationController::runOptimizationBackground(std::shared_ptr<Optimizat
         run->completedAt = std::chrono::system_clock::now().time_since_epoch().count() / 1000000000;
 
         // Save to database
-        saveOptimizationResults(run);
+        saveOptimizationResults(run, dbRunId);
 
     } catch (const std::exception& e) {
         run->status = "failed";
         run->isRunning = false;
+        dbManager_->updateOptimizationRunStatus(dbRunId, "failed");
     }
 
     run->isRunning = false;
 }
 
-void OptimizationController::saveOptimizationResults(std::shared_ptr<OptimizationRun> run) {
-    // TODO: Implement database persistence
-    // This would save to the optimization_runs, optimization_generations, and optimization_solutions tables
+void OptimizationController::loadOptimizationHistory() {
+    try {
+        std::lock_guard<std::mutex> lock(runsMutex_);
+
+        // Load all completed optimization runs from database
+        std::vector<ratms::data::DatabaseManager::OptimizationRunRecord> dbRuns =
+            dbManager_->getAllOptimizationRuns();
+
+        for (const auto& dbRun : dbRuns) {
+            // Only load completed runs (skip running/pending as they're stale)
+            if (dbRun.status != "completed") {
+                continue;
+            }
+
+            auto run = std::make_shared<OptimizationRun>();
+            run->id = dbRun.id;
+            run->status = dbRun.status;
+            run->startedAt = dbRun.started_at;
+            run->completedAt = dbRun.completed_at;
+            run->baselineFitness = dbRun.baseline_fitness;
+            run->bestFitness = dbRun.best_fitness;
+            run->improvementPercent = dbRun.improvement_percent;
+            run->simulationSteps = dbRun.simulation_steps;
+            run->dt = dbRun.dt;
+
+            // Restore GA parameters
+            run->gaParams.populationSize = dbRun.population_size;
+            run->gaParams.generations = dbRun.generations;
+            run->gaParams.mutationRate = dbRun.mutation_rate;
+            run->gaParams.crossoverRate = dbRun.crossover_rate;
+            run->gaParams.elitismRate = dbRun.elitism_rate;
+            run->gaParams.minGreenTime = dbRun.min_green_time;
+            run->gaParams.maxGreenTime = dbRun.max_green_time;
+            run->gaParams.minRedTime = dbRun.min_red_time;
+            run->gaParams.maxRedTime = dbRun.max_red_time;
+
+            // Load fitness history from generations
+            std::vector<ratms::data::DatabaseManager::OptimizationGenerationRecord> generations =
+                dbManager_->getOptimizationGenerations(dbRun.id);
+
+            for (const auto& gen : generations) {
+                run->fitnessHistory.push_back(gen.best_fitness);
+            }
+
+            // Load best solution
+            ratms::data::DatabaseManager::OptimizationSolutionRecord solution =
+                dbManager_->getBestOptimizationSolution(dbRun.id);
+
+            if (solution.id > 0) {
+                // Parse chromosome JSON
+                try {
+                    json chromosomeJson = json::parse(solution.chromosome_json);
+                    for (const auto& geneJson : chromosomeJson) {
+                        simulator::TrafficLightTiming timing;
+                        timing.greenTime = geneJson["greenTime"];
+                        timing.redTime = geneJson["redTime"];
+                        run->bestChromosome.genes.push_back(timing);
+                    }
+                    run->bestChromosome.fitness = solution.fitness;
+                } catch (const std::exception& e) {
+                    log_error("Failed to parse chromosome JSON for run %d: %s", dbRun.id, e.what());
+                }
+            }
+
+            activeRuns_[run->id] = run;
+
+            // Update nextRunId
+            if (run->id >= nextRunId_) {
+                nextRunId_ = run->id + 1;
+            }
+        }
+
+        log_info("Loaded %zu optimization runs from database", activeRuns_.size());
+
+    } catch (const std::exception& e) {
+        log_error("Failed to load optimization history: %s", e.what());
+    }
+}
+
+void OptimizationController::saveOptimizationResults(std::shared_ptr<OptimizationRun> run, int dbRunId) {
+    try {
+        // Update optimization run with results
+        long durationSeconds = run->completedAt - run->startedAt;
+        bool success = dbManager_->completeOptimizationRun(
+            dbRunId,
+            run->completedAt,
+            durationSeconds,
+            run->baselineFitness,
+            run->bestFitness,
+            run->improvementPercent
+        );
+
+        if (!success) {
+            log_error("Failed to update optimization run %d", dbRunId);
+            return;
+        }
+
+        // Save fitness history as generation records
+        std::vector<ratms::data::DatabaseManager::OptimizationGenerationRecord> generations;
+        for (size_t i = 0; i < run->fitnessHistory.size(); ++i) {
+            ratms::data::DatabaseManager::OptimizationGenerationRecord genRecord;
+            genRecord.optimization_run_id = dbRunId;
+            genRecord.generation_number = static_cast<int>(i);
+            genRecord.best_fitness = run->fitnessHistory[i];
+            genRecord.average_fitness = run->fitnessHistory[i];  // GA doesn't track avg, use best
+            genRecord.worst_fitness = run->fitnessHistory[i];    // GA doesn't track worst, use best
+            genRecord.timestamp = run->startedAt + static_cast<long>(i);
+            generations.push_back(genRecord);
+        }
+
+        if (!generations.empty()) {
+            bool genSuccess = dbManager_->insertOptimizationGenerationsBatch(generations);
+            if (!genSuccess) {
+                log_error("Failed to insert generation records for run %d", dbRunId);
+            }
+        }
+
+        // Save best solution
+        ratms::data::DatabaseManager::OptimizationSolutionRecord solutionRecord;
+        solutionRecord.optimization_run_id = dbRunId;
+        solutionRecord.is_best_solution = true;
+        solutionRecord.fitness = run->bestFitness;
+        solutionRecord.traffic_light_count = static_cast<int>(run->bestChromosome.genes.size());
+        solutionRecord.created_at = run->completedAt;
+
+        // Convert chromosome to JSON
+        json chromosomeJson = json::array();
+        for (const auto& gene : run->bestChromosome.genes) {
+            chromosomeJson.push_back({
+                {"greenTime", gene.greenTime},
+                {"redTime", gene.redTime}
+            });
+        }
+        solutionRecord.chromosome_json = chromosomeJson.dump();
+
+        int solutionId = dbManager_->insertOptimizationSolution(solutionRecord);
+        if (solutionId < 0) {
+            log_error("Failed to insert solution for run %d", dbRunId);
+        } else {
+            log_info("Saved optimization results for run %d (solution ID: %d)", dbRunId, solutionId);
+        }
+
+    } catch (const std::exception& e) {
+        log_error("Exception while saving optimization results: %s", e.what());
+    }
 }
 
 json OptimizationController::runToJson(const std::shared_ptr<OptimizationRun>& run, bool includeFullHistory) {

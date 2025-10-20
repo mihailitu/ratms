@@ -53,6 +53,51 @@ public:
         std::string config_json;
     };
 
+    struct OptimizationRunRecord {
+        int id;
+        int network_id;
+        std::string status;
+        int population_size;
+        int generations;
+        double mutation_rate;
+        double crossover_rate;
+        double elitism_rate;
+        double min_green_time;
+        double max_green_time;
+        double min_red_time;
+        double max_red_time;
+        int simulation_steps;
+        double dt;
+        double baseline_fitness;
+        double best_fitness;
+        double improvement_percent;
+        long started_at;
+        long completed_at;
+        long duration_seconds;
+        std::string created_by;
+        std::string notes;
+    };
+
+    struct OptimizationGenerationRecord {
+        int id;
+        int optimization_run_id;
+        int generation_number;
+        double best_fitness;
+        double average_fitness;
+        double worst_fitness;
+        long timestamp;
+    };
+
+    struct OptimizationSolutionRecord {
+        int id;
+        int optimization_run_id;
+        bool is_best_solution;
+        double fitness;
+        std::string chromosome_json;
+        int traffic_light_count;
+        long created_at;
+    };
+
     DatabaseManager(const std::string& db_path = "ratms.db");
     ~DatabaseManager();
 
@@ -84,6 +129,25 @@ public:
     NetworkRecord getNetwork(int network_id);
     std::vector<NetworkRecord> getAllNetworks();
     bool deleteNetwork(int network_id);
+
+    // Optimization operations
+    int createOptimizationRun(const OptimizationRunRecord& record);
+    bool updateOptimizationRunStatus(int run_id, const std::string& status);
+    bool completeOptimizationRun(int run_id, long completed_at, long duration_seconds,
+                                double baseline_fitness, double best_fitness, double improvement_percent);
+    OptimizationRunRecord getOptimizationRun(int run_id);
+    std::vector<OptimizationRunRecord> getAllOptimizationRuns();
+    std::vector<OptimizationRunRecord> getOptimizationRunsByStatus(const std::string& status);
+
+    // Optimization generation operations
+    bool insertOptimizationGeneration(const OptimizationGenerationRecord& record);
+    bool insertOptimizationGenerationsBatch(const std::vector<OptimizationGenerationRecord>& records);
+    std::vector<OptimizationGenerationRecord> getOptimizationGenerations(int run_id);
+
+    // Optimization solution operations
+    int insertOptimizationSolution(const OptimizationSolutionRecord& record);
+    OptimizationSolutionRecord getBestOptimizationSolution(int run_id);
+    std::vector<OptimizationSolutionRecord> getOptimizationSolutions(int run_id);
 
     // Utility
     bool isConnected() const { return db_ != nullptr; }

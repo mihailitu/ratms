@@ -81,7 +81,8 @@ private:
     int createOptimizationRun(const simulator::GeneticAlgorithm::Parameters& params,
                              int simulationSteps, double dt, int networkId);
     void runOptimizationBackground(std::shared_ptr<OptimizationRun> run, int networkId);
-    void saveOptimizationResults(std::shared_ptr<OptimizationRun> run);
+    void saveOptimizationResults(std::shared_ptr<OptimizationRun> run, int dbRunId);
+    void loadOptimizationHistory();
     json runToJson(const std::shared_ptr<OptimizationRun>& run, bool includeFullHistory);
 
     // Test network creation

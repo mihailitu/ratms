@@ -332,7 +332,7 @@ void Server::captureSimulationSnapshot() {
 }
 ```
 
-### 8. DatabaseManager (`data/storage/database.h/cpp`)
+### 8. DatabaseManager (`data/storage/database_manager.h/cpp`)
 
 SQLite persistence layer with prepared statements.
 
@@ -342,11 +342,13 @@ SQLite persistence layer with prepared statements.
 - `metrics`: Time-series simulation metrics
 - `roads`: Individual road data
 - `traffic_lights`: Traffic light configurations
-- `optimization_runs`: GA optimization results
+- `optimization_runs`: GA optimization results (002_optimization_runs.sql)
 - `optimization_generations`: Fitness per generation
 - `optimization_solutions`: Chromosome data
 
 **Key Methods:**
+
+Simulation Operations:
 ```cpp
 int64_t createSimulation(name, description, networkId, config);
 void updateSimulationStatus(id, status);
@@ -354,8 +356,34 @@ void insertMetrics(simulationId, timestamp, metrics);
 std::vector<MetricRecord> getMetrics(simulationId, startTime, endTime);
 ```
 
+Optimization Operations:
+```cpp
+int createOptimizationRun(const OptimizationRunRecord& record);
+bool updateOptimizationRunStatus(int run_id, const std::string& status);
+bool completeOptimizationRun(int run_id, long completed_at, long duration_seconds,
+                             double baseline_fitness, double best_fitness, double improvement_percent);
+OptimizationRunRecord getOptimizationRun(int run_id);
+std::vector<OptimizationRunRecord> getAllOptimizationRuns();
+
+bool insertOptimizationGeneration(const OptimizationGenerationRecord& record);
+bool insertOptimizationGenerationsBatch(const std::vector<OptimizationGenerationRecord>& records);
+std::vector<OptimizationGenerationRecord> getOptimizationGenerations(int run_id);
+
+int insertOptimizationSolution(const OptimizationSolutionRecord& record);
+OptimizationSolutionRecord getBestOptimizationSolution(int run_id);
+std::vector<OptimizationSolutionRecord> getOptimizationSolutions(int run_id);
+```
+
 **Prepared Statement Pattern:**
 All queries use prepared statements to prevent SQL injection.
+
+**Transaction Pattern:**
+Batch operations use transactions for atomicity:
+```cpp
+executeSQL("BEGIN TRANSACTION");
+// ... multiple inserts
+executeSQL("COMMIT");  // or ROLLBACK on error
+```
 
 ## Frontend Architecture
 

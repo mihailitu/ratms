@@ -164,6 +164,8 @@ export interface TrafficLightState {
   roadId: number;
   lane: number;
   state: 'R' | 'Y' | 'G';
+  lat: number;
+  lon: number;
 }
 
 export interface SimulationUpdate {
