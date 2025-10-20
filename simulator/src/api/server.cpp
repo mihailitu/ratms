@@ -349,7 +349,7 @@ void Server::handleSimulationStream(const httplib::Request& req, httplib::Respon
     res.set_header("Content-Type", "text/event-stream");
     res.set_header("Cache-Control", "no-cache");
     res.set_header("Connection", "keep-alive");
-    res.set_header("Access-Control-Allow-Origin", "*");
+    // CORS header already set by middleware
 
     log_info("Client connected to simulation stream");
 

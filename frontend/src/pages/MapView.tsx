@@ -12,6 +12,8 @@ export default function MapView() {
   const [selectedNetwork, setSelectedNetwork] = useState<number | null>(null);
   const [streamEnabled, setStreamEnabled] = useState(false);
   const [roads, setRoads] = useState<RoadGeometry[]>([]);
+  const [simulationRunning, setSimulationRunning] = useState(false);
+  const [simulationLoading, setSimulationLoading] = useState(false);
   const vehicleMarkersRef = useRef<Map<number, L.CircleMarker>>(new Map());
   const roadPolylinesRef = useRef<Map<number, L.Polyline>>(new Map());
   const trafficLightMarkersRef = useRef<Map<string, L.CircleMarker>>(new Map());
@@ -41,8 +43,22 @@ export default function MapView() {
       }
     };
 
+    const fetchSimulationStatus = async () => {
+      try {
+        const status = await apiClient.getSimulationStatus();
+        setSimulationRunning(status.status === 'running');
+      } catch (err) {
+        console.error('Failed to fetch simulation status:', err);
+      }
+    };
+
     fetchNetworks();
     fetchRoads();
+    fetchSimulationStatus();
+
+    // Poll simulation status every 2 seconds
+    const statusInterval = setInterval(fetchSimulationStatus, 2000);
+    return () => clearInterval(statusInterval);
   }, []);
 
   // Render roads as polylines on map
@@ -263,6 +279,34 @@ export default function MapView() {
 
   const selectedNetworkData = networks.find((n) => n.id === selectedNetwork);
 
+  const handleStartSimulation = async () => {
+    setSimulationLoading(true);
+    try {
+      await apiClient.startSimulation();
+      setSimulationRunning(true);
+      setStreamEnabled(true); // Auto-enable streaming when simulation starts
+    } catch (err) {
+      console.error('Failed to start simulation:', err);
+      alert('Failed to start simulation. Check console for details.');
+    } finally {
+      setSimulationLoading(false);
+    }
+  };
+
+  const handleStopSimulation = async () => {
+    setSimulationLoading(true);
+    try {
+      await apiClient.stopSimulation();
+      setSimulationRunning(false);
+      setStreamEnabled(false); // Auto-disable streaming when simulation stops
+    } catch (err) {
+      console.error('Failed to stop simulation:', err);
+      alert('Failed to stop simulation. Check console for details.');
+    } finally {
+      setSimulationLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -273,20 +317,42 @@ export default function MapView() {
               <p className="text-gray-600">Visualize road networks and traffic flow</p>
             </div>
             <div className="flex items-center gap-4">
-              {/* Connection Status */}
+              {/* Simulation Status */}
+              <div className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${simulationRunning ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`} />
+                <span className="text-sm text-gray-600">
+                  Sim: {simulationRunning ? 'Running' : 'Stopped'}
+                </span>
+              </div>
+
+              {/* Stream Status */}
               <div className="flex items-center gap-2">
                 <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-300'}`} />
                 <span className="text-sm text-gray-600">
-                  {isConnected ? 'Live' : 'Disconnected'}
+                  Stream: {isConnected ? 'Live' : 'Disconnected'}
                 </span>
               </div>
+
+              {/* Simulation Control */}
+              <button
+                onClick={simulationRunning ? handleStopSimulation : handleStartSimulation}
+                disabled={simulationLoading}
+                className={`px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  simulationRunning
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {simulationLoading ? 'Loading...' : simulationRunning ? 'Stop Simulation' : 'Start Simulation'}
+              </button>
 
               {/* Stream Control */}
               <button
                 onClick={() => setStreamEnabled(!streamEnabled)}
-                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                disabled={!simulationRunning}
+                className={`px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                   streamEnabled
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    ? 'bg-orange-600 hover:bg-orange-700 text-white'
                     : 'bg-green-600 hover:bg-green-700 text-white'
                 }`}
               >
