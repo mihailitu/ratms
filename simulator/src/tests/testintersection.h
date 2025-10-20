@@ -15,6 +15,8 @@ std::vector<Road> testIntersectionTest();
 
 std::vector<Road> fourWayIntersectionTest();
 
+std::vector<Road> cityGridTestMap();
+
 } //namespace simulator
 
 

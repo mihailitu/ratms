@@ -38,18 +38,18 @@ int main() {
 
     // Create default network in database
     int network_id = database->createNetwork(
-        "Test 4-Way Intersection",
-        "Simple 4-way intersection for testing",
-        5,  // road count
-        1,  // intersection count
-        "{}" // config JSON
+        "City Grid 10x10",
+        "Realistic 10x10 city grid with 100 intersections and 1000 vehicles",
+        360,  // road count (approximate, actual is ~360 bidirectional roads)
+        100,  // intersection count
+        "{\"grid_size\": 10, \"block_length\": 300, \"vehicles\": 1000}" // config JSON
     );
 
     log_info("Default network created with ID: %d", network_id);
 
-    // Create simulator instance with test network
+    // Create simulator instance with city grid test network
     auto simulator = std::make_shared<simulator::Simulator>();
-    std::vector<simulator::Road> roadMap = simulator::fourWayIntersectionTest();
+    std::vector<simulator::Road> roadMap = simulator::cityGridTestMap();
     simulator->addRoadNetToMap(roadMap);
 
     log_info("Simulator initialized with test network");
