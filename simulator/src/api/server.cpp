@@ -146,6 +146,27 @@ void Server::setupRoutes() {
         handleGetNetworks(req, res);
     });
 
+    // Analytics endpoints
+    http_server_.Get(R"(/api/analytics/simulations/(\d+)/statistics)", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetStatistics(req, res);
+    });
+
+    http_server_.Get(R"(/api/analytics/simulations/(\d+)/statistics/(.+))", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetStatisticsByType(req, res);
+    });
+
+    http_server_.Post("/api/analytics/compare", [this](const httplib::Request& req, httplib::Response& res) {
+        handleCompareSimulations(req, res);
+    });
+
+    http_server_.Get(R"(/api/analytics/simulations/(\d+)/export)", [this](const httplib::Request& req, httplib::Response& res) {
+        handleExportMetrics(req, res);
+    });
+
+    http_server_.Get("/api/analytics/metric-types", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetMetricTypes(req, res);
+    });
+
     // Register optimization routes if controller is initialized
     if (optimization_controller_) {
         optimization_controller_->registerRoutes(http_server_);
@@ -741,6 +762,235 @@ void Server::captureSimulationSnapshot() {
         latest_snapshot_ = std::move(snapshot);
         has_new_snapshot_ = true;
     }
+}
+
+// Analytics handlers
+void Server::handleGetStatistics(const httplib::Request& req, httplib::Response& res) {
+    try {
+        int sim_id = std::stoi(req.matches[1]);
+
+        if (!database_) {
+            json error = {{"error", "Database not initialized"}};
+            res.set_content(error.dump(2), "application/json");
+            res.status = 500;
+            return;
+        }
+
+        // Get simulation info
+        auto sim_record = database_->getSimulation(sim_id);
+        if (sim_record.id != sim_id) {
+            json error = {{"error", "Simulation not found"}};
+            res.set_content(error.dump(2), "application/json");
+            res.status = 404;
+            return;
+        }
+
+        // Get all statistics
+        auto all_stats = database_->getAllMetricStatistics(sim_id);
+
+        // Format response
+        json stats_json = json::object();
+        for (const auto& [metric_type, stats] : all_stats) {
+            stats_json[metric_type] = {
+                {"metric_type", stats.metric_type},
+                {"min_value", stats.min_value},
+                {"max_value", stats.max_value},
+                {"mean_value", stats.mean_value},
+                {"median_value", stats.median_value},
+                {"stddev_value", stats.stddev_value},
+                {"p25_value", stats.p25_value},
+                {"p75_value", stats.p75_value},
+                {"p95_value", stats.p95_value},
+                {"sample_count", stats.sample_count}
+            };
+        }
+
+        json response = {
+            {"simulation_id", sim_id},
+            {"simulation_name", sim_record.name},
+            {"statistics", stats_json}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        json error = {{"error", e.what()}};
+        res.set_content(error.dump(2), "application/json");
+        res.status = 500;
+    }
+}
+
+void Server::handleGetStatisticsByType(const httplib::Request& req, httplib::Response& res) {
+    try {
+        int sim_id = std::stoi(req.matches[1]);
+        std::string metric_type = req.matches[2];
+
+        if (!database_) {
+            json error = {{"error", "Database not initialized"}};
+            res.set_content(error.dump(2), "application/json");
+            res.status = 500;
+            return;
+        }
+
+        // Get simulation info
+        auto sim_record = database_->getSimulation(sim_id);
+        if (sim_record.id != sim_id) {
+            json error = {{"error", "Simulation not found"}};
+            res.set_content(error.dump(2), "application/json");
+            res.status = 404;
+            return;
+        }
+
+        // Get statistics for specific metric type
+        auto stats = database_->getMetricStatistics(sim_id, metric_type);
+
+        json response = {
+            {"simulation_id", sim_id},
+            {"simulation_name", sim_record.name},
+            {"metric_type", stats.metric_type},
+            {"min_value", stats.min_value},
+            {"max_value", stats.max_value},
+            {"mean_value", stats.mean_value},
+            {"median_value", stats.median_value},
+            {"stddev_value", stats.stddev_value},
+            {"p25_value", stats.p25_value},
+            {"p75_value", stats.p75_value},
+            {"p95_value", stats.p95_value},
+            {"sample_count", stats.sample_count}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        json error = {{"error", e.what()}};
+        res.set_content(error.dump(2), "application/json");
+        res.status = 500;
+    }
+}
+
+void Server::handleCompareSimulations(const httplib::Request& req, httplib::Response& res) {
+    try {
+        if (!database_) {
+            json error = {{"error", "Database not initialized"}};
+            res.set_content(error.dump(2), "application/json");
+            res.status = 500;
+            return;
+        }
+
+        // Parse request body
+        json request_body = json::parse(req.body);
+        std::vector<int> simulation_ids = request_body["simulation_ids"];
+        std::string metric_type = request_body["metric_type"];
+
+        if (simulation_ids.empty()) {
+            json error = {{"error", "No simulation IDs provided"}};
+            res.set_content(error.dump(2), "application/json");
+            res.status = 400;
+            return;
+        }
+
+        // Get comparative metrics
+        auto comparative_data = database_->getComparativeMetrics(simulation_ids, metric_type);
+
+        // Format response
+        json simulations_json = json::array();
+        for (const auto& comp : comparative_data) {
+            json metrics_json = json::array();
+            for (const auto& metric : comp.metrics) {
+                metrics_json.push_back({
+                    {"timestamp", metric.timestamp},
+                    {"value", metric.value}
+                });
+            }
+
+            simulations_json.push_back({
+                {"simulation_id", comp.simulation_id},
+                {"simulation_name", comp.simulation_name},
+                {"metrics", metrics_json}
+            });
+        }
+
+        json response = {
+            {"metric_type", metric_type},
+            {"simulations", simulations_json}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        json error = {{"error", e.what()}};
+        res.set_content(error.dump(2), "application/json");
+        res.status = 500;
+    }
+}
+
+void Server::handleExportMetrics(const httplib::Request& req, httplib::Response& res) {
+    try {
+        int sim_id = std::stoi(req.matches[1]);
+
+        if (!database_) {
+            json error = {{"error", "Database not initialized"}};
+            res.set_content(error.dump(2), "application/json");
+            res.status = 500;
+            return;
+        }
+
+        // Check if metric_type filter is provided
+        std::string metric_type = "";
+        if (req.has_param("metric_type")) {
+            metric_type = req.get_param_value("metric_type");
+        }
+
+        // Get metrics
+        std::vector<data::DatabaseManager::MetricRecord> metrics;
+        if (!metric_type.empty()) {
+            metrics = database_->getMetricsByType(sim_id, metric_type);
+        } else {
+            metrics = database_->getMetrics(sim_id);
+        }
+
+        // Build CSV content
+        std::ostringstream csv;
+        csv << "timestamp,metric_type,value,road_id,unit\n";
+
+        for (const auto& metric : metrics) {
+            csv << metric.timestamp << ","
+                << metric.metric_type << ","
+                << metric.value << ","
+                << metric.road_id << ","
+                << metric.unit << "\n";
+        }
+
+        // Set response headers for CSV download
+        res.set_header("Content-Type", "text/csv");
+        res.set_header("Content-Disposition",
+                      "attachment; filename=\"simulation_" + std::to_string(sim_id) + "_metrics.csv\"");
+        res.set_content(csv.str(), "text/csv");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        json error = {{"error", e.what()}};
+        res.set_content(error.dump(2), "application/json");
+        res.status = 500;
+    }
+}
+
+void Server::handleGetMetricTypes(const httplib::Request& req, httplib::Response& res) {
+    // Return list of common metric types
+    json response = {
+        {"metric_types", {
+            "avg_queue_length",
+            "avg_speed",
+            "vehicles_exited",
+            "max_queue_length"
+        }}
+    };
+
+    res.set_content(response.dump(2), "application/json");
+    res.status = 200;
 }
 
 } // namespace api

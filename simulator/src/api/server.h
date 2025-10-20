@@ -89,6 +89,13 @@ private:
     void handleGetMetrics(const httplib::Request& req, httplib::Response& res);
     void handleGetNetworks(const httplib::Request& req, httplib::Response& res);
 
+    // Analytics handlers
+    void handleGetStatistics(const httplib::Request& req, httplib::Response& res);
+    void handleGetStatisticsByType(const httplib::Request& req, httplib::Response& res);
+    void handleCompareSimulations(const httplib::Request& req, httplib::Response& res);
+    void handleExportMetrics(const httplib::Request& req, httplib::Response& res);
+    void handleGetMetricTypes(const httplib::Request& req, httplib::Response& res);
+
     // Middleware
     void corsMiddleware(const httplib::Request& req, httplib::Response& res);
     void loggingMiddleware(const httplib::Request& req, httplib::Response& res);

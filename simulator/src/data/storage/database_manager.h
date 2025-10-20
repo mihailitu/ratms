@@ -149,6 +149,36 @@ public:
     OptimizationSolutionRecord getBestOptimizationSolution(int run_id);
     std::vector<OptimizationSolutionRecord> getOptimizationSolutions(int run_id);
 
+    // Analytics operations
+    struct MetricStatistics {
+        std::string metric_type;
+        double min_value;
+        double max_value;
+        double mean_value;
+        double median_value;
+        double stddev_value;
+        double p25_value;  // 25th percentile
+        double p75_value;  // 75th percentile
+        double p95_value;  // 95th percentile
+        int sample_count;
+    };
+
+    struct ComparativeMetrics {
+        int simulation_id;
+        std::string simulation_name;
+        std::vector<MetricRecord> metrics;
+    };
+
+    // Get statistics for a specific metric type across a simulation
+    MetricStatistics getMetricStatistics(int simulation_id, const std::string& metric_type);
+
+    // Get all metric statistics for a simulation (grouped by metric_type)
+    std::map<std::string, MetricStatistics> getAllMetricStatistics(int simulation_id);
+
+    // Get metrics for multiple simulations for comparison
+    std::vector<ComparativeMetrics> getComparativeMetrics(const std::vector<int>& simulation_ids,
+                                                          const std::string& metric_type);
+
     // Utility
     bool isConnected() const { return db_ != nullptr; }
     std::string getLastError() const { return last_error_; }

@@ -303,6 +303,40 @@ std::vector<DatabaseManager::MetricRecord> DatabaseManager::getMetrics(int simul
     return results;
 }
 
+std::vector<DatabaseManager::MetricRecord> DatabaseManager::getMetricsByType(int simulation_id, const std::string& metric_type) {
+    std::vector<MetricRecord> results;
+    std::string sql = "SELECT id, simulation_id, timestamp, metric_type, road_id, value, "
+                     "unit, metadata_json FROM metrics WHERE simulation_id = ? AND metric_type = ? "
+                     "ORDER BY timestamp ASC";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return results;
+    }
+
+    sqlite3_bind_int(stmt, 1, simulation_id);
+    sqlite3_bind_text(stmt, 2, metric_type.c_str(), -1, SQLITE_TRANSIENT);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        MetricRecord record;
+        record.id = sqlite3_column_int(stmt, 0);
+        record.simulation_id = sqlite3_column_int(stmt, 1);
+        record.timestamp = sqlite3_column_double(stmt, 2);
+        record.metric_type = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3));
+        record.road_id = sqlite3_column_int(stmt, 4);
+        record.value = sqlite3_column_double(stmt, 5);
+        record.unit = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6));
+        record.metadata_json = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7));
+        results.push_back(record);
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
 // Network operations
 int DatabaseManager::createNetwork(const std::string& name, const std::string& description,
                                   int road_count, int intersection_count, const std::string& config_json) {
@@ -833,6 +867,157 @@ std::vector<DatabaseManager::OptimizationSolutionRecord> DatabaseManager::getOpt
     }
 
     sqlite3_finalize(stmt);
+    return results;
+}
+
+// Analytics operations
+DatabaseManager::MetricStatistics DatabaseManager::getMetricStatistics(int simulation_id, const std::string& metric_type) {
+    MetricStatistics stats;
+    stats.metric_type = metric_type;
+    stats.min_value = 0.0;
+    stats.max_value = 0.0;
+    stats.mean_value = 0.0;
+    stats.median_value = 0.0;
+    stats.stddev_value = 0.0;
+    stats.p25_value = 0.0;
+    stats.p75_value = 0.0;
+    stats.p95_value = 0.0;
+    stats.sample_count = 0;
+
+    // Get basic statistics (min, max, mean, count, stddev)
+    std::string sql_basic = "SELECT MIN(value), MAX(value), AVG(value), COUNT(*), "
+                           "SQRT(MAX(0, AVG(value * value) - AVG(value) * AVG(value))) as stddev "
+                           "FROM metrics WHERE simulation_id = ? AND metric_type = ?";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql_basic.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return stats;
+    }
+
+    sqlite3_bind_int(stmt, 1, simulation_id);
+    sqlite3_bind_text(stmt, 2, metric_type.c_str(), -1, SQLITE_TRANSIENT);
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        stats.min_value = sqlite3_column_double(stmt, 0);
+        stats.max_value = sqlite3_column_double(stmt, 1);
+        stats.mean_value = sqlite3_column_double(stmt, 2);
+        stats.sample_count = sqlite3_column_int(stmt, 3);
+        stats.stddev_value = sqlite3_column_double(stmt, 4);
+    }
+
+    sqlite3_finalize(stmt);
+
+    // If no data, return early
+    if (stats.sample_count == 0) {
+        return stats;
+    }
+
+    // Get percentiles (median, p25, p75, p95)
+    // Median (50th percentile)
+    std::string sql_median = "SELECT value FROM metrics WHERE simulation_id = ? AND metric_type = ? "
+                            "ORDER BY value LIMIT 1 OFFSET ?";
+    rc = sqlite3_prepare_v2(db_, sql_median.c_str(), -1, &stmt, nullptr);
+    if (rc == SQLITE_OK) {
+        sqlite3_bind_int(stmt, 1, simulation_id);
+        sqlite3_bind_text(stmt, 2, metric_type.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int(stmt, 3, stats.sample_count / 2);
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            stats.median_value = sqlite3_column_double(stmt, 0);
+        }
+        sqlite3_finalize(stmt);
+    }
+
+    // 25th percentile
+    rc = sqlite3_prepare_v2(db_, sql_median.c_str(), -1, &stmt, nullptr);
+    if (rc == SQLITE_OK) {
+        sqlite3_bind_int(stmt, 1, simulation_id);
+        sqlite3_bind_text(stmt, 2, metric_type.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int(stmt, 3, stats.sample_count / 4);
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            stats.p25_value = sqlite3_column_double(stmt, 0);
+        }
+        sqlite3_finalize(stmt);
+    }
+
+    // 75th percentile
+    rc = sqlite3_prepare_v2(db_, sql_median.c_str(), -1, &stmt, nullptr);
+    if (rc == SQLITE_OK) {
+        sqlite3_bind_int(stmt, 1, simulation_id);
+        sqlite3_bind_text(stmt, 2, metric_type.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int(stmt, 3, (stats.sample_count * 3) / 4);
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            stats.p75_value = sqlite3_column_double(stmt, 0);
+        }
+        sqlite3_finalize(stmt);
+    }
+
+    // 95th percentile
+    rc = sqlite3_prepare_v2(db_, sql_median.c_str(), -1, &stmt, nullptr);
+    if (rc == SQLITE_OK) {
+        sqlite3_bind_int(stmt, 1, simulation_id);
+        sqlite3_bind_text(stmt, 2, metric_type.c_str(), -1, SQLITE_TRANSIENT);
+        sqlite3_bind_int(stmt, 3, (stats.sample_count * 95) / 100);
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            stats.p95_value = sqlite3_column_double(stmt, 0);
+        }
+        sqlite3_finalize(stmt);
+    }
+
+    return stats;
+}
+
+std::map<std::string, DatabaseManager::MetricStatistics> DatabaseManager::getAllMetricStatistics(int simulation_id) {
+    std::map<std::string, MetricStatistics> all_stats;
+
+    // Get all unique metric types for this simulation
+    std::string sql = "SELECT DISTINCT metric_type FROM metrics WHERE simulation_id = ?";
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return all_stats;
+    }
+
+    sqlite3_bind_int(stmt, 1, simulation_id);
+
+    std::vector<std::string> metric_types;
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        metric_types.push_back(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+    }
+
+    sqlite3_finalize(stmt);
+
+    // Get statistics for each metric type
+    for (const auto& metric_type : metric_types) {
+        all_stats[metric_type] = getMetricStatistics(simulation_id, metric_type);
+    }
+
+    return all_stats;
+}
+
+std::vector<DatabaseManager::ComparativeMetrics> DatabaseManager::getComparativeMetrics(
+    const std::vector<int>& simulation_ids, const std::string& metric_type) {
+
+    std::vector<ComparativeMetrics> results;
+
+    for (int sim_id : simulation_ids) {
+        ComparativeMetrics comp;
+        comp.simulation_id = sim_id;
+
+        // Get simulation name
+        SimulationRecord sim = getSimulation(sim_id);
+        comp.simulation_name = sim.name;
+
+        // Get metrics for this simulation
+        comp.metrics = getMetricsByType(sim_id, metric_type);
+
+        results.push_back(comp);
+    }
+
     return results;
 }
 

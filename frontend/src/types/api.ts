@@ -191,3 +191,41 @@ export interface RoadsResponse {
   roads: RoadGeometry[];
   count: number;
 }
+
+// Analytics types
+export interface MetricStatistics {
+  metric_type: string;
+  min_value: number;
+  max_value: number;
+  mean_value: number;
+  median_value: number;
+  stddev_value: number;
+  p25_value: number;
+  p75_value: number;
+  p95_value: number;
+  sample_count: number;
+}
+
+export interface SimulationStatistics {
+  simulation_id: number;
+  simulation_name: string;
+  statistics: Record<string, MetricStatistics>;
+}
+
+export interface ComparativeMetric {
+  simulation_id: number;
+  simulation_name: string;
+  metrics: Array<{
+    timestamp: number;
+    value: number;
+  }>;
+}
+
+export interface ComparisonResponse {
+  metric_type: string;
+  simulations: ComparativeMetric[];
+}
+
+export interface MetricTypesResponse {
+  metric_types: string[];
+}

@@ -13,6 +13,9 @@ import type {
   OptimizationResultsResponse,
   OptimizationHistoryResponse,
   StopOptimizationResponse,
+  SimulationStatistics,
+  ComparisonResponse,
+  MetricTypesResponse,
 } from '../types/api';
 
 class ApiClient {
@@ -110,6 +113,38 @@ class ApiClient {
   // Road geometry
   async getRoads(): Promise<import('../types/api').RoadsResponse> {
     const response = await this.client.get<import('../types/api').RoadsResponse>('/api/simulation/roads');
+    return response.data;
+  }
+
+  // Analytics
+  async getSimulationStatistics(simulationId: number, metricType?: string): Promise<SimulationStatistics> {
+    const url = metricType
+      ? `/api/analytics/simulations/${simulationId}/statistics/${metricType}`
+      : `/api/analytics/simulations/${simulationId}/statistics`;
+    const response = await this.client.get<SimulationStatistics>(url);
+    return response.data;
+  }
+
+  async compareSimulations(simulationIds: number[], metricType: string): Promise<ComparisonResponse> {
+    const response = await this.client.post<ComparisonResponse>('/api/analytics/compare', {
+      simulation_ids: simulationIds,
+      metric_type: metricType,
+    });
+    return response.data;
+  }
+
+  async exportMetrics(simulationId: number, metricType?: string): Promise<Blob> {
+    const url = metricType
+      ? `/api/analytics/simulations/${simulationId}/export?metric_type=${metricType}`
+      : `/api/analytics/simulations/${simulationId}/export`;
+    const response = await this.client.get(url, {
+      responseType: 'blob',
+    });
+    return response.data;
+  }
+
+  async getMetricTypes(): Promise<MetricTypesResponse> {
+    const response = await this.client.get<MetricTypesResponse>('/api/analytics/metric-types');
     return response.data;
   }
 }

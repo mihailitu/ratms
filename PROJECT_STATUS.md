@@ -582,6 +582,149 @@ Road Creation:
 
 ---
 
+### ✅ Phase 12: Performance Analytics Dashboard (Option G)
+**Branch:** `master` (committed directly)
+
+**Accomplishments:**
+- Complete analytics system for comparative performance analysis
+- Multi-simulation comparison with time-series visualization
+- Statistical summaries with percentiles and distributions
+- CSV export functionality for external analysis
+
+**Backend Implementation (C++):**
+
+DatabaseManager Enhancements (database_manager.h/cpp):
+- Added `MetricStatistics` struct (min, max, mean, median, stddev, P25, P75, P95)
+- Added `ComparativeMetrics` struct for multi-simulation comparison
+- Implemented `getMetricStatistics()` - Calculates all statistics for one metric type
+- Implemented `getAllMetricStatistics()` - Returns statistics for all metric types
+- Implemented `getComparativeMetrics()` - Fetches metrics for multiple simulations
+- Implemented `getMetricsByType()` - Filter metrics by type
+- Uses SQL aggregate functions and percentile calculations
+
+API Server Endpoints (server.h/cpp):
+- `GET /api/analytics/simulations/:id/statistics` - Get all statistics for a simulation
+- `GET /api/analytics/simulations/:id/statistics/:metric_type` - Get statistics for specific metric
+- `POST /api/analytics/compare` - Compare multiple simulations (accepts simulation_ids array)
+- `GET /api/analytics/simulations/:id/export` - Export metrics as CSV file
+- `GET /api/analytics/metric-types` - List available metric types
+- All endpoints return JSON (except CSV export)
+- Thread-safe with mutex protection
+
+**Frontend Implementation (TypeScript/React):**
+
+Analytics Types (types/api.ts):
+- `MetricStatistics` - Statistical summary interface
+- `SimulationStatistics` - Simulation-level statistics
+- `ComparativeMetric` - Time-series data for comparison
+- `ComparisonResponse` - Multi-simulation comparison response
+- `MetricTypesResponse` - Available metric types
+
+API Client (apiClient.ts):
+- `getSimulationStatistics()` - Fetch statistics for one simulation
+- `compareSimulations()` - Compare multiple simulations
+- `exportMetrics()` - Download CSV file (returns Blob)
+- `getMetricTypes()` - Get available metric types
+
+Analytics Page (Analytics.tsx):
+- **Simulation Selector**: Multi-select checkboxes for completed simulations
+- **Metric Type Dropdown**: Select metric to analyze (avg_queue_length, avg_speed, etc.)
+- **Comparison Chart**: Recharts line chart with multiple series
+  - Color-coded lines for each simulation
+  - Interactive tooltips with exact values
+  - Responsive design (100% width, 400px height)
+  - X-axis: Time (seconds), Y-axis: Metric value
+- **Statistics Table**: Comprehensive statistical summary
+  - Columns: Simulation, Min, Max, Mean, Median, Std Dev, P25, P75, P95, Samples
+  - Export button for each simulation (CSV download)
+  - Sortable and scrollable
+- **CSV Export**: Browser download with dynamic filename
+- **Error Handling**: User-friendly error messages
+
+Navigation & Routing:
+- Added `/analytics` route to App.tsx
+- Added "Analytics" link to navigation header (Layout.tsx)
+- Positioned between Optimization and Map View
+
+**Technical Implementation:**
+
+Statistical Calculations (SQLite queries):
+```sql
+-- Basic statistics
+SELECT MIN(value), MAX(value), AVG(value), COUNT(*)
+FROM metrics WHERE simulation_id = ? AND metric_type = ?
+
+-- Standard deviation
+SQRT(MAX(0, AVG(value * value) - AVG(value) * AVG(value)))
+
+-- Percentiles (median example)
+SELECT value FROM metrics
+WHERE simulation_id = ? AND metric_type = ?
+ORDER BY value LIMIT 1 OFFSET (COUNT(*) / 2)
+```
+
+Chart Data Transformation:
+```typescript
+// Merge time-series from multiple simulations
+// Each timestamp becomes a data point with values from all simulations
+const chartData = timestamps.map(timestamp => ({
+  timestamp,
+  sim_1: value1,
+  sim_2: value2,
+  ...
+}));
+```
+
+**Features:**
+
+Multi-Simulation Comparison:
+- Select 1+ completed simulations
+- Overlay time-series on single chart
+- Different colors per simulation (6 color palette)
+- Compare baseline vs optimized scenarios
+
+Statistical Analysis:
+- Min/Max values
+- Mean (average)
+- Median (50th percentile)
+- Standard deviation (measure of variability)
+- P25 (25th percentile)
+- P75 (75th percentile)
+- P95 (95th percentile)
+- Sample count
+
+CSV Export:
+- Filename format: `simulation_{id}_{metric_type}_metrics.csv`
+- Headers: timestamp, metric_type, value, road_id, unit
+- Can filter by metric type or export all metrics
+- Browser download via Blob API
+
+**Usage Scenario:**
+
+1. User selects two completed simulations (baseline + optimized)
+2. User chooses metric: "avg_queue_length"
+3. User clicks "Compare Simulations"
+4. System displays:
+   - Line chart showing queue length over time for both simulations
+   - Statistics table comparing min/max/mean/percentiles
+   - Export button to download raw data
+
+**Technical Details:**
+- Backend: 5 new API endpoints, 4 new DatabaseManager methods
+- Frontend: 1 new page (Analytics.tsx), updated types and API client
+- Lines added: ~650 (backend ~250, frontend ~400)
+- Build: No errors, full type safety
+- Responsive design with Tailwind CSS
+
+**Benefits:**
+- Quantitative comparison of simulation performance
+- Identify optimization improvements with percentile analysis
+- Export data for external tools (Excel, Python, R)
+- Visual and tabular data presentation
+- Foundation for automated performance reports
+
+---
+
 ## Current System State
 
 ### ✅ Working Features
@@ -608,6 +751,9 @@ Road Creation:
 21. ✓ GA optimization database persistence with automatic history loading
 22. ✓ Realistic 10×10 city grid test network with 1000 vehicles and 100 intersections
 23. ✓ Real-time traffic light state visualization with color-coded markers
+24. ✓ Performance analytics dashboard with multi-simulation comparison
+25. ✓ Statistical summaries with percentiles (min, max, mean, median, std dev, P25, P75, P95)
+26. ✓ CSV export functionality for metrics data
 
 ### 🔄 Limitations & TODOs
 1. No pedestrian interactions
@@ -618,7 +764,7 @@ Road Creation:
 
 ## Future Enhancements
 
-### Option F: Advanced Network Editing
+### Option F: Advanced Network Editing (Recommended Next Step)
 **Goal:** Create/edit road networks through web interface
 
 **Tasks:**
@@ -628,17 +774,21 @@ Road Creation:
 4. Network validation and testing
 5. Save/load custom networks
 
+**Estimated Effort:** 3-4 development sessions
+
 ---
 
-### Option G: Performance Analytics Dashboard
-**Goal:** Comprehensive traffic analysis tools
+### Option H: Advanced Analytics Features
+**Goal:** Enhance analytics dashboard with additional visualization
 
 **Tasks:**
-1. Time-series charts for multiple simulations
-2. Comparative analysis (baseline vs optimized)
-3. Heatmaps for congestion hotspots
-4. Statistical summaries (percentiles, distributions)
-5. Export reports (PDF, CSV)
+1. Heatmaps for congestion hotspots on map
+2. PDF report generation
+3. Real-time analytics during running simulations
+4. Automated comparison of GA optimization runs
+5. Custom metric definitions via configuration
+
+**Estimated Effort:** 2-3 development sessions
 
 ---
 
@@ -766,20 +916,21 @@ ratms/
 - ✅ Phase 8: Real-time streaming (Option B - SSE vehicle updates)
 - ✅ Phase 9: Advanced map visualization (Option C - road rendering)
 - ✅ Phase 10: GA optimization database persistence (Option D - SQLite storage)
-- ✅ Phase 11: Realistic 10×10 city grid test network
+- ✅ Phase 11: Realistic 10×10 city grid test network (Option E - traffic light visualization)
+- ✅ Phase 12: Performance analytics dashboard (Option G - comparative analysis)
 
 **Current Branch:** `master`
-**Commits Ahead of Origin:** 13 (local changes not pushed)
+**Commits Ahead of Origin:** 14 (local changes not pushed)
 
 ---
 
 ## Performance Metrics
 
 **Lines of Code:**
-- Backend (C++): ~5,900 lines (+900 from Phase 5)
-- Frontend (TypeScript/React): ~1,500 lines
+- Backend (C++): ~6,150 lines (+250 from Phase 12)
+- Frontend (TypeScript/React): ~1,900 lines (+400 from Phase 12)
 - SQL Schema: ~200 lines
-- Total: ~7,600 lines
+- Total: ~8,250 lines
 
 **Build Time:**
 - api_server: ~5 seconds
@@ -794,18 +945,18 @@ ratms/
 
 ## Recommendations
 
-**Immediate Next Step:** **Option F (Network Editor)** or **Option G (Analytics Dashboard)**
+**Immediate Next Step:** **Option F (Network Editor)** or **Option H (Advanced Analytics Features)**
 
 **Rationale:**
-1. ✅ All core features complete (Phases 1-11 + Option E)
-2. Traffic light visualization already implemented and working
+1. ✅ All core features complete (Phases 1-12)
+2. ✅ Analytics dashboard implemented with comparison and statistics
 3. System ready for advanced features
 
 **Recommended Priority:**
-1. **Option G** (Analytics Dashboard) - Better analysis and comparison tools
-2. **Option F** (Network Editor) - Custom network creation capability
+1. **Option F** (Network Editor) - Custom network creation capability
+2. **Option H** (Advanced Analytics) - Heatmaps and PDF reports
 
-**Estimated Effort:** 2-3 development sessions each
+**Estimated Effort:** 3-4 sessions (Network Editor), 2-3 sessions (Advanced Analytics)
 
 ---
 
@@ -822,7 +973,10 @@ ratms/
 - Simulation execution integrated with API server
 - GA optimization results persisted to SQLite database
 - Optimization history survives server restarts
+- Analytics dashboard with multi-simulation comparison
+- Statistical analysis with percentiles (P25, P75, P95)
+- CSV export for metrics data
 
 ---
 
-**Status:** ✅ All Core Features Complete! Traffic simulation system with 1000 vehicles, real-time visualization, traffic light indicators, and GA optimization fully operational. Ready for advanced analytics or network editing features.
+**Status:** ✅ Phase 12 Complete! Traffic simulation system with 1000 vehicles, real-time visualization, traffic light indicators, GA optimization, and comprehensive analytics dashboard fully operational. Ready for network editor or advanced analytics features.
