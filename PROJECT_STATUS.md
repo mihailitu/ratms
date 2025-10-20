@@ -607,28 +607,16 @@ Road Creation:
 20. ✓ Interactive map with vehicle markers and speed-based coloring
 21. ✓ GA optimization database persistence with automatic history loading
 22. ✓ Realistic 10×10 city grid test network with 1000 vehicles and 100 intersections
+23. ✓ Real-time traffic light state visualization with color-coded markers
 
 ### 🔄 Limitations & TODOs
 1. No pedestrian interactions
 2. Lane selection logic needs refinement
 3. Road polylines are straight (curved segments possible in future)
-4. Traffic light indicators on map not yet implemented
 
 ---
 
 ## Future Enhancements
-
-### Option E: Traffic Light Indicators on Map
-**Goal:** Visual representation of traffic light states
-
-**Tasks:**
-1. Add traffic light markers at intersection entry points
-2. Color-coded indicators (red/yellow/green)
-3. Real-time state updates via SSE stream
-4. Click-to-inspect traffic light details
-5. Phase timing display
-
----
 
 ### Option F: Advanced Network Editing
 **Goal:** Create/edit road networks through web interface
@@ -806,20 +794,18 @@ ratms/
 
 ## Recommendations
 
-**Immediate Next Step:** **Option E: Traffic Light Indicators on Map**
+**Immediate Next Step:** **Option F (Network Editor)** or **Option G (Analytics Dashboard)**
 
 **Rationale:**
-1. ✅ Phases 7-10 complete (simulation, streaming, map, GA persistence)
-2. Map visualization is functional but missing traffic light indicators
-3. Enhances real-time monitoring capabilities
-4. Visual feedback for optimization results
-5. SSE stream already includes traffic light states
+1. ✅ All core features complete (Phases 1-11 + Option E)
+2. Traffic light visualization already implemented and working
+3. System ready for advanced features
 
-**Estimated Effort:** 1 development session
+**Recommended Priority:**
+1. **Option G** (Analytics Dashboard) - Better analysis and comparison tools
+2. **Option F** (Network Editor) - Custom network creation capability
 
-**Alternatives:**
-- **Option F** (Network Editor): Interactive road network creation
-- **Option G** (Analytics Dashboard): Advanced performance analysis
+**Estimated Effort:** 2-3 development sessions each
 
 ---
 
@@ -839,4 +825,4 @@ ratms/
 
 ---
 
-**Status:** ✅ Phase 11 Complete! Realistic 10×10 city grid with 1000 vehicles now operational for large-scale simulation testing. Next: Traffic light indicators on map visualization.
+**Status:** ✅ All Core Features Complete! Traffic simulation system with 1000 vehicles, real-time visualization, traffic light indicators, and GA optimization fully operational. Ready for advanced analytics or network editing features.
