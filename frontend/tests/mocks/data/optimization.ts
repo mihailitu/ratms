@@ -30,20 +30,15 @@ export const mockCompletedOptimizationRun: OptimizationRun = {
     bestFitness: 10.00,
     improvementPercent: 37.8,
     durationSeconds: 125,
-    generations: Array.from({ length: 50 }, (_, i) => ({
-      generation: i + 1,
-      bestFitness: 16.08 - (i * 0.12), // Linear improvement for simplicity
-      avgFitness: 18.00 - (i * 0.15),
-      worstFitness: 20.00 - (i * 0.10),
-    })),
-    bestSolution: {
-      trafficLights: [
-        { greenTime: 30.5, redTime: 25.2 },
-        { greenTime: 35.1, redTime: 20.8 },
-        { greenTime: 28.9, redTime: 26.4 },
-        { greenTime: 32.3, redTime: 23.1 },
-      ],
-    },
+    // Flat array of best fitness values per generation (what GAVisualizer expects)
+    fitnessHistory: Array.from({ length: 50 }, (_, i) => 16.08 - (i * 0.12)),
+    // Best chromosome (array of traffic light timings)
+    bestChromosome: [
+      { greenTime: 30.5, redTime: 25.2 },
+      { greenTime: 35.1, redTime: 20.8 },
+      { greenTime: 28.9, redTime: 26.4 },
+      { greenTime: 32.3, redTime: 23.1 },
+    ],
   },
 };
 

@@ -1,16 +1,22 @@
 import { test, expect } from '@playwright/test';
 import { OptimizationPage } from '../fixtures/OptimizationPage';
-import { server } from '../mocks/server';
-import { http, HttpResponse } from 'msw';
-import { mockRunningOptimizationRun, mockCompletedOptimizationRun } from '../mocks/data/optimization';
+import {
+  setupOptimizationMocks,
+  mockEmptyOptimizationHistory,
+  mockOptimizationStartError,
+  mockRunningOptimizationRun,
+} from '../helpers/apiMocks';
 
 test.describe('Optimization Page', () => {
   let optimizationPage: OptimizationPage;
 
   test.beforeEach(async ({ page }) => {
     optimizationPage = new OptimizationPage(page);
-    server.resetHandlers();
+    // Setup Playwright route-based mocking (intercepts at browser level)
+    await setupOptimizationMocks(page);
     await optimizationPage.goto();
+    // Wait for page to load (loading state to disappear)
+    await page.waitForSelector('text=Traffic Light Optimization', { timeout: 10000 });
   });
 
   test.describe('Page Load', () => {
@@ -59,15 +65,33 @@ test.describe('Optimization Page', () => {
     test('should submit form when Start Optimization is clicked', async ({ page }) => {
       let optimizationStarted = false;
 
-      server.use(
-        http.post('http://localhost:8080/api/optimization/start', async () => {
+      // Override the start endpoint to track the call
+      await page.route('http://localhost:8080/api/optimization/start', async (route) => {
+        if (route.request().method() === 'POST') {
           optimizationStarted = true;
-          return HttpResponse.json({
-            message: 'Optimization started',
-            run: mockRunningOptimizationRun,
+          const body = JSON.parse(route.request().postData() || '{}');
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              message: 'Optimization started',
+              run: {
+                id: 99,
+                startedAt: Math.floor(Date.now() / 1000),
+                status: 'running',
+                parameters: body,
+                progress: {
+                  currentGeneration: 0,
+                  totalGenerations: body.generations || 50,
+                  percentComplete: 0,
+                },
+              },
+            }),
           });
-        })
-      );
+        } else {
+          await route.continue();
+        }
+      });
 
       await optimizationPage.startOptimization();
       await page.waitForTimeout(500);
@@ -76,15 +100,22 @@ test.describe('Optimization Page', () => {
     });
 
     test('should show loading state while starting', async ({ page }) => {
-      server.use(
-        http.post('http://localhost:8080/api/optimization/start', async () => {
+      // Set up a delayed response
+      await page.route('http://localhost:8080/api/optimization/start', async (route) => {
+        if (route.request().method() === 'POST') {
           await new Promise(resolve => setTimeout(resolve, 1000));
-          return HttpResponse.json({
-            message: 'Optimization started',
-            run: mockRunningOptimizationRun,
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              message: 'Optimization started',
+              run: mockRunningOptimizationRun,
+            }),
           });
-        })
-      );
+        } else {
+          await route.continue();
+        }
+      });
 
       const startPromise = optimizationPage.startOptimization();
       await page.waitForTimeout(200);
@@ -100,7 +131,7 @@ test.describe('Optimization Page', () => {
       await expect(optimizationPage.page.getByText('Optimization History')).toBeVisible();
     });
 
-    test('should display all optimization runs', async ({ page }) => {
+    test('should display all optimization runs', async () => {
       await expect(optimizationPage.getRun(1)).toBeVisible();
       await expect(optimizationPage.getRun(2)).toBeVisible();
     });
@@ -135,7 +166,8 @@ test.describe('Optimization Page', () => {
 
     test('should display run details when selected', async ({ page }) => {
       await optimizationPage.viewRunDetails(1);
-      await page.waitForTimeout(300);
+      // Wait for API call and state update
+      await page.waitForTimeout(500);
 
       await expect(optimizationPage.getResultsSection()).toBeVisible();
       await expect(optimizationPage.page.getByText('Run #1 Details')).toBeVisible();
@@ -154,52 +186,58 @@ test.describe('Optimization Page', () => {
   test.describe('Completed Run Results', () => {
     test('should display results for completed runs', async ({ page }) => {
       await optimizationPage.viewRunDetails(1);
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(500);
 
-      await expect(optimizationPage.page.getByText('Results')).toBeVisible();
-      await expect(optimizationPage.page.getByText('Baseline Fitness:')).toBeVisible();
-      await expect(optimizationPage.page.getByText('Best Fitness:')).toBeVisible();
-      await expect(optimizationPage.getImprovementValue()).toBeVisible();
+      // Check that results section is visible with specific labels
+      await expect(page.getByText('Results').first()).toBeVisible();
+      await expect(page.getByText('Baseline Fitness:', { exact: true })).toBeVisible();
+      await expect(page.getByText('Best Fitness:', { exact: true })).toBeVisible();
     });
 
     test('should display fitness improvement percentage', async ({ page }) => {
       await optimizationPage.viewRunDetails(1);
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(500);
 
-      const improvement = optimizationPage.getImprovementValue();
-      await expect(improvement).toContainText('%');
+      // Check for improvement percentage in results section
+      await expect(page.getByText(/Improvement:/).first()).toBeVisible();
+      await expect(page.getByText(/37\.8%/).first()).toBeVisible();
     });
 
     test('should display GA visualizer chart for completed runs', async ({ page }) => {
       await optimizationPage.viewRunDetails(1);
       await page.waitForTimeout(500);
 
-      await expect(optimizationPage.getGAVisualizerChart()).toBeVisible();
+      // GAVisualizer renders an SVG chart
+      await expect(page.locator('svg').first()).toBeVisible();
+      await expect(page.getByText('Fitness Evolution')).toBeVisible();
     });
 
     test('should display duration in results', async ({ page }) => {
       await optimizationPage.viewRunDetails(1);
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(500);
 
-      await expect(optimizationPage.page.getByText('Duration:')).toBeVisible();
-      await expect(optimizationPage.page.getByText(/\d+s/)).toBeVisible();
+      await expect(page.getByText('Duration:', { exact: true })).toBeVisible();
+      await expect(page.getByText('125s')).toBeVisible();
     });
   });
 
   test.describe('Running Run Progress', () => {
     test('should display progress section for running runs', async ({ page }) => {
       await optimizationPage.viewRunDetails(2);
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(500);
 
-      await expect(optimizationPage.page.getByText('Progress')).toBeVisible();
-      await expect(optimizationPage.page.getByText(/Generation.*\//)).toBeVisible();
+      // Running run should show Progress heading in details panel
+      await expect(page.getByText('Progress').first()).toBeVisible();
+      // And generation progress text
+      await expect(page.getByText(/Generation:.*45.*\/.*100/)).toBeVisible();
     });
 
     test('should display progress bar for running run', async ({ page }) => {
       await optimizationPage.viewRunDetails(2);
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(500);
 
-      const progressBar = optimizationPage.page.locator('.bg-blue-600.h-3');
+      // Progress bar with h-3 height in details section
+      const progressBar = page.locator('.bg-blue-600.h-3');
       await expect(progressBar).toBeVisible();
     });
   });
@@ -208,15 +246,21 @@ test.describe('Optimization Page', () => {
     test('should stop optimization when stop button is clicked', async ({ page }) => {
       let stopCalled = false;
 
-      server.use(
-        http.post('http://localhost:8080/api/optimization/stop/2', () => {
+      await page.route('http://localhost:8080/api/optimization/stop/2', async (route) => {
+        if (route.request().method() === 'POST') {
           stopCalled = true;
-          return HttpResponse.json({
-            message: 'Optimization stopped',
-            run_id: 2,
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              message: 'Optimization stopped',
+              run_id: 2,
+            }),
           });
-        })
-      );
+        } else {
+          await route.continue();
+        }
+      });
 
       await optimizationPage.stopRun(2);
       await page.waitForTimeout(500);
@@ -227,29 +271,23 @@ test.describe('Optimization Page', () => {
 
   test.describe('Empty State', () => {
     test('should display empty state when no runs exist', async ({ page }) => {
-      server.use(
-        http.get('http://localhost:8080/api/optimization/history', () => {
-          return HttpResponse.json({ runs: [] });
-        })
-      );
-
+      // Override with empty history before reload
+      await mockEmptyOptimizationHistory(page);
       await page.reload();
+      await page.waitForSelector('text=Traffic Light Optimization', { timeout: 10000 });
       await expect(optimizationPage.getEmptyState()).toBeVisible();
     });
   });
 
   test.describe('Error Handling', () => {
     test('should display error when optimization start fails', async ({ page }) => {
-      server.use(
-        http.post('http://localhost:8080/api/optimization/start', () => {
-          return new HttpResponse(null, { status: 500 });
-        })
-      );
+      await mockOptimizationStartError(page);
 
       await optimizationPage.startOptimization();
       await page.waitForTimeout(500);
 
-      await expect(optimizationPage.page.getByText(/error|failed/i)).toBeVisible();
+      // Error should be shown - could be "Failed to start optimization" or similar
+      await expect(page.locator('.bg-red-50, .text-red-700').first()).toBeVisible();
     });
   });
 });

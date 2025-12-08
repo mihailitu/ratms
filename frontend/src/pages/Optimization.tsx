@@ -165,10 +165,11 @@ export default function Optimization() {
                 <form onSubmit={handleStartOptimization} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="populationSize" className="block text-sm font-medium text-gray-700 mb-1">
                         Population Size
                       </label>
                       <input
+                        id="populationSize"
                         type="number"
                         value={formData.populationSize}
                         onChange={(e) => setFormData({...formData, populationSize: parseInt(e.target.value)})}
@@ -178,10 +179,11 @@ export default function Optimization() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="generations" className="block text-sm font-medium text-gray-700 mb-1">
                         Generations
                       </label>
                       <input
+                        id="generations"
                         type="number"
                         value={formData.generations}
                         onChange={(e) => setFormData({...formData, generations: parseInt(e.target.value)})}
@@ -194,10 +196,11 @@ export default function Optimization() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="mutationRate" className="block text-sm font-medium text-gray-700 mb-1">
                         Mutation Rate
                       </label>
                       <input
+                        id="mutationRate"
                         type="number"
                         step="0.01"
                         value={formData.mutationRate}
@@ -208,10 +211,11 @@ export default function Optimization() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="crossoverRate" className="block text-sm font-medium text-gray-700 mb-1">
                         Crossover Rate
                       </label>
                       <input
+                        id="crossoverRate"
                         type="number"
                         step="0.01"
                         value={formData.crossoverRate}
@@ -225,10 +229,11 @@ export default function Optimization() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="simulationSteps" className="block text-sm font-medium text-gray-700 mb-1">
                         Simulation Steps
                       </label>
                       <input
+                        id="simulationSteps"
                         type="number"
                         value={formData.simulationSteps}
                         onChange={(e) => setFormData({...formData, simulationSteps: parseInt(e.target.value)})}
@@ -238,10 +243,11 @@ export default function Optimization() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="networkId" className="block text-sm font-medium text-gray-700 mb-1">
                         Network ID
                       </label>
                       <input
+                        id="networkId"
                         type="number"
                         value={formData.networkId}
                         onChange={(e) => setFormData({...formData, networkId: parseInt(e.target.value)})}

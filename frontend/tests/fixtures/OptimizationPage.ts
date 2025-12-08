@@ -118,10 +118,11 @@ export class OptimizationPage extends BasePage {
   }
 
   /**
-   * Get run by ID
+   * Get run by ID - returns the full run card container
    */
   getRun(runId: number): Locator {
-    return this.page.locator(`text=Run #${runId}`).locator('..');
+    // Find the run card by looking for a container that has "Run #X" text
+    return this.page.locator('.border.rounded-lg.p-4').filter({ hasText: `Run #${runId}` });
   }
 
   /**
@@ -188,12 +189,12 @@ export class OptimizationPage extends BasePage {
   }
 
   /**
-   * Check if run is selected
+   * Check if run is selected (has the blue border selection style)
    */
   async isRunSelected(runId: number): Promise<boolean> {
-    const run = this.getRun(runId);
-    const classes = await run.getAttribute('class');
-    return classes?.includes('border-blue-500') ?? false;
+    // Use a more specific selector that looks for the selection state
+    const selectedRun = this.page.locator('.border-blue-500.bg-blue-50').filter({ hasText: `Run #${runId}` });
+    return await selectedRun.isVisible();
   }
 
   /**
