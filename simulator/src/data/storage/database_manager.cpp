@@ -7,6 +7,8 @@
 namespace ratms {
 namespace data {
 
+using namespace ratms;
+
 DatabaseManager::DatabaseManager(const std::string& db_path)
     : db_(nullptr), db_path_(db_path) {
 }
@@ -19,34 +21,36 @@ bool DatabaseManager::initialize() {
     int rc = sqlite3_open(db_path_.c_str(), &db_);
     if (rc != SQLITE_OK) {
         last_error_ = sqlite3_errmsg(db_);
-        log_error("Failed to open database: %s", last_error_.c_str());
+        LOG_ERROR(LogComponent::Database, "Failed to open database: {}", last_error_);
         return false;
     }
 
-    log_info("Database opened successfully: %s", db_path_.c_str());
+    LOG_INFO(LogComponent::Database, "Database opened: {}", db_path_);
     return true;
 }
 
 bool DatabaseManager::runMigrations(const std::string& migrations_dir) {
+    TIMED_SCOPE(LogComponent::Database, "database_migrations");
+
     // Run migration 001
     std::string migration_file_001 = migrations_dir + "/001_initial_schema.sql";
-    log_info("Running database migration: %s", migration_file_001.c_str());
+    LOG_INFO(LogComponent::Database, "Running database migration: {}", migration_file_001);
 
     if (!executeSQLFile(migration_file_001)) {
-        log_error("Migration 001 failed: %s", last_error_.c_str());
+        LOG_ERROR(LogComponent::Database, "Migration 001 failed: {}", last_error_);
         return false;
     }
 
     // Run migration 002 (optimization runs)
     std::string migration_file_002 = migrations_dir + "/002_optimization_runs.sql";
-    log_info("Running database migration: %s", migration_file_002.c_str());
+    LOG_INFO(LogComponent::Database, "Running database migration: {}", migration_file_002);
 
     if (!executeSQLFile(migration_file_002)) {
-        log_error("Migration 002 failed: %s", last_error_.c_str());
+        LOG_ERROR(LogComponent::Database, "Migration 002 failed: {}", last_error_);
         return false;
     }
 
-    log_info("Database migrations completed successfully");
+    LOG_INFO(LogComponent::Database, "Database migrations completed successfully");
     return true;
 }
 
@@ -56,7 +60,7 @@ bool DatabaseManager::executeSQL(const std::string& sql) {
 
     if (rc != SQLITE_OK) {
         last_error_ = err_msg ? err_msg : "Unknown error";
-        log_error("SQL execution failed: %s", last_error_.c_str());
+        LOG_ERROR(LogComponent::Database, "SQL execution failed: {}", last_error_);
         if (err_msg) sqlite3_free(err_msg);
         return false;
     }
@@ -82,7 +86,7 @@ void DatabaseManager::close() {
     if (db_) {
         sqlite3_close(db_);
         db_ = nullptr;
-        log_info("Database closed");
+        LOG_INFO(LogComponent::Database, "Database closed");
     }
 }
 
@@ -97,7 +101,7 @@ int DatabaseManager::createSimulation(const std::string& name, const std::string
 
     if (rc != SQLITE_OK) {
         last_error_ = sqlite3_errmsg(db_);
-        log_error("Failed to prepare statement: %s", last_error_.c_str());
+        LOG_ERROR(LogComponent::Database, "Failed to prepare statement: {}", last_error_);
         return -1;
     }
 
@@ -114,12 +118,12 @@ int DatabaseManager::createSimulation(const std::string& name, const std::string
 
     if (rc != SQLITE_DONE) {
         last_error_ = sqlite3_errmsg(db_);
-        log_error("Failed to insert simulation: %s", last_error_.c_str());
+        LOG_ERROR(LogComponent::Database, "Failed to insert simulation: {}", last_error_);
         return -1;
     }
 
     int sim_id = sqlite3_last_insert_rowid(db_);
-    log_info("Created simulation with ID: %d", sim_id);
+    LOG_DEBUG(LogComponent::Database, "Created simulation with ID: {}", sim_id);
     return sim_id;
 }
 
@@ -148,7 +152,7 @@ bool DatabaseManager::updateSimulationStatus(int sim_id, const std::string& stat
         return false;
     }
 
-    log_info("Updated simulation %d status to: %s", sim_id, status.c_str());
+    LOG_DEBUG(LogComponent::Database, "Updated simulation {} status to: {}", sim_id, status);
     return true;
 }
 
@@ -366,7 +370,7 @@ int DatabaseManager::createNetwork(const std::string& name, const std::string& d
     }
 
     int network_id = sqlite3_last_insert_rowid(db_);
-    log_info("Created network with ID: %d", network_id);
+    LOG_DEBUG(LogComponent::Database, "Created network with ID: {}", network_id);
     return network_id;
 }
 
@@ -440,7 +444,7 @@ int DatabaseManager::createOptimizationRun(const OptimizationRunRecord& record) 
 
     if (rc != SQLITE_OK) {
         last_error_ = sqlite3_errmsg(db_);
-        log_error("Failed to prepare optimization run insert: %s", last_error_.c_str());
+        LOG_ERROR(LogComponent::Database, "Failed to prepare optimization run insert: {}", last_error_);
         return -1;
     }
 
@@ -466,12 +470,12 @@ int DatabaseManager::createOptimizationRun(const OptimizationRunRecord& record) 
 
     if (rc != SQLITE_DONE) {
         last_error_ = sqlite3_errmsg(db_);
-        log_error("Failed to insert optimization run: %s", last_error_.c_str());
+        LOG_ERROR(LogComponent::Database, "Failed to insert optimization run: {}", last_error_);
         return -1;
     }
 
     int run_id = sqlite3_last_insert_rowid(db_);
-    log_info("Created optimization run with ID: %d", run_id);
+    LOG_DEBUG(LogComponent::Database, "Created optimization run with ID: {}", run_id);
     return run_id;
 }
 
@@ -497,7 +501,7 @@ bool DatabaseManager::updateOptimizationRunStatus(int run_id, const std::string&
         return false;
     }
 
-    log_info("Updated optimization run %d status to: %s", run_id, status.c_str());
+    LOG_DEBUG(LogComponent::Database, "Updated optimization run {} status to: {}", run_id, status);
     return true;
 }
 
@@ -781,7 +785,7 @@ int DatabaseManager::insertOptimizationSolution(const OptimizationSolutionRecord
 
     if (rc != SQLITE_OK) {
         last_error_ = sqlite3_errmsg(db_);
-        log_error("Failed to prepare solution insert: %s", last_error_.c_str());
+        LOG_ERROR(LogComponent::Database, "Failed to prepare solution insert: {}", last_error_);
         return -1;
     }
 
@@ -797,7 +801,7 @@ int DatabaseManager::insertOptimizationSolution(const OptimizationSolutionRecord
 
     if (rc != SQLITE_DONE) {
         last_error_ = sqlite3_errmsg(db_);
-        log_error("Failed to insert optimization solution: %s", last_error_.c_str());
+        LOG_ERROR(LogComponent::Database, "Failed to insert optimization solution: {}", last_error_);
         return -1;
     }
 

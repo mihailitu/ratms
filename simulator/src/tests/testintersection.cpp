@@ -5,6 +5,8 @@
 #include <map>
 #include <tuple>
 
+using namespace ratms;
+
 namespace simulator {
 
 /*
@@ -177,7 +179,7 @@ std::vector<Road> cityGridTestMap()
     const unsigned ARTERIAL_SPEED = 14;  // 50 km/h
     const unsigned SECONDARY_SPEED = 8;  // 30 km/h
 
-    log_info("Generating 10x10 city grid: 100 intersections, ~440 roads, 1000 vehicles");
+    LOG_INFO(LogComponent::Simulation, "Generating 10x10 city grid: 100 intersections, ~440 roads, 1000 vehicles");
 
     // Helper lambda to determine if a road is arterial (perimeter or every 3rd)
     auto isArterial = [](int i, int j, bool isHorizontal) -> bool {
@@ -275,7 +277,7 @@ std::vector<Road> cityGridTestMap()
         }
     }
 
-    log_info("Created %u road segments", nextRoadId);
+    LOG_INFO(LogComponent::Simulation, "Created {} road segments", nextRoadId);
 
     // PHASE 3: Set up probabilistic connections at each intersection
     for (int row = 0; row < GRID_SIZE; row++) {
@@ -404,7 +406,7 @@ std::vector<Road> cityGridTestMap()
         }
     }
 
-    log_info("Set up probabilistic routing at all intersections");
+    LOG_INFO(LogComponent::Simulation, "Set up probabilistic routing at all intersections");
 
     // PHASE 4: Place 1000 vehicles randomly across the network
     std::uniform_int_distribution<unsigned> roadDist(0, cmap.size() - 1);
@@ -437,7 +439,7 @@ std::vector<Road> cityGridTestMap()
         attempts++;
     }
 
-    log_info("Placed %d vehicles across the network (target: %d)", vehiclesPlaced, TOTAL_VEHICLES);
+    LOG_INFO(LogComponent::Simulation, "Placed {} vehicles across the network (target: {})", vehiclesPlaced, TOTAL_VEHICLES);
 
     // Set dummy map size for visualization bounds
     setDummyMapSize(GRID_SIZE * BLOCK_LENGTH, GRID_SIZE * BLOCK_LENGTH, cmap);

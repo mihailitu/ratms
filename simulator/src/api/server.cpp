@@ -8,12 +8,13 @@
 #include <thread>
 
 using json = nlohmann::json;
+using namespace ratms;
 
 namespace ratms {
 namespace api {
 
 Server::Server(int port) : port_(port) {
-    log_info("API Server initialized on port %d", port_);
+    LOG_INFO(LogComponent::API, "API Server initialized on port {}", port_);
 }
 
 Server::~Server() {
@@ -30,7 +31,7 @@ Server::~Server() {
 
 void Server::start() {
     if (running_) {
-        log_warning("Server already running");
+        LOG_WARN(LogComponent::API, "Server already running");
         return;
     }
 
@@ -41,11 +42,11 @@ void Server::start() {
 
     // Start server in separate thread
     server_thread_ = std::make_unique<std::thread>([this]() {
-        log_info("Starting HTTP server on http://localhost:%d", port_);
+        LOG_INFO(LogComponent::API, "Starting HTTP server on http://localhost:{}", port_);
         http_server_.listen("0.0.0.0", port_);
     });
 
-    log_info("API Server started successfully");
+    LOG_INFO(LogComponent::API, "API Server started successfully");
 }
 
 void Server::stop() {
@@ -60,23 +61,23 @@ void Server::stop() {
         server_thread_->join();
     }
 
-    log_info("API Server stopped");
+    LOG_INFO(LogComponent::API, "API Server stopped");
 }
 
 void Server::setSimulator(std::shared_ptr<simulator::Simulator> sim) {
     std::lock_guard<std::mutex> lock(sim_mutex_);
     simulator_ = sim;
-    log_info("Simulator instance attached to API server");
+    LOG_INFO(LogComponent::API, "Simulator instance attached to API server");
 }
 
 void Server::setDatabase(std::shared_ptr<data::DatabaseManager> db) {
     database_ = db;
-    log_info("Database manager attached to API server");
+    LOG_INFO(LogComponent::Database, "Database manager attached to API server");
 
     // Initialize optimization controller
     if (database_) {
         optimization_controller_ = std::make_unique<OptimizationController>(database_);
-        log_info("Optimization controller initialized");
+        LOG_INFO(LogComponent::Optimization, "Optimization controller initialized");
     }
 }
 
@@ -96,9 +97,13 @@ void Server::setupMiddleware() {
         return httplib::Server::HandlerResponse::Unhandled;
     });
 
-    // Logging middleware
+    // Logging middleware - log warnings for errors, debug for success
     http_server_.set_logger([](const httplib::Request& req, const httplib::Response& res) {
-        log_info("HTTP %s %s - %d", req.method.c_str(), req.path.c_str(), res.status);
+        if (res.status >= 400) {
+            LOG_WARN(LogComponent::API, "HTTP {} {} -> {}", req.method, req.path, res.status);
+        } else {
+            LOG_DEBUG(LogComponent::API, "HTTP {} {} -> {}", req.method, req.path, res.status);
+        }
     });
 }
 
@@ -170,10 +175,10 @@ void Server::setupRoutes() {
     // Register optimization routes if controller is initialized
     if (optimization_controller_) {
         optimization_controller_->registerRoutes(http_server_);
-        log_info("Optimization routes registered");
+        LOG_INFO(LogComponent::API, "Optimization routes registered");
     }
 
-    log_info("API routes configured");
+    LOG_INFO(LogComponent::API, "API routes configured: {} endpoints", 15);
 }
 
 void Server::handleHealth(const httplib::Request& req, httplib::Response& res) {
@@ -189,9 +194,11 @@ void Server::handleHealth(const httplib::Request& req, httplib::Response& res) {
 }
 
 void Server::handleSimulationStart(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
     std::lock_guard<std::mutex> lock(sim_mutex_);
 
     if (simulation_running_) {
+        LOG_WARN(LogComponent::API, "Start request rejected: simulation already running");
         json response = {
             {"error", "Simulation already running"},
             {"status", "running"}
@@ -202,6 +209,7 @@ void Server::handleSimulationStart(const httplib::Request& req, httplib::Respons
     }
 
     if (!simulator_) {
+        LOG_ERROR(LogComponent::API, "Start request failed: simulator not initialized");
         json response = {
             {"error", "Simulator not initialized"},
             {"status", "error"}
@@ -222,7 +230,7 @@ void Server::handleSimulationStart(const httplib::Request& req, httplib::Respons
         if (sim_id > 0) {
             current_simulation_id_ = sim_id;
             database_->updateSimulationStatus(sim_id, "running");
-            log_info("Simulation record created with ID: %d", sim_id);
+            LOG_INFO(LogComponent::Database, "Simulation record created with ID: {}", sim_id);
         }
     }
 
@@ -235,7 +243,7 @@ void Server::handleSimulationStart(const httplib::Request& req, httplib::Respons
     // Start simulation in background thread
     simulation_thread_ = std::make_unique<std::thread>(&Server::runSimulationLoop, this);
 
-    log_info("Simulation started via API");
+    LOG_INFO(LogComponent::Simulation, "Simulation started via API");
 
     json response = {
         {"message", "Simulation started successfully"},
@@ -249,10 +257,12 @@ void Server::handleSimulationStart(const httplib::Request& req, httplib::Respons
 }
 
 void Server::handleSimulationStop(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
     {
         std::lock_guard<std::mutex> lock(sim_mutex_);
 
         if (!simulation_running_) {
+            LOG_WARN(LogComponent::API, "Stop request rejected: simulation not running");
             json response = {
                 {"error", "Simulation not running"},
                 {"status", "stopped"}
@@ -264,14 +274,14 @@ void Server::handleSimulationStop(const httplib::Request& req, httplib::Response
 
         // Signal simulation thread to stop
         simulation_should_stop_ = true;
-        log_info("Sent stop signal to simulation thread");
+        LOG_DEBUG(LogComponent::Simulation, "Sent stop signal to simulation thread");
     }
 
     // Wait for simulation thread to complete (outside the lock to avoid deadlock)
     if (simulation_thread_ && simulation_thread_->joinable()) {
         simulation_thread_->join();
         simulation_thread_.reset();
-        log_info("Simulation thread joined");
+        LOG_DEBUG(LogComponent::Simulation, "Simulation thread joined");
     }
 
     {
@@ -282,12 +292,12 @@ void Server::handleSimulationStop(const httplib::Request& req, httplib::Response
         if (database_ && database_->isConnected() && current_simulation_id_ > 0) {
             long end_time = std::time(nullptr);
             database_->completeSimulation(current_simulation_id_, end_time, simulation_time_.load());
-            log_info("Simulation record %d completed", current_simulation_id_.load());
+            LOG_INFO(LogComponent::Database, "Simulation record {} completed", current_simulation_id_.load());
             current_simulation_id_ = -1;
         }
     }
 
-    log_info("Simulation stopped via API");
+    LOG_INFO(LogComponent::Simulation, "Simulation stopped via API");
 
     json response = {
         {"message", "Simulation stopped successfully"},
@@ -372,7 +382,7 @@ void Server::handleSimulationStream(const httplib::Request& req, httplib::Respon
     res.set_header("Connection", "keep-alive");
     // CORS header already set by middleware
 
-    log_info("Client connected to simulation stream");
+    LOG_INFO(LogComponent::SSE, "Client connected to simulation stream");
 
     res.set_chunked_content_provider(
         "text/event-stream",
@@ -426,7 +436,7 @@ void Server::handleSimulationStream(const httplib::Request& req, httplib::Respon
                 // Send as SSE
                 std::string msg = "event: update\ndata: " + data.dump() + "\n\n";
                 if (!sink.write(msg.c_str(), msg.size())) {
-                    log_info("Client disconnected from simulation stream");
+                    LOG_INFO(LogComponent::SSE, "Client disconnected from simulation stream");
                     return false;
                 }
             }
@@ -440,7 +450,7 @@ void Server::handleSimulationStream(const httplib::Request& req, httplib::Respon
         }
     );
 
-    log_info("Simulation stream handler completed");
+    LOG_DEBUG(LogComponent::SSE, "Simulation stream handler completed");
 }
 
 // Database query handlers
@@ -572,7 +582,7 @@ void Server::handleGetNetworks(const httplib::Request& req, httplib::Response& r
 }
 
 void Server::runSimulationLoop() {
-    log_info("Simulation loop started");
+    LOG_INFO(LogComponent::Simulation, "Simulation loop started");
 
     const double dt = 0.1;  // Time step
     const int maxSteps = 10000;  // Maximum steps
@@ -588,9 +598,10 @@ void Server::runSimulationLoop() {
             // PHASE 1: Update all roads and collect pending transitions
             std::vector<simulator::RoadTransition> pendingTransitions;
             {
+                TIMED_SCOPE(LogComponent::Simulation, "simulation_step");
                 std::lock_guard<std::mutex> lock(sim_mutex_);
                 if (!simulator_) {
-                    log_error("Simulator became null during simulation");
+                    LOG_ERROR(LogComponent::Simulation, "Simulator became null during simulation");
                     break;
                 }
 
@@ -653,7 +664,7 @@ void Server::runSimulationLoop() {
                     database_->insertMetric(current_simulation_id_, timestamp, "vehicles_exited", 0, metrics.vehiclesExited, "count");
                     database_->insertMetric(current_simulation_id_, timestamp, "max_queue_length", 0, metrics.maxQueueLength, "vehicles");
 
-                    log_info("Saved metrics at step %d: avg_queue=%.2f, avg_speed=%.2f, exited=%.0f",
+                    LOG_DEBUG(LogComponent::Database, "Saved metrics at step {}: avg_queue={:.2f}, avg_speed={:.2f}, exited={:.0f}",
                              currentStep, avgQueueLength, avgSpeed, metrics.vehiclesExited);
                 }
             }
@@ -683,22 +694,22 @@ void Server::runSimulationLoop() {
                 database_->insertMetric(current_simulation_id_, timestamp, "final_avg_speed", 0, avgSpeed, "m/s");
                 database_->insertMetric(current_simulation_id_, timestamp, "final_vehicles_exited", 0, metrics.vehiclesExited, "count");
 
-                log_info("Final metrics saved: avg_queue=%.2f, avg_speed=%.2f, exited=%.0f",
+                LOG_INFO(LogComponent::Database, "Final metrics saved: avg_queue={:.2f}, avg_speed={:.2f}, exited={:.0f}",
                          avgQueueLength, avgSpeed, metrics.vehiclesExited);
             }
         }
 
         if (simulation_should_stop_) {
-            log_info("Simulation stopped by user request at step %d", simulation_steps_.load());
+            LOG_INFO(LogComponent::Simulation, "Simulation stopped by user request at step {}", simulation_steps_.load());
         } else {
-            log_info("Simulation completed naturally at step %d", simulation_steps_.load());
+            LOG_INFO(LogComponent::Simulation, "Simulation completed naturally at step {}", simulation_steps_.load());
         }
 
     } catch (const std::exception& e) {
-        log_error("Exception in simulation loop: %s", e.what());
+        LOG_ERROR(LogComponent::Simulation, "Exception in simulation loop: {}", e.what());
     }
 
-    log_info("Simulation loop ended: steps=%d, time=%.2f", simulation_steps_.load(), simulation_time_.load());
+    LOG_INFO(LogComponent::Simulation, "Simulation loop ended: steps={}, time={:.2f}", simulation_steps_.load(), simulation_time_.load());
 }
 
 void Server::captureSimulationSnapshot() {

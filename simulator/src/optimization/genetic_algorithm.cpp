@@ -1,9 +1,12 @@
 #include "genetic_algorithm.h"
+#include "../utils/logger.h"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <iostream>
 #include <limits>
+
+using namespace ratms;
 
 namespace simulator {
 
@@ -69,29 +72,34 @@ void GeneticAlgorithm::initializePopulation(size_t chromosomeSize) {
         population_.push_back(chromosome);
     }
 
-    std::cout << "Initialized population with " << params_.populationSize
-              << " individuals, each with " << chromosomeSize << " traffic lights\n";
+    LOG_INFO(LogComponent::Optimization, "Initialized population: {} individuals, {} traffic lights each",
+             params_.populationSize, chromosomeSize);
 }
 
 Chromosome GeneticAlgorithm::evolve() {
-    std::cout << "\n=== Starting Genetic Algorithm Evolution ===\n";
-    std::cout << "Population size: " << params_.populationSize << "\n";
-    std::cout << "Generations: " << params_.generations << "\n";
-    std::cout << "Mutation rate: " << params_.mutationRate << "\n";
-    std::cout << "Crossover rate: " << params_.crossoverRate << "\n\n";
+    LOG_INFO(LogComponent::Optimization, "Starting GA evolution: pop={}, gen={}, mutation={:.2f}, crossover={:.2f}",
+             params_.populationSize, params_.generations, params_.mutationRate, params_.crossoverRate);
 
     // Evaluate initial population
     evaluatePopulation();
     sortPopulation();
 
+    LOG_DEBUG(LogComponent::Optimization, "Initial population evaluated, best fitness: {:.4f}", population_[0].fitness);
+
     for (size_t gen = 0; gen < params_.generations; ++gen) {
         // Store best fitness
         fitnessHistory_.push_back(population_[0].fitness);
 
-        // Print progress
+        // Log progress every 10 generations or at end
         if (gen % 10 == 0 || gen == params_.generations - 1) {
-            std::cout << "Generation " << gen << ": Best fitness = "
-                      << population_[0].fitness << " (lower is better)\n";
+            // Calculate average fitness for more informative logging
+            double avgFitness = 0.0;
+            for (const auto& chr : population_) {
+                avgFitness += chr.fitness;
+            }
+            avgFitness /= population_.size();
+            LOG_INFO(LogComponent::Optimization, "Gen {}/{}: best={:.4f}, avg={:.4f}",
+                     gen, params_.generations, population_[0].fitness, avgFitness);
         }
 
         // Create next generation
@@ -105,8 +113,7 @@ Chromosome GeneticAlgorithm::evolve() {
     // Store best solution
     bestChromosome_ = population_[0];
 
-    std::cout << "\n=== Evolution Complete ===\n";
-    std::cout << "Final best fitness: " << bestChromosome_.fitness << "\n";
+    LOG_INFO(LogComponent::Optimization, "Evolution complete: final best fitness = {:.4f}", bestChromosome_.fitness);
 
     return bestChromosome_;
 }
@@ -201,7 +208,7 @@ void GeneticAlgorithm::reproduce() {
 void exportEvolutionHistoryCSV(const std::vector<double>& history, const std::string& filename) {
     std::ofstream file(filename);
     if (!file.is_open()) {
-        std::cerr << "Failed to open file: " << filename << "\n";
+        LOG_ERROR(LogComponent::Optimization, "Failed to open file for evolution history: {}", filename);
         return;
     }
 
@@ -211,13 +218,13 @@ void exportEvolutionHistoryCSV(const std::vector<double>& history, const std::st
     }
 
     file.close();
-    std::cout << "Exported evolution history to " << filename << "\n";
+    LOG_INFO(LogComponent::Optimization, "Exported evolution history to {}", filename);
 }
 
 void exportChromosomeCSV(const Chromosome& chromosome, const std::string& filename) {
     std::ofstream file(filename);
     if (!file.is_open()) {
-        std::cerr << "Failed to open file: " << filename << "\n";
+        LOG_ERROR(LogComponent::Optimization, "Failed to open file for chromosome: {}", filename);
         return;
     }
 
@@ -229,7 +236,7 @@ void exportChromosomeCSV(const Chromosome& chromosome, const std::string& filena
     }
 
     file.close();
-    std::cout << "Exported chromosome to " << filename << "\n";
+    LOG_INFO(LogComponent::Optimization, "Exported chromosome ({} genes) to {}", chromosome.genes.size(), filename);
 }
 
 } // namespace simulator

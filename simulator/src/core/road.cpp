@@ -6,6 +6,8 @@
 #include <functional>
 #include <random>
 
+using namespace ratms;
+
 namespace simulator
 {
 
@@ -22,12 +24,8 @@ Road::Road()
 Road::Road(roadID /*rId*/, double rLength, unsigned lanes, unsigned maxSpeed_mps ) :
     id (idSeed++), length(rLength), lanesNo(lanes), maxSpeed(maxSpeed_mps)
 {
-    log_info("New road added: \n"
-             "\t ID: %u \n"
-             "\t length: %.2f m\n"
-             "\t max_speed: %u \n"
-             "\t lanes: %u \n",
-             id, length, maxSpeed, lanesNo);
+    LOG_DEBUG(LogComponent::Simulation, "New road added: id={}, length={:.2f}m, lanes={}, maxSpeed={}",
+              id, length, lanesNo, maxSpeed);
 
     for(unsigned i = 0; i < lanesNo; ++i) {
         vehicles.push_back(std::list<Vehicle>());
@@ -49,7 +47,7 @@ bool vehicleComparer(const Vehicle &v1, const Vehicle &v2)
 bool Road::addVehicle(Vehicle v, unsigned lane)
 {
     if(lane >= lanesNo) {
-        log_warning("Assigned vehicle to road %u on lane %d, where the road has only %d lanes.", id, lane, lanesNo);
+        LOG_WARN(LogComponent::Simulation, "Assigned vehicle to road {} on lane {}, where road has only {} lanes", id, lane, lanesNo);
         lane = 0; //TODO: throw exception?
     }
 
@@ -65,7 +63,7 @@ bool Road::addVehicle(Vehicle v, unsigned lane)
 void Road::addLaneConnection(unsigned lane, roadID road, double usageProb)
 {
     if (lane >= lanesNo) {
-        log_error("Cannot connect road %u with lane %d. Max lanes: %d", road, lane, lanesNo);
+        LOG_ERROR(LogComponent::Simulation, "Cannot connect road {} with lane {}. Max lanes: {}", road, lane, lanesNo);
         return;
     }
     connections[lane].push_back({road, usageProb});
@@ -111,10 +109,8 @@ bool Road::tryLaneChange(const Vehicle &currentVehicle, const Vehicle &currentLa
                     noVehicle : *nextLaneFollowerIterator;
 
         if(currentVehicle.canChangeLane(currentLaneLeader, nextLaneLeader, nextLaneFollower)) {
-            log_info("Vehicle %d switched lanes (%d -> %d).\n "
-                     "\tCurrent leader: %d, next leader: %d, nextFolower: %d",
-                     currentVehicle.getId(), currentLane, nextLaneIdx,
-                     currentLaneLeader.getId(), nextLaneLeader.getId(), nextLaneFollower.getId());
+            LOG_TRACE(LogComponent::Simulation, "Vehicle {} lane change {} -> {}",
+                      currentVehicle.getId(), currentLane, nextLaneIdx);
 
             addVehicle(currentVehicle, nextLaneIdx);
             return true;
@@ -254,7 +250,7 @@ roadID selectConnection(std::vector<std::pair<roadID, double>> &connections)
     }
 
     if (sum <= 0.0) {
-        log_warning("selectConnection: probabilities sum to zero, choosing first connection");
+        LOG_WARN(LogComponent::Simulation, "selectConnection: probabilities sum to zero, choosing first connection");
         return connections[0].first;
     }
 
@@ -314,7 +310,7 @@ bool Road::performRoadChange(const Vehicle &currentVehicle,
 {
     // No connections -> vehicle leaves simulation
     if (connections[laneIndex].size() == 0) {
-        log_info("Vehicle %d leaving simulation (no connections from road %lu, lane %u)",
+        LOG_TRACE(LogComponent::Simulation, "Vehicle {} leaving simulation (no connections from road {}, lane {})",
                  currentVehicle.getId(), id, laneIndex);
         return true; // Remove vehicle
     }
@@ -325,7 +321,7 @@ bool Road::performRoadChange(const Vehicle &currentVehicle,
     roadID nextRoadID = selectConnection(laneConnections);
 
     if (nextRoadID == (roadID)-1) {
-        log_error("Failed to select connection for vehicle %d on road %lu, lane %u",
+        LOG_ERROR(LogComponent::Simulation, "Failed to select connection for vehicle {} on road {}, lane {}",
                   currentVehicle.getId(), id, laneIndex);
         return true; // Remove vehicle to avoid stuck state
     }
@@ -333,8 +329,8 @@ bool Road::performRoadChange(const Vehicle &currentVehicle,
     // Check if next road exists in cityMap
     auto nextRoadIt = cityMap.find(nextRoadID);
     if (nextRoadIt == cityMap.end()) {
-        log_warning("Vehicle %d cannot transition - destination road %lu not in cityMap",
-                    currentVehicle.getId(), nextRoadID);
+        LOG_WARN(LogComponent::Simulation, "Vehicle {} cannot transition - destination road {} not in cityMap",
+                 currentVehicle.getId(), nextRoadID);
         return true; // Remove vehicle
     }
 
@@ -350,13 +346,13 @@ bool Road::performRoadChange(const Vehicle &currentVehicle,
 
     // Check if destination road has capacity
     if (!nextRoad.vehicleCanJoinThisRoad(currentVehicle, destLane)) {
-        log_info("Vehicle %d blocked at intersection - destination road %lu lane %u is full",
+        LOG_TRACE(LogComponent::Simulation, "Vehicle {} blocked at intersection - destination road {} lane {} is full",
                  currentVehicle.getId(), nextRoadID, destLane);
         return false; // Keep vehicle on current road (waiting at traffic light)
     }
 
-    log_info("Vehicle %d transitioning from road %lu (lane %u) to road %lu (lane %u)",
-             currentVehicle.getId(), id, laneIndex, nextRoadID, destLane);
+    LOG_TRACE(LogComponent::Simulation, "Vehicle {} transitioning road {} -> {} (lane {})",
+             currentVehicle.getId(), id, nextRoadID, destLane);
 
     // Add transition to pending list
     pendingTransitions.push_back(std::make_tuple(currentVehicle, nextRoadID, destLane));
@@ -439,17 +435,8 @@ roadPosGeo Road::getEndPosGeo() const
 
 void Road::printRoad() const
 {
-
-    log_info("Road ID:    %u\n"
-             "Length:       %d\n"
-             "Lanes:        %d\n"
-             "Max speed:    %d\n"
-             "Vehicle No.:  %d\n"
-             "Start:        (%f, %f)\n"
-             "End:          (%f, %f)\n"
-             "Connections:  %s\n",
-             id, length, lanesNo, maxSpeed, vehicles.size(),
-             startPosGeo.first, startPosGeo.second, endPosGeo.first, endPosGeo.second);//, connections_str.c_str());
+    LOG_DEBUG(LogComponent::Simulation, "Road {}: length={}, lanes={}, maxSpeed={}, vehicles={}",
+              id, length, lanesNo, maxSpeed, vehicles.size());
 
     for(auto lane : vehicles )
         for(auto v : lane)

@@ -1,6 +1,14 @@
 project(simulator)
 cmake_minimum_required(VERSION 3.10)
 
+include(FetchContent)
+FetchContent_Declare(
+  spdlog
+  GIT_REPOSITORY https://github.com/gabime/spdlog.git
+  GIT_TAG        v1.12.0
+)
+FetchContent_MakeAvailable(spdlog)
+
 # Set C++20 standard
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -35,6 +43,7 @@ set(SIMULATOR_SOURCES
 )
 
 add_executable(${PROJECT_NAME} ${SIMULATOR_SOURCES})
+target_link_libraries(${PROJECT_NAME} PRIVATE spdlog::spdlog Threads::Threads SQLite::SQLite3)
 
 # API server executable
 set(API_SERVER_SOURCES
@@ -51,6 +60,7 @@ find_package(SQLite3 REQUIRED)
 
 # Link libraries for API server
 target_link_libraries(api_server
+    spdlog::spdlog
     Threads::Threads
     SQLite::SQLite3
 )
@@ -65,7 +75,7 @@ add_executable(ga_optimizer ${GA_OPTIMIZER_SOURCES})
 
 # Link libraries for GA optimizer
 target_link_libraries(ga_optimizer
+    spdlog::spdlog
     Threads::Threads
     SQLite::SQLite3
 )
-

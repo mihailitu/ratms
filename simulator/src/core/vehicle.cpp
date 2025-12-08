@@ -4,6 +4,8 @@
 #include "../utils/logger.h"
 #include "../utils/utils.h"
 
+using namespace ratms;
+
 namespace simulator
 {
 
@@ -196,19 +198,16 @@ void Vehicle::serialize_v1(std::ostream &out) const
 
 void Vehicle::printVehicle() const
 {
-    log_info("Vehicle: %d\n"
-             "Originated: %.2f\n"
-             "Position:   %.2f m\n"
-             "Length:     %.2f m\n"
-             "Velocity:   %.2f m/s\n",
-             type, xOrig, xPos, length, velocity);
+    LOG_DEBUG(LogComponent::Simulation, "Vehicle id={}: pos={:.2f}m, vel={:.2f}m/s, len={:.2f}m",
+              id, xPos, velocity, length);
 }
 
 void Vehicle::log() const
 {
     double mv = mps_to_kmh(velocity);
     double maxv = mps_to_kmh(v0);
-    log_debug("id: %2d type: %d orig: %5.2f x: %5.2f v: %2.f max: %2.f a: %1.1f ", id, type, xOrig, xPos, mv, maxv, acceleration);
+    LOG_DEBUG(LogComponent::Simulation, "Vehicle id={}: type={}, pos={:.2f}, vel={:.0f}/{:.0f}km/h, accel={:.1f}",
+              id, static_cast<int>(type), xPos, mv, maxv, acceleration);
 }
 
 } // namespace simulator

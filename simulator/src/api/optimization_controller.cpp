@@ -8,6 +8,7 @@ namespace ratms {
 namespace api {
 
 using json = nlohmann::json;
+using namespace ratms;
 
 OptimizationController::OptimizationController(std::shared_ptr<ratms::data::DatabaseManager> dbManager)
     : dbManager_(dbManager) {
@@ -54,7 +55,9 @@ void OptimizationController::registerRoutes(httplib::Server& server) {
 }
 
 void OptimizationController::handleStartOptimization(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
     try {
+        LOG_INFO(LogComponent::Optimization, "Received optimization start request");
         // Parse request body
         json requestBody = json::parse(req.body);
 
@@ -115,8 +118,10 @@ void OptimizationController::handleStartOptimization(const httplib::Request& req
 }
 
 void OptimizationController::handleGetStatus(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
     try {
         int runId = std::stoi(req.matches[1]);
+        LOG_DEBUG(LogComponent::Optimization, "Status request for run {}", runId);
 
         std::lock_guard<std::mutex> lock(runsMutex_);
         auto it = activeRuns_.find(runId);
@@ -149,8 +154,10 @@ void OptimizationController::handleGetStatus(const httplib::Request& req, httpli
 }
 
 void OptimizationController::handleGetResults(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
     try {
         int runId = std::stoi(req.matches[1]);
+        LOG_DEBUG(LogComponent::Optimization, "Results request for run {}", runId);
 
         std::lock_guard<std::mutex> lock(runsMutex_);
         auto it = activeRuns_.find(runId);
@@ -193,6 +200,7 @@ void OptimizationController::handleGetResults(const httplib::Request& req, httpl
 }
 
 void OptimizationController::handleGetHistory(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
     try {
         std::lock_guard<std::mutex> lock(runsMutex_);
 
@@ -221,8 +229,10 @@ void OptimizationController::handleGetHistory(const httplib::Request& req, httpl
 }
 
 void OptimizationController::handleStopOptimization(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
     try {
         int runId = std::stoi(req.matches[1]);
+        LOG_INFO(LogComponent::Optimization, "Stop request for run {}", runId);
 
         std::lock_guard<std::mutex> lock(runsMutex_);
         auto it = activeRuns_.find(runId);
@@ -310,7 +320,10 @@ int OptimizationController::createOptimizationRun(const simulator::GeneticAlgori
 
 void OptimizationController::runOptimizationBackground(std::shared_ptr<OptimizationRun> run, int networkId) {
     int dbRunId = run->id;
+    TIMED_SCOPE(LogComponent::Optimization, "optimization_run");
     try {
+        LOG_INFO(LogComponent::Optimization, "Starting optimization run {} with {} generations",
+                 dbRunId, run->gaParams.generations);
         run->status = "running";
         run->isRunning = true;
         dbManager_->updateOptimizationRunStatus(dbRunId, "running");
@@ -393,12 +406,14 @@ void OptimizationController::runOptimizationBackground(std::shared_ptr<Optimizat
         saveOptimizationResults(run, dbRunId);
 
     } catch (const std::exception& e) {
+        LOG_ERROR(LogComponent::Optimization, "Optimization run {} failed: {}", dbRunId, e.what());
         run->status = "failed";
         run->isRunning = false;
         dbManager_->updateOptimizationRunStatus(dbRunId, "failed");
     }
 
     run->isRunning = false;
+    LOG_INFO(LogComponent::Optimization, "Optimization run {} finished with status: {}", dbRunId, run->status);
 }
 
 void OptimizationController::loadOptimizationHistory() {
@@ -461,7 +476,7 @@ void OptimizationController::loadOptimizationHistory() {
                     }
                     run->bestChromosome.fitness = solution.fitness;
                 } catch (const std::exception& e) {
-                    log_error("Failed to parse chromosome JSON for run %d: %s", dbRun.id, e.what());
+                    LOG_ERROR(LogComponent::Optimization, "Failed to parse chromosome JSON for run {}: {}", dbRun.id, e.what());
                 }
             }
 
@@ -473,10 +488,10 @@ void OptimizationController::loadOptimizationHistory() {
             }
         }
 
-        log_info("Loaded %zu optimization runs from database", activeRuns_.size());
+        LOG_INFO(LogComponent::Optimization, "Loaded {} optimization runs from database", activeRuns_.size());
 
     } catch (const std::exception& e) {
-        log_error("Failed to load optimization history: %s", e.what());
+        LOG_ERROR(LogComponent::Optimization, "Failed to load optimization history: {}", e.what());
     }
 }
 
@@ -494,7 +509,7 @@ void OptimizationController::saveOptimizationResults(std::shared_ptr<Optimizatio
         );
 
         if (!success) {
-            log_error("Failed to update optimization run %d", dbRunId);
+            LOG_ERROR(LogComponent::Database, "Failed to update optimization run {}", dbRunId);
             return;
         }
 
@@ -514,7 +529,7 @@ void OptimizationController::saveOptimizationResults(std::shared_ptr<Optimizatio
         if (!generations.empty()) {
             bool genSuccess = dbManager_->insertOptimizationGenerationsBatch(generations);
             if (!genSuccess) {
-                log_error("Failed to insert generation records for run %d", dbRunId);
+                LOG_ERROR(LogComponent::Database, "Failed to insert generation records for run {}", dbRunId);
             }
         }
 
@@ -538,13 +553,13 @@ void OptimizationController::saveOptimizationResults(std::shared_ptr<Optimizatio
 
         int solutionId = dbManager_->insertOptimizationSolution(solutionRecord);
         if (solutionId < 0) {
-            log_error("Failed to insert solution for run %d", dbRunId);
+            LOG_ERROR(LogComponent::Database, "Failed to insert solution for run {}", dbRunId);
         } else {
-            log_info("Saved optimization results for run %d (solution ID: %d)", dbRunId, solutionId);
+            LOG_INFO(LogComponent::Database, "Saved optimization results for run {} (solution ID: {})", dbRunId, solutionId);
         }
 
     } catch (const std::exception& e) {
-        log_error("Exception while saving optimization results: %s", e.what());
+        LOG_ERROR(LogComponent::Database, "Exception while saving optimization results: {}", e.what());
     }
 }
 

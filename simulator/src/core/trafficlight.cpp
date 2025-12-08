@@ -1,4 +1,7 @@
 #include "trafficlight.h"
+#include "../utils/logger.h"
+
+using namespace ratms;
 
 namespace simulator {
 
@@ -26,11 +29,23 @@ TrafficLight::LightColor nextColor(TrafficLight::LightColor current)
     }
 }
 
+static char lightColorToChar(TrafficLight::LightColor color) {
+    switch (color) {
+    case TrafficLight::green_light: return 'G';
+    case TrafficLight::yellow_light: return 'Y';
+    case TrafficLight::red_light: return 'R';
+    default: return '?';
+    }
+}
+
 void TrafficLight::update(double dt)
 {
     if(counter >= lightsTime[currentLightColor]) {
+        LightColor oldColor = currentLightColor;
         counter = 0;
         currentLightColor = nextColor(currentLightColor);
+        LOG_TRACE(LogComponent::Core, "Traffic light state change: {} -> {}",
+                  lightColorToChar(oldColor), lightColorToChar(currentLightColor));
     }
     counter += dt;
 }

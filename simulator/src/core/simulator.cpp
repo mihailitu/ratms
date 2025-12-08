@@ -8,6 +8,8 @@
 #include <iomanip>
 #include <algorithm>
 
+using namespace ratms;
+
 namespace simulator
 {
 
@@ -192,7 +194,7 @@ void Simulator::serialize_v1(double time, std::ostream &output) const
 
 void Simulator::runSimulator()
 {
-    log_info("Running the simulator");
+    LOG_INFO(LogComponent::Simulation, "Running the simulator");
 }
 
 } // namespace simulator
