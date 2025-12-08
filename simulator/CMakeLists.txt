@@ -2,12 +2,24 @@ project(simulator)
 cmake_minimum_required(VERSION 3.10)
 
 include(FetchContent)
+
+# Fetch spdlog for logging
 FetchContent_Declare(
   spdlog
   GIT_REPOSITORY https://github.com/gabime/spdlog.git
   GIT_TAG        v1.12.0
 )
 FetchContent_MakeAvailable(spdlog)
+
+# Fetch Google Test for unit testing
+FetchContent_Declare(
+  googletest
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG        v1.14.0
+)
+# Prevent overriding the parent project's compiler/linker settings (Windows)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
 
 # Set C++20 standard
 set(CMAKE_CXX_STANDARD 20)
@@ -79,3 +91,31 @@ target_link_libraries(ga_optimizer
     Threads::Threads
     SQLite::SQLite3
 )
+
+# =============================================================================
+# Unit Tests
+# =============================================================================
+
+# Enable testing
+enable_testing()
+
+# Collect unit test source files
+file(GLOB UNIT_TEST_SOURCES "src/unit_tests/*.cpp")
+
+# Unit test executable
+add_executable(unit_tests
+    ${UNIT_TEST_SOURCES}
+    ${SHARED_SOURCES}
+)
+
+target_link_libraries(unit_tests
+    GTest::gtest_main
+    GTest::gmock
+    spdlog::spdlog
+    Threads::Threads
+    SQLite::SQLite3
+)
+
+# Register tests with CTest
+include(GoogleTest)
+gtest_discover_tests(unit_tests)
