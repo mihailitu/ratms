@@ -13,6 +13,24 @@ using namespace ratms;
 namespace ratms {
 namespace api {
 
+// Helper functions for consistent API responses
+static void sendError(httplib::Response& res, int status, const std::string& message) {
+    json error = {
+        {"success", false},
+        {"error", message}
+    };
+    res.status = status;
+    res.set_content(error.dump(2), "application/json");
+}
+
+static void sendSuccess(httplib::Response& res, const json& data) {
+    json response = {
+        {"success", true},
+        {"data", data}
+    };
+    res.set_content(response.dump(2), "application/json");
+}
+
 Server::Server(int port) : port_(port) {
     LOG_INFO(LogComponent::API, "API Server initialized on port {}", port_);
 }
@@ -199,23 +217,13 @@ void Server::handleSimulationStart(const httplib::Request& req, httplib::Respons
 
     if (simulation_running_) {
         LOG_WARN(LogComponent::API, "Start request rejected: simulation already running");
-        json response = {
-            {"error", "Simulation already running"},
-            {"status", "running"}
-        };
-        res.set_content(response.dump(2), "application/json");
-        res.status = 400;
+        sendError(res, 400, "Simulation already running");
         return;
     }
 
     if (!simulator_) {
         LOG_ERROR(LogComponent::API, "Start request failed: simulator not initialized");
-        json response = {
-            {"error", "Simulator not initialized"},
-            {"status", "error"}
-        };
-        res.set_content(response.dump(2), "application/json");
-        res.status = 500;
+        sendError(res, 500, "Simulator not initialized");
         return;
     }
 
@@ -263,12 +271,7 @@ void Server::handleSimulationStop(const httplib::Request& req, httplib::Response
 
         if (!simulation_running_) {
             LOG_WARN(LogComponent::API, "Stop request rejected: simulation not running");
-            json response = {
-                {"error", "Simulation not running"},
-                {"status", "stopped"}
-            };
-            res.set_content(response.dump(2), "application/json");
-            res.status = 400;
+            sendError(res, 400, "Simulation not running");
             return;
         }
 
@@ -338,12 +341,7 @@ void Server::handleGetRoads(const httplib::Request& req, httplib::Response& res)
     std::lock_guard<std::mutex> lock(sim_mutex_);
 
     if (!simulator_) {
-        json response = {
-            {"error", "Simulator not initialized"},
-            {"roads", json::array()}
-        };
-        res.set_content(response.dump(2), "application/json");
-        res.status = 500;
+        sendError(res, 500, "Simulator not initialized");
         return;
     }
 
@@ -487,11 +485,7 @@ void Server::handleGetSimulations(const httplib::Request& req, httplib::Response
 
 void Server::handleGetSimulation(const httplib::Request& req, httplib::Response& res) {
     if (!database_ || !database_->isConnected()) {
-        json response = {
-            {"error", "Database not available"}
-        };
-        res.set_content(response.dump(2), "application/json");
-        res.status = 503;
+        sendError(res, 503, "Database not available");
         return;
     }
 
@@ -499,12 +493,7 @@ void Server::handleGetSimulation(const httplib::Request& req, httplib::Response&
     auto sim = database_->getSimulation(sim_id);
 
     if (sim.id == 0) {
-        json response = {
-            {"error", "Simulation not found"},
-            {"simulation_id", sim_id}
-        };
-        res.set_content(response.dump(2), "application/json");
-        res.status = 404;
+        sendError(res, 404, "Simulation not found");
         return;
     }
 
@@ -526,11 +515,7 @@ void Server::handleGetSimulation(const httplib::Request& req, httplib::Response&
 
 void Server::handleGetMetrics(const httplib::Request& req, httplib::Response& res) {
     if (!database_ || !database_->isConnected()) {
-        json response = {
-            {"error", "Database not available"}
-        };
-        res.set_content(response.dump(2), "application/json");
-        res.status = 503;
+        sendError(res, 503, "Database not available");
         return;
     }
 
@@ -781,18 +766,14 @@ void Server::handleGetStatistics(const httplib::Request& req, httplib::Response&
         int sim_id = std::stoi(req.matches[1]);
 
         if (!database_) {
-            json error = {{"error", "Database not initialized"}};
-            res.set_content(error.dump(2), "application/json");
-            res.status = 500;
+            sendError(res, 500, "Database not initialized");
             return;
         }
 
         // Get simulation info
         auto sim_record = database_->getSimulation(sim_id);
         if (sim_record.id != sim_id) {
-            json error = {{"error", "Simulation not found"}};
-            res.set_content(error.dump(2), "application/json");
-            res.status = 404;
+            sendError(res, 404, "Simulation not found");
             return;
         }
 
@@ -826,9 +807,7 @@ void Server::handleGetStatistics(const httplib::Request& req, httplib::Response&
         res.status = 200;
 
     } catch (const std::exception& e) {
-        json error = {{"error", e.what()}};
-        res.set_content(error.dump(2), "application/json");
-        res.status = 500;
+        sendError(res, 500, e.what());
     }
 }
 
@@ -838,18 +817,14 @@ void Server::handleGetStatisticsByType(const httplib::Request& req, httplib::Res
         std::string metric_type = req.matches[2];
 
         if (!database_) {
-            json error = {{"error", "Database not initialized"}};
-            res.set_content(error.dump(2), "application/json");
-            res.status = 500;
+            sendError(res, 500, "Database not initialized");
             return;
         }
 
         // Get simulation info
         auto sim_record = database_->getSimulation(sim_id);
         if (sim_record.id != sim_id) {
-            json error = {{"error", "Simulation not found"}};
-            res.set_content(error.dump(2), "application/json");
-            res.status = 404;
+            sendError(res, 404, "Simulation not found");
             return;
         }
 
@@ -875,18 +850,14 @@ void Server::handleGetStatisticsByType(const httplib::Request& req, httplib::Res
         res.status = 200;
 
     } catch (const std::exception& e) {
-        json error = {{"error", e.what()}};
-        res.set_content(error.dump(2), "application/json");
-        res.status = 500;
+        sendError(res, 500, e.what());
     }
 }
 
 void Server::handleCompareSimulations(const httplib::Request& req, httplib::Response& res) {
     try {
         if (!database_) {
-            json error = {{"error", "Database not initialized"}};
-            res.set_content(error.dump(2), "application/json");
-            res.status = 500;
+            sendError(res, 500, "Database not initialized");
             return;
         }
 
@@ -896,9 +867,7 @@ void Server::handleCompareSimulations(const httplib::Request& req, httplib::Resp
         std::string metric_type = request_body["metric_type"];
 
         if (simulation_ids.empty()) {
-            json error = {{"error", "No simulation IDs provided"}};
-            res.set_content(error.dump(2), "application/json");
-            res.status = 400;
+            sendError(res, 400, "No simulation IDs provided");
             return;
         }
 
@@ -932,9 +901,7 @@ void Server::handleCompareSimulations(const httplib::Request& req, httplib::Resp
         res.status = 200;
 
     } catch (const std::exception& e) {
-        json error = {{"error", e.what()}};
-        res.set_content(error.dump(2), "application/json");
-        res.status = 500;
+        sendError(res, 500, e.what());
     }
 }
 
@@ -943,9 +910,7 @@ void Server::handleExportMetrics(const httplib::Request& req, httplib::Response&
         int sim_id = std::stoi(req.matches[1]);
 
         if (!database_) {
-            json error = {{"error", "Database not initialized"}};
-            res.set_content(error.dump(2), "application/json");
-            res.status = 500;
+            sendError(res, 500, "Database not initialized");
             return;
         }
 
@@ -983,9 +948,7 @@ void Server::handleExportMetrics(const httplib::Request& req, httplib::Response&
         res.status = 200;
 
     } catch (const std::exception& e) {
-        json error = {{"error", e.what()}};
-        res.set_content(error.dump(2), "application/json");
-        res.status = 500;
+        sendError(res, 500, e.what());
     }
 }
 

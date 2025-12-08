@@ -10,6 +10,53 @@ namespace api {
 using json = nlohmann::json;
 using namespace ratms;
 
+// Validation helper for GA parameters
+struct ValidationResult {
+    bool valid;
+    std::string error;
+};
+
+static ValidationResult validateGAParams(const simulator::GeneticAlgorithm::Parameters& params,
+                                          int simulationSteps, double dt) {
+    // Population bounds
+    if (params.populationSize < 2 || params.populationSize > 1000)
+        return {false, "populationSize must be between 2 and 1000"};
+
+    // Generation bounds
+    if (params.generations < 1 || params.generations > 10000)
+        return {false, "generations must be between 1 and 10000"};
+
+    // Probability bounds [0, 1]
+    if (params.mutationRate < 0.0 || params.mutationRate > 1.0)
+        return {false, "mutationRate must be between 0.0 and 1.0"};
+    if (params.crossoverRate < 0.0 || params.crossoverRate > 1.0)
+        return {false, "crossoverRate must be between 0.0 and 1.0"};
+    if (params.elitismRate < 0.0 || params.elitismRate > 1.0)
+        return {false, "elitismRate must be between 0.0 and 1.0"};
+
+    // Tournament size must not exceed population
+    if (params.tournamentSize < 1 || params.tournamentSize > params.populationSize)
+        return {false, "tournamentSize must be between 1 and populationSize"};
+
+    // Timing bounds - must be positive and min <= max
+    if (params.minGreenTime <= 0 || params.maxGreenTime <= 0)
+        return {false, "green times must be positive"};
+    if (params.minGreenTime > params.maxGreenTime)
+        return {false, "minGreenTime must be <= maxGreenTime"};
+    if (params.minRedTime <= 0 || params.maxRedTime <= 0)
+        return {false, "red times must be positive"};
+    if (params.minRedTime > params.maxRedTime)
+        return {false, "minRedTime must be <= maxRedTime"};
+
+    // Simulation bounds
+    if (simulationSteps < 1 || simulationSteps > 100000)
+        return {false, "simulationSteps must be between 1 and 100000"};
+    if (dt < 0.01 || dt > 1.0)
+        return {false, "dt must be between 0.01 and 1.0"};
+
+    return {true, ""};
+}
+
 OptimizationController::OptimizationController(std::shared_ptr<ratms::data::DatabaseManager> dbManager)
     : dbManager_(dbManager) {
     // Load optimization history from database on startup
@@ -80,6 +127,19 @@ void OptimizationController::handleStartOptimization(const httplib::Request& req
         double dt = requestBody.value("dt", 0.1);
         int networkId = requestBody.value("networkId", 1);
 
+        // Validate parameters
+        auto validation = validateGAParams(gaParams, simulationSteps, dt);
+        if (!validation.valid) {
+            LOG_WARN(LogComponent::Optimization, "Invalid GA parameters: {}", validation.error);
+            json error = {
+                {"success", false},
+                {"error", validation.error}
+            };
+            res.set_content(error.dump(), "application/json");
+            res.status = 400;
+            return;
+        }
+
         // Create optimization run
         int runId = createOptimizationRun(gaParams, simulationSteps, dt, networkId);
 
@@ -90,11 +150,10 @@ void OptimizationController::handleStartOptimization(const httplib::Request& req
             run = activeRuns_[runId];
         }
 
-        // Start optimization in background thread
+        // Start optimization in background thread (no detach - destructor handles join)
         run->optimizationThread = std::make_unique<std::thread>(
             &OptimizationController::runOptimizationBackground, this, run, networkId
         );
-        run->optimizationThread->detach();
 
         // Return response
         json response = {

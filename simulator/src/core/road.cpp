@@ -3,6 +3,7 @@
 #include "../utils/logger.h"
 
 #include <algorithm>
+#include <atomic>
 #include <functional>
 #include <random>
 
@@ -15,14 +16,14 @@ const Vehicle Road::noVehicle(0.0, 0.0, 0.0);
 const double Road::minChangeLaneDist = 1.0;
 const double Road::maxChangeLaneDist = 25.0;
 
-static long idSeed = 0;
+static std::atomic<long> idSeed{0};
 
 Road::Road()
 {
 }
 
 Road::Road(roadID /*rId*/, double rLength, unsigned lanes, unsigned maxSpeed_mps ) :
-    id (idSeed++), length(rLength), lanesNo(lanes), maxSpeed(maxSpeed_mps)
+    id (idSeed.fetch_add(1)), length(rLength), lanesNo(lanes), maxSpeed(maxSpeed_mps)
 {
     LOG_DEBUG(LogComponent::Simulation, "New road added: id={}, length={:.2f}m, lanes={}, maxSpeed={}",
               id, length, lanesNo, maxSpeed);
