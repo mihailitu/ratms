@@ -69,6 +69,8 @@ cd frontend && npm run test:e2e
 | GET | /api/optimization/status/:id | Optimization progress |
 | GET | /api/analytics/simulations/:id/statistics | Metrics statistics |
 | POST | /api/analytics/compare | Compare simulations |
+| GET | /api/traffic-lights | Get all traffic light timings |
+| POST | /api/traffic-lights | Bulk update traffic light timings |
 
 ## File Structure
 
@@ -115,7 +117,7 @@ See [docs/PRODUCTION_PLAN.md](docs/PRODUCTION_PLAN.md) for full 8-stage plan.
 | Stage | Description | Status |
 |-------|-------------|--------|
 | 1 | Density-based visualization | **Complete** |
-| 2 | Runtime traffic light modification | Pending |
+| 2 | Runtime traffic light modification | **Complete** |
 | 3 | Dynamic vehicle spawning | Pending |
 | 4 | Continuous simulation mode | Pending |
 | 5 | Traffic profiles (JSON-based) | Pending |
@@ -133,4 +135,4 @@ Component-based logging with spdlog:
 
 ---
 
-**Status:** Production-ready with 157 E2E tests. Implementing 8-stage production system plan (Stage 1 complete).
+**Status:** Production-ready with 157 E2E tests. Implementing 8-stage production system plan (Stages 1-2 complete).
