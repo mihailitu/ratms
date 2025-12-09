@@ -180,6 +180,10 @@ public:
     std::vector<char> getCurrentLightConfig() const;
     const std::vector<std::list<Vehicle>>& getVehicles() const;
 
+    // Traffic light accessors
+    const std::vector<TrafficLight>& getTrafficLights() const { return trafficLights; }
+    std::vector<TrafficLight>& getTrafficLightsMutable() { return trafficLights; }
+
     void update(double dt, const std::map<roadID, Road> &cityMap,
                std::vector<RoadTransition> &pendingTransitions);
 

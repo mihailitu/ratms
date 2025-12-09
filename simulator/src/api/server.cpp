@@ -190,6 +190,15 @@ void Server::setupRoutes() {
         handleGetMetricTypes(req, res);
     });
 
+    // Traffic light control endpoints
+    http_server_.Get("/api/traffic-lights", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetTrafficLights(req, res);
+    });
+
+    http_server_.Post("/api/traffic-lights", [this](const httplib::Request& req, httplib::Response& res) {
+        handleSetTrafficLights(req, res);
+    });
+
     // Register optimization routes if controller is initialized
     if (optimization_controller_) {
         optimization_controller_->registerRoutes(http_server_);
@@ -965,6 +974,118 @@ void Server::handleGetMetricTypes(const httplib::Request& req, httplib::Response
 
     res.set_content(response.dump(2), "application/json");
     res.status = 200;
+}
+
+void Server::handleGetTrafficLights(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+    std::lock_guard<std::mutex> lock(sim_mutex_);
+
+    if (!simulator_) {
+        sendError(res, 500, "Simulator not initialized");
+        return;
+    }
+
+    json trafficLights = json::array();
+
+    for (const auto& [roadId, road] : simulator_->cityMap) {
+        const auto& roadTrafficLights = road.getTrafficLights();
+        for (unsigned lane = 0; lane < road.getLanesNo(); lane++) {
+            const auto& tl = roadTrafficLights[lane];
+            trafficLights.push_back({
+                {"roadId", roadId},
+                {"lane", lane},
+                {"greenTime", tl.getGreenTime()},
+                {"yellowTime", tl.getYellowTime()},
+                {"redTime", tl.getRedTime()},
+                {"currentState", std::string(1, tl.getState())}
+            });
+        }
+    }
+
+    json response = {
+        {"trafficLights", trafficLights},
+        {"count", trafficLights.size()}
+    };
+
+    res.set_content(response.dump(2), "application/json");
+    res.status = 200;
+}
+
+void Server::handleSetTrafficLights(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    try {
+        json requestBody = json::parse(req.body);
+
+        if (!requestBody.contains("updates") || !requestBody["updates"].is_array()) {
+            sendError(res, 400, "Request must contain 'updates' array");
+            return;
+        }
+
+        std::lock_guard<std::mutex> lock(sim_mutex_);
+
+        if (!simulator_) {
+            sendError(res, 500, "Simulator not initialized");
+            return;
+        }
+
+        int updated = 0;
+        json errors = json::array();
+
+        for (const auto& update : requestBody["updates"]) {
+            if (!update.contains("roadId") || !update.contains("lane")) {
+                errors.push_back({{"error", "Missing roadId or lane"}});
+                continue;
+            }
+
+            int roadId = update["roadId"].get<int>();
+            unsigned lane = update["lane"].get<unsigned>();
+
+            auto roadIt = simulator_->cityMap.find(roadId);
+            if (roadIt == simulator_->cityMap.end()) {
+                errors.push_back({{"roadId", roadId}, {"error", "Road not found"}});
+                continue;
+            }
+
+            auto& road = roadIt->second;
+            if (lane >= road.getLanesNo()) {
+                errors.push_back({{"roadId", roadId}, {"lane", lane}, {"error", "Lane out of range"}});
+                continue;
+            }
+
+            auto& roadTrafficLights = road.getTrafficLightsMutable();
+            double greenTime = update.value("greenTime", roadTrafficLights[lane].getGreenTime());
+            double yellowTime = update.value("yellowTime", roadTrafficLights[lane].getYellowTime());
+            double redTime = update.value("redTime", roadTrafficLights[lane].getRedTime());
+
+            if (greenTime <= 0 || yellowTime < 0 || redTime <= 0) {
+                errors.push_back({{"roadId", roadId}, {"lane", lane}, {"error", "Invalid timing values"}});
+                continue;
+            }
+
+            // Reconstruct traffic light with new timings
+            roadTrafficLights[lane] = simulator::TrafficLight(greenTime, yellowTime, redTime);
+            updated++;
+
+            LOG_INFO(LogComponent::API, "Updated traffic light: road={}, lane={}, g={}, y={}, r={}",
+                     roadId, lane, greenTime, yellowTime, redTime);
+        }
+
+        json response = {
+            {"success", true},
+            {"updated", updated}
+        };
+
+        if (!errors.empty()) {
+            response["errors"] = errors;
+        }
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 400, std::string("Invalid JSON: ") + e.what());
+    }
 }
 
 } // namespace api

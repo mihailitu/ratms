@@ -40,6 +40,16 @@ public:
     bool isGreen() const;
     void update(double dt);
     double getRenainingTimeForCurrentColor();
+
+    // Timing getters for API
+    double getGreenTime() const { return lightsTime[green_light]; }
+    double getYellowTime() const { return lightsTime[yellow_light]; }
+    double getRedTime() const { return lightsTime[red_light]; }
+    char getState() const {
+        if (currentLightColor == green_light) return 'G';
+        if (currentLightColor == yellow_light) return 'Y';
+        return 'R';
+    }
 };
 
 } // namespace simulator

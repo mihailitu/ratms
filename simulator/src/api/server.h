@@ -96,6 +96,10 @@ private:
     void handleExportMetrics(const httplib::Request& req, httplib::Response& res);
     void handleGetMetricTypes(const httplib::Request& req, httplib::Response& res);
 
+    // Traffic light handlers
+    void handleGetTrafficLights(const httplib::Request& req, httplib::Response& res);
+    void handleSetTrafficLights(const httplib::Request& req, httplib::Response& res);
+
     // Middleware
     void corsMiddleware(const httplib::Request& req, httplib::Response& res);
     void loggingMiddleware(const httplib::Request& req, httplib::Response& res);
