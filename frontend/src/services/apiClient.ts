@@ -53,12 +53,14 @@ class ApiClient {
   }
 
   async startSimulation(): Promise<SimulationStartResponse> {
-    const response = await this.client.post<SimulationStartResponse>('/api/simulation/start');
+    // Send empty body to ensure Content-Length is set (cpp-httplib requires it)
+    const response = await this.client.post<SimulationStartResponse>('/api/simulation/start', {});
     return response.data;
   }
 
   async stopSimulation(): Promise<SimulationStopResponse> {
-    const response = await this.client.post<SimulationStopResponse>('/api/simulation/stop');
+    // Send empty body to ensure Content-Length is set (cpp-httplib requires it)
+    const response = await this.client.post<SimulationStopResponse>('/api/simulation/stop', {});
     return response.data;
   }
 
@@ -106,7 +108,8 @@ class ApiClient {
   }
 
   async stopOptimization(runId: number): Promise<StopOptimizationResponse> {
-    const response = await this.client.post<StopOptimizationResponse>(`/api/optimization/stop/${runId}`);
+    // Send empty body to ensure Content-Length is set (cpp-httplib requires it)
+    const response = await this.client.post<StopOptimizationResponse>(`/api/optimization/stop/${runId}`, {});
     return response.data;
   }
 
