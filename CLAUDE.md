@@ -853,3 +853,4 @@ make ga_optimizer
 - Consider thread safety for all shared state
 - Use move semantics for performance-critical code
 - Batch database operations when possible
+- Don't add Claude mentions on commit messages
