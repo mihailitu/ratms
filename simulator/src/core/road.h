@@ -184,6 +184,10 @@ public:
     const std::vector<TrafficLight>& getTrafficLights() const { return trafficLights; }
     std::vector<TrafficLight>& getTrafficLightsMutable() { return trafficLights; }
 
+    // Vehicle spawning - spawns at position 0 on lane with fewest vehicles
+    bool spawnVehicle(double velocity = 10.0, double length = 5.0);
+    int getVehicleCount() const;
+
     void update(double dt, const std::map<roadID, Road> &cityMap,
                std::vector<RoadTransition> &pendingTransitions);
 

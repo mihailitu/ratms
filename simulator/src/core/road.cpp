@@ -449,4 +449,63 @@ void Road::printRoad() const
             v.printVehicle();
 }
 
+/**
+ * @brief Road::spawnVehicle - Spawn a new vehicle at position 0
+ * @param velocity - initial velocity of the vehicle
+ * @param length - vehicle length (default 5.0m)
+ * @return true if vehicle was spawned, false if no space available
+ *
+ * Picks the lane with fewest vehicles that has space at position 0.
+ */
+bool Road::spawnVehicle(double velocity, double length)
+{
+    // Find lane with fewest vehicles that has space
+    int bestLane = -1;
+    size_t minVehicles = SIZE_MAX;
+
+    for (unsigned lane = 0; lane < lanesNo; ++lane) {
+        // Check if there's space at the start of this lane
+        if (vehicles[lane].empty()) {
+            bestLane = lane;
+            minVehicles = 0;
+            break;  // Empty lane is best
+        }
+
+        // Check gap from start of road to first vehicle
+        const Vehicle& firstVehicle = vehicles[lane].front();
+        double requiredGap = length + minChangeLaneDist;
+
+        if (firstVehicle.getPos() >= requiredGap && vehicles[lane].size() < minVehicles) {
+            bestLane = lane;
+            minVehicles = vehicles[lane].size();
+        }
+    }
+
+    if (bestLane < 0) {
+        LOG_TRACE(LogComponent::Simulation, "Cannot spawn vehicle on road {} - no space available", id);
+        return false;
+    }
+
+    // Create and add vehicle at position 0
+    Vehicle newVehicle(0.0, length, velocity);
+    addVehicle(newVehicle, bestLane);
+
+    LOG_TRACE(LogComponent::Simulation, "Spawned vehicle {} on road {} lane {} (v={:.1f} m/s)",
+              newVehicle.getId(), id, bestLane, velocity);
+
+    return true;
+}
+
+/**
+ * @brief Road::getVehicleCount - Get total vehicle count across all lanes
+ */
+int Road::getVehicleCount() const
+{
+    int count = 0;
+    for (const auto& lane : vehicles) {
+        count += lane.size();
+    }
+    return count;
+}
+
 } // namespace simulator

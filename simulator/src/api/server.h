@@ -9,6 +9,7 @@
 #include <atomic>
 #include <thread>
 #include <mutex>
+#include <map>
 
 namespace ratms {
 namespace api {
@@ -47,6 +48,15 @@ struct SimulationSnapshot {
     double time;
     std::vector<VehicleSnapshot> vehicles;
     std::vector<TrafficLightSnapshot> trafficLights;
+};
+
+/**
+ * @brief SpawnRate - Vehicle spawn rate configuration per road
+ */
+struct SpawnRate {
+    int roadId;
+    double vehiclesPerMinute;  // Spawn rate
+    double accumulator;        // Partial vehicle accumulator
 };
 
 /**
@@ -100,6 +110,10 @@ private:
     void handleGetTrafficLights(const httplib::Request& req, httplib::Response& res);
     void handleSetTrafficLights(const httplib::Request& req, httplib::Response& res);
 
+    // Spawn rate handlers
+    void handleGetSpawnRates(const httplib::Request& req, httplib::Response& res);
+    void handleSetSpawnRates(const httplib::Request& req, httplib::Response& res);
+
     // Middleware
     void corsMiddleware(const httplib::Request& req, httplib::Response& res);
     void loggingMiddleware(const httplib::Request& req, httplib::Response& res);
@@ -131,6 +145,11 @@ private:
     // Simulation execution
     void runSimulationLoop();
     void captureSimulationSnapshot();
+
+    // Vehicle spawning
+    std::map<int, SpawnRate> spawn_rates_;  // roadId -> spawn rate config
+    std::mutex spawn_mutex_;
+    void processVehicleSpawning(double dt);
 };
 
 } // namespace api

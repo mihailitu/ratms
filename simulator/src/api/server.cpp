@@ -199,6 +199,15 @@ void Server::setupRoutes() {
         handleSetTrafficLights(req, res);
     });
 
+    // Spawn rate control endpoints
+    http_server_.Get("/api/spawn-rates", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetSpawnRates(req, res);
+    });
+
+    http_server_.Post("/api/spawn-rates", [this](const httplib::Request& req, httplib::Response& res) {
+        handleSetSpawnRates(req, res);
+    });
+
     // Register optimization routes if controller is initialized
     if (optimization_controller_) {
         optimization_controller_->registerRoutes(http_server_);
@@ -624,6 +633,9 @@ void Server::runSimulationLoop() {
                     }
                 }
             }
+
+            // PHASE 2.5: Process vehicle spawning
+            processVehicleSpawning(dt);
 
             // PHASE 3: Collect metrics periodically
             if (currentStep % metricsInterval == 0) {
@@ -1085,6 +1097,136 @@ void Server::handleSetTrafficLights(const httplib::Request& req, httplib::Respon
 
     } catch (const std::exception& e) {
         sendError(res, 400, std::string("Invalid JSON: ") + e.what());
+    }
+}
+
+// ============================================================================
+// Spawn Rate Handlers
+// ============================================================================
+
+void Server::handleGetSpawnRates(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+    std::lock_guard<std::mutex> lock(spawn_mutex_);
+
+    json spawnRatesArray = json::array();
+
+    for (const auto& [roadId, rate] : spawn_rates_) {
+        spawnRatesArray.push_back({
+            {"roadId", rate.roadId},
+            {"vehiclesPerMinute", rate.vehiclesPerMinute},
+            {"accumulator", rate.accumulator}
+        });
+    }
+
+    json response = {
+        {"spawnRates", spawnRatesArray},
+        {"count", spawn_rates_.size()}
+    };
+
+    res.set_content(response.dump(2), "application/json");
+    res.status = 200;
+}
+
+void Server::handleSetSpawnRates(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    try {
+        json body = json::parse(req.body);
+
+        if (!body.contains("rates") || !body["rates"].is_array()) {
+            sendError(res, 400, "Request must contain 'rates' array");
+            return;
+        }
+
+        std::lock_guard<std::mutex> lock(spawn_mutex_);
+
+        int updated = 0;
+        json errors = json::array();
+
+        for (const auto& rateObj : body["rates"]) {
+            if (!rateObj.contains("roadId") || !rateObj.contains("vehiclesPerMinute")) {
+                errors.push_back({{"error", "Each rate must have roadId and vehiclesPerMinute"}});
+                continue;
+            }
+
+            int roadId = rateObj["roadId"].get<int>();
+            double vpm = rateObj["vehiclesPerMinute"].get<double>();
+
+            // Validate road exists
+            {
+                std::lock_guard<std::mutex> simLock(sim_mutex_);
+                if (simulator_->cityMap.find(roadId) == simulator_->cityMap.end()) {
+                    errors.push_back({{"roadId", roadId}, {"error", "Road not found"}});
+                    continue;
+                }
+            }
+
+            if (vpm < 0) {
+                errors.push_back({{"roadId", roadId}, {"error", "vehiclesPerMinute must be >= 0"}});
+                continue;
+            }
+
+            if (vpm == 0) {
+                // Remove spawn rate for this road
+                spawn_rates_.erase(roadId);
+                LOG_INFO(LogComponent::API, "Removed spawn rate for road {}", roadId);
+            } else {
+                // Set or update spawn rate
+                spawn_rates_[roadId] = SpawnRate{roadId, vpm, 0.0};
+                LOG_INFO(LogComponent::API, "Set spawn rate: road={}, vpm={:.2f}", roadId, vpm);
+            }
+            updated++;
+        }
+
+        json response = {
+            {"success", true},
+            {"updated", updated}
+        };
+
+        if (!errors.empty()) {
+            response["errors"] = errors;
+        }
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 400, std::string("Invalid JSON: ") + e.what());
+    }
+}
+
+/**
+ * @brief Process vehicle spawning based on configured spawn rates
+ * @param dt - Time step in seconds
+ *
+ * Uses accumulator pattern: adds (rate * dt / 60) to accumulator each step.
+ * When accumulator >= 1.0, spawns a vehicle and decrements.
+ */
+void Server::processVehicleSpawning(double dt) {
+    std::lock_guard<std::mutex> lock(spawn_mutex_);
+
+    for (auto& [roadId, rate] : spawn_rates_) {
+        // Add partial vehicles based on rate and time step
+        // rate is vehicles per minute, dt is in seconds
+        rate.accumulator += (rate.vehiclesPerMinute * dt) / 60.0;
+
+        // Spawn vehicles when accumulator reaches 1.0
+        while (rate.accumulator >= 1.0) {
+            auto roadIt = simulator_->cityMap.find(roadId);
+            if (roadIt != simulator_->cityMap.end()) {
+                // Spawn with road's max speed as initial velocity
+                double initialVelocity = roadIt->second.getMaxSpeed() * 0.8;  // 80% of max speed
+                if (roadIt->second.spawnVehicle(initialVelocity)) {
+                    rate.accumulator -= 1.0;
+                } else {
+                    // Road is full, stop trying to spawn more this step
+                    break;
+                }
+            } else {
+                rate.accumulator = 0.0;
+                break;
+            }
+        }
     }
 }
 
