@@ -256,3 +256,93 @@ TEST_F(RoadTest, SingleLaneRoad) {
     Vehicle v(100.0, 5.0, 10.0);
     EXPECT_TRUE(r.addVehicle(v, 0));
 }
+
+// Vehicle spawning tests (Stage 3 feature)
+TEST_F(RoadTest, SpawnVehicleOnEmptyRoad) {
+    Road r(1, 500.0, 2, 20);
+
+    // Should spawn successfully on empty road
+    EXPECT_TRUE(r.spawnVehicle(10.0, 5.0));
+
+    // Verify vehicle was added
+    EXPECT_EQ(r.getVehicleCount(), 1);
+}
+
+TEST_F(RoadTest, SpawnMultipleVehicles) {
+    Road r(1, 500.0, 3, 20);
+
+    // Spawn several vehicles with space between them
+    for (int i = 0; i < 5; i++) {
+        // Add a vehicle far enough ahead to make space for spawning
+        Vehicle v(50.0 + i * 100.0, 5.0, 10.0);
+        r.addVehicle(v, i % 3);
+    }
+
+    int initialCount = r.getVehicleCount();
+
+    // Should be able to spawn more vehicles since there's space at position 0
+    EXPECT_TRUE(r.spawnVehicle(10.0, 5.0));
+    EXPECT_EQ(r.getVehicleCount(), initialCount + 1);
+}
+
+TEST_F(RoadTest, SpawnVehicleNoSpaceAvailable) {
+    Road r(1, 500.0, 1, 20);  // Single lane
+
+    // Add vehicle at position 0 - no space for spawning
+    Vehicle v(0.0, 5.0, 0.0);  // Stationary at start
+    r.addVehicle(v, 0);
+
+    // Should fail - no space at position 0
+    EXPECT_FALSE(r.spawnVehicle(10.0, 5.0));
+    EXPECT_EQ(r.getVehicleCount(), 1);  // Still only 1 vehicle
+}
+
+TEST_F(RoadTest, SpawnVehiclePicksLaneWithFewestVehicles) {
+    Road r(1, 500.0, 3, 20);
+
+    // Fill lane 0 and 1 with vehicles (far from start)
+    Vehicle v1(100.0, 5.0, 10.0);
+    Vehicle v2(100.0, 5.0, 10.0);
+    Vehicle v3(100.0, 5.0, 10.0);
+    r.addVehicle(v1, 0);
+    r.addVehicle(v2, 0);
+    r.addVehicle(v3, 1);
+
+    // Lane counts: lane 0 = 2, lane 1 = 1, lane 2 = 0
+    // Spawn should pick lane 2 (empty)
+    EXPECT_TRUE(r.spawnVehicle(10.0, 5.0));
+
+    const auto& vehicles = r.getVehicles();
+    EXPECT_EQ(vehicles[2].size(), 1);  // New vehicle in lane 2
+}
+
+TEST_F(RoadTest, GetVehicleCountEmpty) {
+    Road r(1, 500.0, 3, 20);
+
+    EXPECT_EQ(r.getVehicleCount(), 0);
+}
+
+TEST_F(RoadTest, GetVehicleCountMultipleLanes) {
+    Road r(1, 500.0, 3, 20);
+
+    // Add vehicles to different lanes
+    Vehicle v1(100.0, 5.0, 10.0);
+    Vehicle v2(200.0, 5.0, 10.0);
+    Vehicle v3(150.0, 5.0, 10.0);
+    Vehicle v4(250.0, 5.0, 10.0);
+
+    r.addVehicle(v1, 0);
+    r.addVehicle(v2, 0);  // 2 in lane 0
+    r.addVehicle(v3, 1);  // 1 in lane 1
+    r.addVehicle(v4, 2);  // 1 in lane 2
+
+    EXPECT_EQ(r.getVehicleCount(), 4);
+}
+
+TEST_F(RoadTest, SpawnVehicleDefaultParameters) {
+    Road r(1, 500.0, 1, 20);
+
+    // Test default parameters (velocity=10.0, length=5.0)
+    EXPECT_TRUE(r.spawnVehicle());
+    EXPECT_EQ(r.getVehicleCount(), 1);
+}

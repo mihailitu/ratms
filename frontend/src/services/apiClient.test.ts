@@ -75,7 +75,9 @@ describe('ApiClient', () => {
       const mockStatus: SimulationStatus = {
         status: 'running',
         server_running: true,
+        simulator_initialized: true,
         road_count: 4,
+        timestamp: 1234567890,
       };
 
       mockAxiosInstance.get.mockResolvedValue({ data: mockStatus });
@@ -90,13 +92,16 @@ describe('ApiClient', () => {
       const mockResponse: SimulationStartResponse = {
         message: 'Simulation started',
         status: 'running',
+        simulation_id: 1,
+        timestamp: 1234567890,
       };
 
       mockAxiosInstance.post.mockResolvedValue({ data: mockResponse });
 
       const result = await apiClient.startSimulation();
 
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/simulation/start');
+      // Empty body {} is sent to ensure Content-Length is set (cpp-httplib requirement)
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/simulation/start', {});
       expect(result).toEqual(mockResponse);
     });
 
@@ -104,13 +109,15 @@ describe('ApiClient', () => {
       const mockResponse: SimulationStopResponse = {
         message: 'Simulation stopped',
         status: 'stopped',
+        timestamp: 1234567890,
       };
 
       mockAxiosInstance.post.mockResolvedValue({ data: mockResponse });
 
       const result = await apiClient.stopSimulation();
 
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/simulation/stop');
+      // Empty body {} is sent to ensure Content-Length is set (cpp-httplib requirement)
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/simulation/stop', {});
       expect(result).toEqual(mockResponse);
     });
 
@@ -293,7 +300,8 @@ describe('ApiClient', () => {
 
       const result = await apiClient.stopOptimization(1);
 
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/optimization/stop/1');
+      // Empty body {} is sent to ensure Content-Length is set (cpp-httplib requirement)
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/optimization/stop/1', {});
       expect(result).toEqual(mockResponse);
     });
   });
@@ -338,6 +346,85 @@ describe('ApiClient', () => {
       mockAxiosInstance.get.mockRejectedValue(timeoutError);
 
       await expect(apiClient.getSimulationStatus()).rejects.toThrow('timeout');
+    });
+  });
+
+  describe('Traffic Light Control (Stage 2)', () => {
+    it('should get traffic lights', async () => {
+      const mockResponse = {
+        trafficLights: [
+          { roadId: 1, lane: 0, greenTime: 10, yellowTime: 3, redTime: 30, currentState: 'G' },
+          { roadId: 1, lane: 1, greenTime: 10, yellowTime: 3, redTime: 30, currentState: 'R' },
+        ],
+        count: 2,
+      };
+
+      mockAxiosInstance.get.mockResolvedValue({ data: mockResponse });
+
+      const result = await apiClient.getTrafficLights();
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/traffic-lights');
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should set traffic lights', async () => {
+      const request = {
+        updates: [
+          { roadId: 1, lane: 0, greenTime: 20, yellowTime: 3, redTime: 25 },
+        ],
+      };
+
+      const mockResponse = {
+        success: true,
+        updated: 1,
+      };
+
+      mockAxiosInstance.post.mockResolvedValue({ data: mockResponse });
+
+      const result = await apiClient.setTrafficLights(request);
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/traffic-lights', request);
+      expect(result).toEqual(mockResponse);
+    });
+  });
+
+  describe('Spawn Rate Control (Stage 3)', () => {
+    it('should get spawn rates', async () => {
+      const mockResponse = {
+        rates: [
+          { roadId: 1, vehiclesPerMinute: 10 },
+          { roadId: 5, vehiclesPerMinute: 5 },
+        ],
+        count: 2,
+      };
+
+      mockAxiosInstance.get.mockResolvedValue({ data: mockResponse });
+
+      const result = await apiClient.getSpawnRates();
+
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith('/api/spawn-rates');
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('should set spawn rates', async () => {
+      const request = {
+        rates: [
+          { roadId: 1, vehiclesPerMinute: 10 },
+          { roadId: 5, vehiclesPerMinute: 5 },
+        ],
+      };
+
+      const mockResponse = {
+        success: true,
+        updated: 2,
+      };
+
+      mockAxiosInstance.post.mockResolvedValue({ data: mockResponse });
+
+      const result = await apiClient.setSpawnRates(request);
+
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/spawn-rates', request);
+      expect(result).toEqual(mockResponse);
     });
   });
 });

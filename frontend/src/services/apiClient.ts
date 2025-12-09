@@ -16,6 +16,12 @@ import type {
   SimulationStatistics,
   ComparisonResponse,
   MetricTypesResponse,
+  TrafficLightsResponse,
+  SetTrafficLightsRequest,
+  SetTrafficLightsResponse,
+  SpawnRatesResponse,
+  SetSpawnRatesRequest,
+  SetSpawnRatesResponse,
 } from '../types/api';
 
 class ApiClient {
@@ -148,6 +154,28 @@ class ApiClient {
 
   async getMetricTypes(): Promise<MetricTypesResponse> {
     const response = await this.client.get<MetricTypesResponse>('/api/analytics/metric-types');
+    return response.data;
+  }
+
+  // Traffic Light Control (Stage 2)
+  async getTrafficLights(): Promise<TrafficLightsResponse> {
+    const response = await this.client.get<TrafficLightsResponse>('/api/traffic-lights');
+    return response.data;
+  }
+
+  async setTrafficLights(request: SetTrafficLightsRequest): Promise<SetTrafficLightsResponse> {
+    const response = await this.client.post<SetTrafficLightsResponse>('/api/traffic-lights', request);
+    return response.data;
+  }
+
+  // Spawn Rate Control (Stage 3)
+  async getSpawnRates(): Promise<SpawnRatesResponse> {
+    const response = await this.client.get<SpawnRatesResponse>('/api/spawn-rates');
+    return response.data;
+  }
+
+  async setSpawnRates(request: SetSpawnRatesRequest): Promise<SetSpawnRatesResponse> {
+    const response = await this.client.post<SetSpawnRatesResponse>('/api/spawn-rates', request);
     return response.data;
   }
 }

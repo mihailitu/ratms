@@ -230,5 +230,57 @@ export interface MetricTypesResponse {
   metric_types: string[];
 }
 
+// Traffic Light Configuration (Stage 2)
+export interface TrafficLightConfig {
+  roadId: number;
+  lane: number;
+  greenTime: number;
+  yellowTime: number;
+  redTime: number;
+  currentState: 'G' | 'Y' | 'R';
+}
+
+export interface TrafficLightsResponse {
+  trafficLights: TrafficLightConfig[];
+  count: number;
+}
+
+export interface TrafficLightUpdate {
+  roadId: number;
+  lane: number;
+  greenTime: number;
+  yellowTime: number;
+  redTime: number;
+}
+
+export interface SetTrafficLightsRequest {
+  updates: TrafficLightUpdate[];
+}
+
+export interface SetTrafficLightsResponse {
+  success: boolean;
+  updated: number;
+}
+
+// Spawn Rate Configuration (Stage 3)
+export interface SpawnRateConfig {
+  roadId: number;
+  vehiclesPerMinute: number;
+}
+
+export interface SpawnRatesResponse {
+  rates: SpawnRateConfig[];
+  count: number;
+}
+
+export interface SetSpawnRatesRequest {
+  rates: SpawnRateConfig[];
+}
+
+export interface SetSpawnRatesResponse {
+  success: boolean;
+  updated: number;
+}
+
 // Visualization types
 export type MapViewMode = 'speed' | 'density';
