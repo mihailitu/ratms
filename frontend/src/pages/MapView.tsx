@@ -4,6 +4,8 @@ import 'leaflet/dist/leaflet.css';
 import { apiClient } from '../services/apiClient';
 import type { NetworkRecord, RoadGeometry, MapViewMode } from '../types/api';
 import { useSimulationStream } from '../hooks/useSimulationStream';
+import TrafficLightPanel from '../components/TrafficLightPanel';
+import SpawnRatePanel from '../components/SpawnRatePanel';
 
 export default function MapView() {
   const mapRef = useRef<L.Map | null>(null);
@@ -18,6 +20,8 @@ export default function MapView() {
   const roadPolylinesRef = useRef<Map<number, L.Polyline>>(new Map());
   const trafficLightMarkersRef = useRef<Map<string, L.CircleMarker>>(new Map());
   const [viewMode, setViewMode] = useState<MapViewMode>('speed');
+  const [trafficLightPanelOpen, setTrafficLightPanelOpen] = useState(false);
+  const [spawnRatePanelOpen, setSpawnRatePanelOpen] = useState(false);
 
   // Subscribe to simulation stream
   const { latestUpdate, isConnected, error: streamError } = useSimulationStream(streamEnabled);
@@ -453,6 +457,28 @@ export default function MapView() {
                   Density
                 </button>
               </div>
+
+              {/* Panel Toggle Buttons */}
+              <button
+                onClick={() => setSpawnRatePanelOpen(!spawnRatePanelOpen)}
+                className={`px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                  spawnRatePanelOpen
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Spawn Rates
+              </button>
+              <button
+                onClick={() => setTrafficLightPanelOpen(!trafficLightPanelOpen)}
+                className={`px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                  trafficLightPanelOpen
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Traffic Lights
+              </button>
             </div>
           </div>
 
@@ -564,6 +590,17 @@ export default function MapView() {
           </div>
         </div>
       </div>
+
+      {/* Control Panels */}
+      <TrafficLightPanel
+        isOpen={trafficLightPanelOpen}
+        onToggle={() => setTrafficLightPanelOpen(!trafficLightPanelOpen)}
+      />
+      <SpawnRatePanel
+        isOpen={spawnRatePanelOpen}
+        onToggle={() => setSpawnRatePanelOpen(!spawnRatePanelOpen)}
+        roads={roads}
+      />
     </div>
   );
 }

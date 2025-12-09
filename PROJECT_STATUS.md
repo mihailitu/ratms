@@ -27,6 +27,9 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 | 14 | Logging System | spdlog with components, REQUEST_SCOPE, TIMED_SCOPE |
 | 15 | Production Plan Stage 1 | Density-based map visualization, Speed/Density toggle |
 | 16 | Build System | Dependency install script, BUILD.md documentation |
+| 17 | Production Plan Stage 2 | Runtime traffic light timing modification API |
+| 18 | Production Plan Stage 3 | Dynamic vehicle spawning API with configurable rates |
+| 19 | Control Panel UI | Traffic light editor, spawn rate controls in MapView |
 
 ## Current Features
 
@@ -36,6 +39,8 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 - SQLite persistence with migrations
 - React dashboard with real-time updates
 - Interactive map with vehicle tracking (speed & density modes)
+- Traffic light timing editor with live updates
+- Dynamic vehicle spawning with configurable rates
 - Analytics with percentile statistics (P25, P50, P75, P95)
 - Comprehensive E2E test coverage
 - Build system with dependency installation script
@@ -71,6 +76,8 @@ cd frontend && npm run test:e2e
 | POST | /api/analytics/compare | Compare simulations |
 | GET | /api/traffic-lights | Get all traffic light timings |
 | POST | /api/traffic-lights | Bulk update traffic light timings |
+| GET | /api/spawn-rates | Get vehicle spawn rates per road |
+| POST | /api/spawn-rates | Set vehicle spawn rates per road |
 
 ## File Structure
 
@@ -118,7 +125,7 @@ See [docs/PRODUCTION_PLAN.md](docs/PRODUCTION_PLAN.md) for full 8-stage plan.
 |-------|-------------|--------|
 | 1 | Density-based visualization | **Complete** |
 | 2 | Runtime traffic light modification | **Complete** |
-| 3 | Dynamic vehicle spawning | Pending |
+| 3 | Dynamic vehicle spawning | **Complete** |
 | 4 | Continuous simulation mode | Pending |
 | 5 | Traffic profiles (JSON-based) | Pending |
 | 6 | Gradual timing blending | Pending |

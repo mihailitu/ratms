@@ -7,6 +7,7 @@ import {
 import { mockSimulations, mockSimulationStatus } from '../mocks/data/simulations';
 import { mockNetworks, mockRoads } from '../mocks/data/networks';
 import { mockMetrics, mockMetricTypes, mockSimulationStatistics } from '../mocks/data/metrics';
+import { mockTrafficLights, mockSpawnRates } from '../mocks/data/controls';
 
 const BASE_URL = 'http://localhost:8080';
 
@@ -327,9 +328,77 @@ export async function mockOptimizationStartError(page: Page) {
   });
 }
 
+/**
+ * Setup control panel mocks (traffic lights and spawn rates)
+ */
+export async function setupControlMocks(page: Page) {
+  // Get traffic lights
+  await page.route(`${BASE_URL}/api/traffic-lights`, async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          trafficLights: mockTrafficLights,
+          count: mockTrafficLights.length,
+        }),
+      });
+    } else if (route.request().method() === 'POST') {
+      const body = JSON.parse(route.request().postData() || '{}');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          updated: body.updates?.length || 0,
+        }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // Get/Set spawn rates
+  await page.route(`${BASE_URL}/api/spawn-rates`, async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          rates: mockSpawnRates,
+          count: mockSpawnRates.length,
+        }),
+      });
+    } else if (route.request().method() === 'POST') {
+      const body = JSON.parse(route.request().postData() || '{}');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          updated: body.rates?.length || 0,
+        }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+}
+
+/**
+ * Setup all mocks including controls
+ */
+export async function setupAllMocksWithControls(page: Page) {
+  await setupApiMocks(page);
+  await setupOptimizationMocks(page);
+  await setupControlMocks(page);
+}
+
 // Export mock data for use in tests
 export {
   mockOptimizationRuns,
   mockCompletedOptimizationRun,
   mockRunningOptimizationRun,
+  mockTrafficLights,
+  mockSpawnRates,
 };
