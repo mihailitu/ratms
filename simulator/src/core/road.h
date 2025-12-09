@@ -186,6 +186,8 @@ public:
 
     // Vehicle spawning - spawns at position 0 on lane with fewest vehicles
     bool spawnVehicle(double velocity = 10.0, double length = 5.0);
+    // Spawn vehicle on specific lane with given velocity and aggressivity
+    bool spawnVehicle(unsigned lane, double velocity, double aggressivity);
     int getVehicleCount() const;
 
     void update(double dt, const std::map<roadID, Road> &cityMap,

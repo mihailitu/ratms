@@ -102,6 +102,10 @@ public:
     void log() const;
     int getId() const { return id; }
 
+    // Aggressivity setter/getter
+    void setAggressivity(double aggr) { aggressivity = aggr; }
+    double getAggressivity() const { return aggressivity; }
+
 private:
     void serialize_v1(std::ostream &out) const;
 };

@@ -497,6 +497,43 @@ bool Road::spawnVehicle(double velocity, double length)
 }
 
 /**
+ * @brief Road::spawnVehicle - Spawn vehicle on specific lane
+ * @param lane Lane to spawn on
+ * @param velocity Initial velocity
+ * @param aggressivity Driver aggressivity (0.0-1.0)
+ * @return true if vehicle was spawned, false if no space available
+ */
+bool Road::spawnVehicle(unsigned lane, double velocity, double aggressivity)
+{
+    if (lane >= lanesNo) {
+        LOG_TRACE(LogComponent::Simulation, "Cannot spawn vehicle on road {} - invalid lane {}", id, lane);
+        return false;
+    }
+
+    double length = 5.0;  // Default vehicle length
+    double requiredGap = length + minChangeLaneDist;
+
+    // Check if there's space at the start of this lane
+    if (!vehicles[lane].empty()) {
+        const Vehicle& firstVehicle = vehicles[lane].front();
+        if (firstVehicle.getPos() < requiredGap) {
+            LOG_TRACE(LogComponent::Simulation, "Cannot spawn vehicle on road {} lane {} - no space", id, lane);
+            return false;
+        }
+    }
+
+    // Create and add vehicle at position 0 with specified aggressivity
+    Vehicle newVehicle(0.0, length, velocity);
+    newVehicle.setAggressivity(aggressivity);
+    addVehicle(newVehicle, lane);
+
+    LOG_TRACE(LogComponent::Simulation, "Spawned vehicle {} on road {} lane {} (v={:.1f} m/s, aggr={:.2f})",
+              newVehicle.getId(), id, lane, velocity, aggressivity);
+
+    return true;
+}
+
+/**
  * @brief Road::getVehicleCount - Get total vehicle count across all lanes
  */
 int Road::getVehicleCount() const

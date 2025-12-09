@@ -53,7 +53,7 @@ describe('useSimulationStream', () => {
   });
 
   it('should create EventSource when enabled', async () => {
-    const { result } = renderHook(() => useSimulationStream(true));
+    renderHook(() => useSimulationStream(true));
 
     await waitFor(() => {
       expect(global.EventSource).toHaveBeenCalledWith('http://localhost:8080/api/simulation/stream');

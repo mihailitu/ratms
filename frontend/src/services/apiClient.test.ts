@@ -15,7 +15,7 @@ const mockAxiosInstance = {
   post: vi.fn(),
   interceptors: {
     response: {
-      use: vi.fn((onSuccess: any, onError: any) => {
+      use: vi.fn((_onSuccess: unknown, _onError: unknown) => {
         return 0;
       }),
     },
@@ -138,9 +138,9 @@ describe('ApiClient', () => {
           description: 'Test',
           status: 'completed',
           network_id: 1,
-          created_at: 1234567890,
-          started_at: 1234567890,
-          completed_at: 1234567900,
+          start_time: 1234567890,
+          end_time: 1234567900,
+          duration_seconds: 10,
           config: '{}',
         },
       ];
@@ -160,9 +160,9 @@ describe('ApiClient', () => {
         description: 'Test',
         status: 'completed',
         network_id: 1,
-        created_at: 1234567890,
-        started_at: 1234567890,
-        completed_at: 1234567900,
+        start_time: 1234567890,
+        end_time: 1234567900,
+        duration_seconds: 10,
         config: '{}',
       };
 
@@ -180,10 +180,10 @@ describe('ApiClient', () => {
           id: 1,
           simulation_id: 1,
           timestamp: 1234567890,
-          avg_speed: 15.5,
-          avg_queue_length: 2.3,
-          total_vehicles: 10,
-          vehicles_exited: 5,
+          metric_type: 'avg_speed',
+          road_id: 1,
+          value: 15.5,
+          unit: 'm/s',
         },
       ];
 
@@ -205,7 +205,6 @@ describe('ApiClient', () => {
           description: 'Test network',
           road_count: 4,
           intersection_count: 1,
-          created_at: 1234567890,
         },
       ];
 

@@ -317,7 +317,9 @@ void ContinuousOptimizationController::updateTransitions() {
             if (roadIt != simulator_->cityMap.end()) {
                 double currentGreen = transition.getCurrentGreenTime();
                 double currentRed = transition.getCurrentRedTime();
-                roadIt->second.setTrafficLightTimings(transition.lane, currentGreen, 3.0, currentRed);
+                if (transition.lane < roadIt->second.getTrafficLightsMutable().size()) {
+                    roadIt->second.getTrafficLightsMutable()[transition.lane].setTimings(currentGreen, 3.0, currentRed);
+                }
             }
         }
     }
@@ -485,7 +487,7 @@ void ContinuousOptimizationController::applyChromosomeGradually(const simulator:
                 const simulator::TrafficLightTiming& timing = chromosome.genes[geneIdx];
 
                 // Get current values
-                const simulator::TrafficLight& light = road.getTrafficLight(lane);
+                const simulator::TrafficLight& light = road.getTrafficLights()[lane];
                 double currentGreen = light.getGreenTime();
                 double currentRed = light.getRedTime();
 

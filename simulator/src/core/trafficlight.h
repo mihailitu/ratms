@@ -45,6 +45,14 @@ public:
     double getGreenTime() const { return lightsTime[green_light]; }
     double getYellowTime() const { return lightsTime[yellow_light]; }
     double getRedTime() const { return lightsTime[red_light]; }
+
+    // Runtime timing modification
+    void setTimings(double greenTime, double yellowTime, double redTime) {
+        lightsTime[green_light] = greenTime;
+        lightsTime[yellow_light] = yellowTime;
+        lightsTime[red_light] = redTime;
+    }
+
     char getState() const {
         if (currentLightColor == green_light) return 'G';
         if (currentLightColor == yellow_light) return 'Y';

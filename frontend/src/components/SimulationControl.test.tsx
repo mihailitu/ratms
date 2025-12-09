@@ -24,6 +24,8 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'stopped',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
@@ -37,6 +39,8 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'running',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
@@ -49,6 +53,8 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'stopped',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
@@ -63,6 +69,8 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'running',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
@@ -76,6 +84,8 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'stopped',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
@@ -89,6 +99,8 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'stopped',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
@@ -102,6 +114,8 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'running',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
@@ -117,12 +131,16 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'stopped',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
       vi.mocked(apiClient.startSimulation).mockResolvedValue({
         message: 'Simulation started',
         status: 'running',
+        simulation_id: 1,
+        timestamp: 1234567890,
       });
 
       render(<SimulationControl status={status} onStatusChange={mockOnStatusChange} />);
@@ -139,12 +157,16 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'stopped',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
       vi.mocked(apiClient.startSimulation).mockResolvedValue({
         message: 'Simulation started',
         status: 'running',
+        simulation_id: 1,
+        timestamp: 1234567890,
       });
 
       render(<SimulationControl status={status} onStatusChange={mockOnStatusChange} />);
@@ -161,6 +183,8 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'stopped',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
@@ -182,6 +206,8 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'stopped',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
@@ -205,12 +231,15 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'running',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
       vi.mocked(apiClient.stopSimulation).mockResolvedValue({
         message: 'Simulation stopped',
         status: 'stopped',
+        timestamp: 1234567890,
       });
 
       render(<SimulationControl status={status} onStatusChange={mockOnStatusChange} />);
@@ -227,12 +256,15 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'running',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
       vi.mocked(apiClient.stopSimulation).mockResolvedValue({
         message: 'Simulation stopped',
         status: 'stopped',
+        timestamp: 1234567890,
       });
 
       render(<SimulationControl status={status} onStatusChange={mockOnStatusChange} />);
@@ -249,6 +281,8 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'running',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
@@ -270,6 +304,8 @@ describe('SimulationControl', () => {
       const status: SimulationStatus = {
         status: 'running',
         server_running: true,
+        simulator_initialized: true,
+        timestamp: 1234567890,
         road_count: 4,
       };
 
