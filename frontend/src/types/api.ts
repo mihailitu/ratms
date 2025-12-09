@@ -229,3 +229,6 @@ export interface ComparisonResponse {
 export interface MetricTypesResponse {
   metric_types: string[];
 }
+
+// Visualization types
+export type MapViewMode = 'speed' | 'density';

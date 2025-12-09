@@ -25,6 +25,8 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 | 12 | Analytics Dashboard | Multi-simulation comparison, statistics, CSV export |
 | 13 | E2E Testing | Playwright + MSW, 157 tests, Page Object Model |
 | 14 | Logging System | spdlog with components, REQUEST_SCOPE, TIMED_SCOPE |
+| 15 | Production Plan Stage 1 | Density-based map visualization, Speed/Density toggle |
+| 16 | Build System | Dependency install script, BUILD.md documentation |
 
 ## Current Features
 
@@ -33,9 +35,10 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 - REST API (15+ endpoints) with SSE streaming
 - SQLite persistence with migrations
 - React dashboard with real-time updates
-- Interactive map with vehicle tracking
+- Interactive map with vehicle tracking (speed & density modes)
 - Analytics with percentile statistics (P25, P50, P75, P95)
 - Comprehensive E2E test coverage
+- Build system with dependency installation script
 
 ## Quick Start
 
@@ -105,10 +108,20 @@ ratms/
 2. Lane selection logic needs refinement at intersections
 3. Road polylines are straight (no curves)
 
-## Next Steps
+## Next Steps (Production System Plan)
 
-**Option F: Network Editor** - Create/edit road networks through web interface
-**Option H: Advanced Analytics** - Heatmaps, PDF reports, real-time analytics
+See [docs/PRODUCTION_PLAN.md](docs/PRODUCTION_PLAN.md) for full 8-stage plan.
+
+| Stage | Description | Status |
+|-------|-------------|--------|
+| 1 | Density-based visualization | **Complete** |
+| 2 | Runtime traffic light modification | Pending |
+| 3 | Dynamic vehicle spawning | Pending |
+| 4 | Continuous simulation mode | Pending |
+| 5 | Traffic profiles (JSON-based) | Pending |
+| 6 | Gradual timing blending | Pending |
+| 7 | Continuous background optimization | Pending |
+| 8 | Travel time metrics & dashboard | Pending |
 
 ## Logging
 
@@ -120,4 +133,4 @@ Component-based logging with spdlog:
 
 ---
 
-**Status:** Production-ready with 157 E2E tests. Ready for network editor or advanced analytics.
+**Status:** Production-ready with 157 E2E tests. Implementing 8-stage production system plan (Stage 1 complete).

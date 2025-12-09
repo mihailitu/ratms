@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { apiClient } from '../services/apiClient';
-import type { NetworkRecord, RoadGeometry } from '../types/api';
+import type { NetworkRecord, RoadGeometry, MapViewMode } from '../types/api';
 import { useSimulationStream } from '../hooks/useSimulationStream';
 
 export default function MapView() {
@@ -17,9 +17,50 @@ export default function MapView() {
   const vehicleMarkersRef = useRef<Map<number, L.CircleMarker>>(new Map());
   const roadPolylinesRef = useRef<Map<number, L.Polyline>>(new Map());
   const trafficLightMarkersRef = useRef<Map<string, L.CircleMarker>>(new Map());
+  const [viewMode, setViewMode] = useState<MapViewMode>('speed');
 
   // Subscribe to simulation stream
   const { latestUpdate, isConnected, error: streamError } = useSimulationStream(streamEnabled);
+
+  // Calculate density per road (vehicles per km)
+  const roadDensities = useMemo(() => {
+    const densities = new Map<number, { count: number; density: number }>();
+    if (!latestUpdate) return densities;
+
+    // Count vehicles per road
+    const counts = new Map<number, number>();
+    latestUpdate.vehicles.forEach(v => {
+      counts.set(v.roadId, (counts.get(v.roadId) || 0) + 1);
+    });
+
+    // Calculate density using road length
+    counts.forEach((count, roadId) => {
+      const road = roads.find(r => r.id === roadId);
+      const lengthKm = road ? road.length / 1000 : 1;
+      densities.set(roadId, {
+        count,
+        density: count / lengthKm
+      });
+    });
+
+    return densities;
+  }, [latestUpdate, roads]);
+
+  // Get color for density-based visualization (vehicles per km)
+  const getDensityColor = (density: number): string => {
+    if (density < 20) return '#22c55e';   // Green: free flow
+    if (density < 50) return '#eab308';   // Yellow: moderate
+    if (density < 100) return '#f97316';  // Orange: heavy
+    return '#ef4444';                      // Red: congestion
+  };
+
+  // Get color for speed-based visualization
+  const getSpeedColor = (velocity: number, maxSpeed: number = 20): string => {
+    const speedRatio = Math.min(velocity / maxSpeed, 1.0);
+    if (speedRatio > 0.7) return '#22c55e';  // Green: fast
+    if (speedRatio > 0.3) return '#3b82f6';  // Blue: medium
+    return '#ef4444';                         // Red: slow
+  };
 
   useEffect(() => {
     const fetchNetworks = async () => {
@@ -79,19 +120,10 @@ export default function MapView() {
         [[road.startLat, road.startLon], [road.endLat, road.endLon]],
         {
           color: '#3b82f6',
-          weight: 3,
-          opacity: 0.7,
+          weight: 4,
+          opacity: 0.8,
         }
       ).addTo(map);
-
-      polyline.bindPopup(`
-        <div>
-          <strong>Road ${road.id}</strong><br/>
-          Length: ${road.length}m<br/>
-          Lanes: ${road.lanes}<br/>
-          Max Speed: ${road.maxSpeed} m/s
-        </div>
-      `);
 
       roadPolylinesRef.current.set(road.id, polyline);
     });
@@ -105,6 +137,47 @@ export default function MapView() {
       map.fitBounds(bounds, { padding: [50, 50] });
     }
   }, [roads]);
+
+  // Update road colors based on view mode and density
+  useEffect(() => {
+    if (roads.length === 0) return;
+
+    roads.forEach((road) => {
+      const polyline = roadPolylinesRef.current.get(road.id);
+      if (!polyline) return;
+
+      let color = '#3b82f6'; // Default blue
+      let weight = 4;
+
+      if (viewMode === 'density') {
+        const densityData = roadDensities.get(road.id);
+        if (densityData) {
+          color = getDensityColor(densityData.density);
+          // Thicker lines for roads with more vehicles
+          weight = Math.min(4 + densityData.count * 0.5, 10);
+        } else {
+          color = '#22c55e'; // Green for empty roads
+        }
+      }
+
+      polyline.setStyle({ color, weight });
+
+      // Update popup with density info
+      const densityData = roadDensities.get(road.id);
+      const densityInfo = densityData
+        ? `<br/>Vehicles: ${densityData.count}<br/>Density: ${densityData.density.toFixed(1)} veh/km`
+        : '<br/>Vehicles: 0';
+
+      polyline.bindPopup(`
+        <div>
+          <strong>Road ${road.id}</strong><br/>
+          Length: ${road.length.toFixed(0)}m<br/>
+          Lanes: ${road.lanes}<br/>
+          Max Speed: ${road.maxSpeed} m/s${densityInfo}
+        </div>
+      `);
+    });
+  }, [roads, viewMode, roadDensities]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -174,8 +247,7 @@ export default function MapView() {
 
       if (!marker) {
         // Create new marker with color based on speed
-        const speedRatio = Math.min(vehicle.velocity / 20, 1.0); // Normalize to 20 m/s
-        const color = speedRatio > 0.7 ? '#22c55e' : speedRatio > 0.3 ? '#3b82f6' : '#ef4444';
+        const color = getSpeedColor(vehicle.velocity, road?.maxSpeed);
 
         marker = L.circleMarker([lat, lng], {
           radius: 5,
@@ -203,8 +275,7 @@ export default function MapView() {
         marker.setLatLng([lat, lng]);
 
         // Update color based on speed
-        const speedRatio = Math.min(vehicle.velocity / 20, 1.0);
-        const color = speedRatio > 0.7 ? '#22c55e' : speedRatio > 0.3 ? '#3b82f6' : '#ef4444';
+        const color = getSpeedColor(vehicle.velocity, road?.maxSpeed);
         marker.setStyle({ fillColor: color });
       }
     });
@@ -358,6 +429,30 @@ export default function MapView() {
               >
                 {streamEnabled ? 'Stop Streaming' : 'Start Streaming'}
               </button>
+
+              {/* View Mode Toggle */}
+              <div className="flex items-center gap-1 bg-gray-200 rounded-md p-1">
+                <button
+                  onClick={() => setViewMode('speed')}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    viewMode === 'speed'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Speed
+                </button>
+                <button
+                  onClick={() => setViewMode('density')}
+                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                    viewMode === 'density'
+                      ? 'bg-white text-gray-900 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Density
+                </button>
+              </div>
             </div>
           </div>
 
@@ -408,20 +503,46 @@ export default function MapView() {
 
         <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="text-sm text-blue-800">
-            <strong>Map Legend:</strong>
+            <strong>Map Legend ({viewMode === 'speed' ? 'Speed Mode' : 'Density Mode'}):</strong>
             <div className="mt-2 grid grid-cols-2 gap-2">
-              <div>
-                <span className="inline-block w-3 h-3 rounded-full bg-green-500 mr-2"></span>
-                Fast vehicles (&gt;70% max speed)
-              </div>
-              <div>
-                <span className="inline-block w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
-                Medium vehicles (30-70% max speed)
-              </div>
-              <div>
-                <span className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span>
-                Slow vehicles (&lt;30% max speed)
-              </div>
+              {viewMode === 'speed' ? (
+                <>
+                  {/* Speed-based legend for vehicles */}
+                  <div>
+                    <span className="inline-block w-3 h-3 rounded-full bg-green-500 mr-2"></span>
+                    Fast vehicles (&gt;70% max speed)
+                  </div>
+                  <div>
+                    <span className="inline-block w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
+                    Medium vehicles (30-70% max speed)
+                  </div>
+                  <div>
+                    <span className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span>
+                    Slow vehicles (&lt;30% max speed)
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Density-based legend for roads */}
+                  <div>
+                    <span className="inline-block w-6 h-3 rounded bg-green-500 mr-2"></span>
+                    Free flow (&lt;20 veh/km)
+                  </div>
+                  <div>
+                    <span className="inline-block w-6 h-3 rounded bg-yellow-500 mr-2"></span>
+                    Moderate (20-50 veh/km)
+                  </div>
+                  <div>
+                    <span className="inline-block w-6 h-3 rounded bg-orange-500 mr-2"></span>
+                    Heavy (50-100 veh/km)
+                  </div>
+                  <div>
+                    <span className="inline-block w-6 h-3 rounded bg-red-500 mr-2"></span>
+                    Congestion (&gt;100 veh/km)
+                  </div>
+                </>
+              )}
+              {/* Traffic lights always shown */}
               <div>
                 <span className="inline-block w-3 h-3 rounded-full bg-green-500 border-2 border-black mr-2"></span>
                 Green traffic lights
@@ -436,7 +557,9 @@ export default function MapView() {
               </div>
             </div>
             <p className="mt-3">
-              Click on any vehicle or traffic light to see detailed information.
+              {viewMode === 'speed'
+                ? 'Click on any vehicle or traffic light to see detailed information.'
+                : 'Roads are colored by traffic density. Click on any road, vehicle, or traffic light for details.'}
             </p>
           </div>
         </div>
