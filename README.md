@@ -40,6 +40,7 @@ A production-ready traffic simulation system implementing the Intelligent Driver
 - CMake 3.15+
 - SQLite3
 - Make
+- libexpat-dev (for OSM import)
 
 **Frontend:**
 - Node.js 18+
@@ -73,6 +74,28 @@ npm run dev
 
 #### 4. Access Dashboard
 Open browser to [http://localhost:5173](http://localhost:5173)
+
+### Using Real City Maps (OpenStreetMap)
+
+RATMS supports importing real road networks from OpenStreetMap. A pre-imported Munich Schwabing map is included.
+
+#### Run with Munich Map
+```bash
+cd simulator/build
+./api_server --network ../../data/maps/munich_schwabing.json
+```
+
+#### Import Your Own City
+```bash
+# Download and convert any area
+./scripts/download_osm.sh berlin 13.36,52.50,13.42,52.54
+
+# Run with the new map
+cd simulator/build
+./api_server --network ../../data/maps/berlin.json
+```
+
+See [OSM Import Guide](#openstreetmap-import) for details.
 
 ## Usage
 
@@ -140,14 +163,16 @@ ratms/
 │   ├── src/
 │   │   ├── core/          # Simulator, Road, Vehicle, TrafficLight
 │   │   ├── utils/         # Logger, Config, Utils
-│   │   ├── mapping/       # Map loading (OSM support)
+│   │   ├── mapping/       # Map loading, OSM import, network loader
 │   │   ├── optimization/  # Genetic Algorithm engine
 │   │   ├── api/           # REST API server
 │   │   ├── data/storage/  # Database layer
+│   │   ├── tools/         # Standalone tools (osm_import_main.cpp)
 │   │   └── tests/         # Test scenarios
 │   └── build/
-│       ├── api_server     # Main executable
-│       └── ga_optimizer   # GA optimization tool
+│       ├── api_server     # Main HTTP server
+│       ├── ga_optimizer   # GA optimization tool
+│       └── osm_import     # OSM to JSON converter
 ├── frontend/              # React Dashboard
 │   ├── src/
 │   │   ├── pages/        # Dashboard, Simulations, Map, Optimization
@@ -155,6 +180,11 @@ ratms/
 │   │   ├── services/     # API client
 │   │   └── types/        # TypeScript types
 │   └── dist/             # Built assets
+├── data/                  # Data files
+│   ├── osm/              # Raw OSM downloads
+│   └── maps/             # Converted JSON maps
+├── scripts/               # Utility scripts
+│   └── download_osm.sh   # OSM download helper
 ├── database/
 │   └── migrations/       # SQL schema definitions
 └── config/               # YAML configuration files
@@ -258,6 +288,73 @@ Current capabilities:
 - Performance analytics dashboard
 - Curved road rendering
 - Multi-network comparison tools
+
+## OpenStreetMap Import
+
+RATMS can import real-world road networks from OpenStreetMap (OSM).
+
+### How It Works
+
+1. **Download**: OSM XML data is fetched from the Overpass API
+2. **Parse**: The `osm_import` tool extracts roads and intersections
+3. **Convert**: Road segments are converted to simulator-compatible JSON
+4. **Load**: The `api_server` loads the JSON map at startup
+
+### Supported Road Types
+
+The importer handles these OSM highway types:
+- motorway, trunk, primary, secondary, tertiary
+- residential, living_street, unclassified
+- motorway_link, trunk_link, primary_link, etc.
+
+### Speed and Lane Defaults
+
+When OSM data lacks specific tags, the importer uses sensible defaults:
+
+| Road Type   | Default Speed | Default Lanes |
+|-------------|---------------|---------------|
+| motorway    | 120 km/h      | 3             |
+| trunk       | 100 km/h      | 2             |
+| primary     | 50 km/h       | 2             |
+| secondary   | 50 km/h       | 2             |
+| tertiary    | 40 km/h       | 1             |
+| residential | 30 km/h       | 1             |
+
+### Manual Import
+
+```bash
+# Build the import tool
+cd simulator/build
+cmake .. && make osm_import
+
+# Download OSM data manually
+wget -O data/osm/myarea.osm "https://overpass-api.de/api/map?bbox=LON1,LAT1,LON2,LAT2"
+
+# Convert to JSON
+./osm_import data/osm/myarea.osm data/maps/myarea.json "My Area"
+
+# Verify the output
+cat data/maps/myarea.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Roads: {len(d[\"roads\"])}')"
+```
+
+### Bounding Box Format
+
+The bbox format is: `min_lon,min_lat,max_lon,max_lat`
+
+Example areas:
+- Munich Schwabing: `11.56,48.15,11.60,48.17`
+- Berlin Mitte: `13.36,52.50,13.42,52.54`
+- Paris center: `2.32,48.85,2.36,48.87`
+
+### Area Size Recommendations
+
+| Area Size | Approximate Roads | File Size | Performance |
+|-----------|-------------------|-----------|-------------|
+| 2x2 km    | 500-1000          | 1-3 MB    | Excellent   |
+| 5x5 km    | 3000-8000         | 5-20 MB   | Good        |
+| 10x10 km  | 10000+            | 50+ MB    | May lag     |
+
+Start small and increase area as needed.
 
 ## Documentation
 

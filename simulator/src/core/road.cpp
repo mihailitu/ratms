@@ -220,6 +220,11 @@ void Road::setCardinalCoordinates(roadPosCard startPos, roadPosCard endPos)
     endPosGeo.second = REF_LAT + (endPos.second / METERS_PER_DEG_LAT);
 }
 
+void Road::setGeoCoordinates(roadPosGeo startPos, roadPosGeo endPos) {
+    startPosGeo = startPos;
+    endPosGeo = endPos;
+}
+
 roadPosCard Road::getStartPosCard()
 {
     return startPosCard;

@@ -57,3 +57,7 @@ simulator/logs/
 # Database
 *.db
 *.db-journal
+
+# OSM data (large files, download on demand)
+data/osm/*.osm
+data/osm/*.pbf

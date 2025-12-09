@@ -1,5 +1,5 @@
+cmake_minimum_required(VERSION 3.30)
 project(simulator)
-cmake_minimum_required(VERSION 3.10)
 
 include(FetchContent)
 
@@ -32,7 +32,10 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 # Collect source files from each module
 file(GLOB CORE_SOURCES "src/core/*.cpp")
 file(GLOB UTILS_SOURCES "src/utils/*.cpp")
+# Note: osm_importer.cpp is excluded from MAPPING_SOURCES because it requires expat
+# It's only included in the osm_import target
 file(GLOB MAPPING_SOURCES "src/mapping/*.cpp")
+list(FILTER MAPPING_SOURCES EXCLUDE REGEX "osm_importer\\.cpp$")
 file(GLOB OPTIMIZATION_SOURCES "src/optimization/*.cpp")
 file(GLOB API_SOURCES "src/api/*.cpp")
 file(GLOB DATA_SOURCES "src/data/storage/*.cpp")
@@ -90,6 +93,29 @@ target_link_libraries(ga_optimizer
     spdlog::spdlog
     Threads::Threads
     SQLite::SQLite3
+)
+
+# =============================================================================
+# OSM Import Tool
+# =============================================================================
+
+# Find expat for XML parsing
+find_package(EXPAT REQUIRED)
+
+# OSM Import executable
+set(OSM_IMPORT_SOURCES
+    src/tools/osm_import_main.cpp
+    src/mapping/osm_importer.cpp
+    ${CORE_SOURCES}
+    ${UTILS_SOURCES}
+)
+
+add_executable(osm_import ${OSM_IMPORT_SOURCES})
+
+target_link_libraries(osm_import
+    spdlog::spdlog
+    Threads::Threads
+    EXPAT::EXPAT
 )
 
 # =============================================================================

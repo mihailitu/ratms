@@ -1,11 +1,13 @@
 #include "api/server.h"
 #include "core/simulator.h"
 #include "data/storage/database_manager.h"
+#include "mapping/network_loader.h"
 #include "tests/testintersection.h"
 #include "utils/logger.h"
 #include <atomic>
 #include <csignal>
 #include <memory>
+#include <cstring>
 
 using namespace ratms;
 
@@ -16,7 +18,32 @@ void signalHandler(int signal) {
   shutdown_requested = true;
 }
 
-int main() {
+void printUsage(const char* progName) {
+  std::cout << "Usage: " << progName << " [options]" << std::endl;
+  std::cout << std::endl;
+  std::cout << "Options:" << std::endl;
+  std::cout << "  --network <file.json>  Load road network from JSON file" << std::endl;
+  std::cout << "  --port <port>          Server port (default: 8080)" << std::endl;
+  std::cout << "  --help                 Show this help message" << std::endl;
+  std::cout << std::endl;
+  std::cout << "If no network file is specified, uses default test network." << std::endl;
+}
+
+int main(int argc, char* argv[]) {
+  std::string networkFile;
+  int port = 8080;
+
+  // Parse command line arguments
+  for (int i = 1; i < argc; i++) {
+    if (std::strcmp(argv[i], "--network") == 0 && i + 1 < argc) {
+      networkFile = argv[++i];
+    } else if (std::strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
+      port = std::atoi(argv[++i]);
+    } else if (std::strcmp(argv[i], "--help") == 0) {
+      printUsage(argv[0]);
+      return 0;
+    }
+  }
   // Register signal handlers for graceful shutdown
   std::signal(SIGINT, signalHandler);
   std::signal(SIGTERM, signalHandler);
@@ -51,21 +78,36 @@ int main() {
 
   LOG_INFO(LogComponent::Database, "Default network created with ID: {}", network_id);
 
-  // Create simulator instance with city grid test network
+  // Create simulator instance
   auto simulator = std::make_shared<simulator::Simulator>();
-  std::vector<simulator::Road> roadMap = simulator::cityGridTestMap();
-  simulator->addRoadNetToMap(roadMap);
+  std::vector<simulator::Road> roadMap;
 
-  LOG_INFO(LogComponent::Simulation, "Simulator initialized with test network: {} roads",
-           roadMap.size());
+  if (!networkFile.empty()) {
+    // Load network from JSON file
+    LOG_INFO(LogComponent::Simulation, "Loading network from: {}", networkFile);
+    try {
+      roadMap = mapping::NetworkLoader::loadFromJson(networkFile);
+      LOG_INFO(LogComponent::Simulation, "Loaded {} roads from JSON", roadMap.size());
+    } catch (const std::exception& e) {
+      LOG_ERROR(LogComponent::Simulation, "Failed to load network: {}", e.what());
+      return 1;
+    }
+  } else {
+    // Use default test network
+    roadMap = simulator::cityGridTestMap();
+    LOG_INFO(LogComponent::Simulation, "Using default test network");
+  }
+
+  simulator->addRoadNetToMap(roadMap);
+  LOG_INFO(LogComponent::Simulation, "Simulator initialized with {} roads", roadMap.size());
 
   // Create and start API server
-  ratms::api::Server api_server(8080);
+  ratms::api::Server api_server(port);
   api_server.setSimulator(simulator);
   api_server.setDatabase(database);
   api_server.start();
 
-  LOG_INFO(LogComponent::API, "RATMS API Server running on http://localhost:8080");
+  LOG_INFO(LogComponent::API, "RATMS API Server running on http://localhost:{}", port);
   LOG_INFO(LogComponent::General, "Press Ctrl+C to stop");
 
   // Keep server running until shutdown signal

@@ -184,6 +184,7 @@ public:
                std::vector<RoadTransition> &pendingTransitions);
 
     void setCardinalCoordinates(roadPosCard startPos, roadPosCard endPosCard);
+    void setGeoCoordinates(roadPosGeo startPos, roadPosGeo endPos);
     roadPosCard getStartPosCard();
     roadPosCard getEndPosCard();
 
