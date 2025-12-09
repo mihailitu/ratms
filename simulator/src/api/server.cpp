@@ -1,5 +1,7 @@
 #include "server.h"
 #include "optimization_controller.h"
+#include "traffic_data_controller.h"
+#include "continuous_optimization_controller.h"
 #include "../utils/logger.h"
 #include "../optimization/metrics.h"
 #include "../core/defs.h"
@@ -96,6 +98,17 @@ void Server::setDatabase(std::shared_ptr<data::DatabaseManager> db) {
     if (database_) {
         optimization_controller_ = std::make_unique<OptimizationController>(database_);
         LOG_INFO(LogComponent::Optimization, "Optimization controller initialized");
+    }
+
+    // Initialize traffic data controller (requires both database and simulator)
+    if (database_ && simulator_) {
+        traffic_data_controller_ = std::make_unique<TrafficDataController>(database_, simulator_, sim_mutex_);
+        LOG_INFO(LogComponent::API, "Traffic data controller initialized");
+
+        // Initialize continuous optimization controller
+        continuous_optimization_controller_ = std::make_unique<ContinuousOptimizationController>(
+            database_, simulator_, sim_mutex_);
+        LOG_INFO(LogComponent::Optimization, "Continuous optimization controller initialized");
     }
 }
 
@@ -214,7 +227,19 @@ void Server::setupRoutes() {
         LOG_INFO(LogComponent::API, "Optimization routes registered");
     }
 
-    LOG_INFO(LogComponent::API, "API routes configured: {} endpoints", 15);
+    // Register traffic data routes if controller is initialized
+    if (traffic_data_controller_) {
+        traffic_data_controller_->registerRoutes(http_server_);
+        LOG_INFO(LogComponent::API, "Traffic data routes registered");
+    }
+
+    // Register continuous optimization routes if controller is initialized
+    if (continuous_optimization_controller_) {
+        continuous_optimization_controller_->registerRoutes(http_server_);
+        LOG_INFO(LogComponent::API, "Continuous optimization routes registered");
+    }
+
+    LOG_INFO(LogComponent::API, "API routes configured");
 }
 
 void Server::handleHealth(const httplib::Request& req, httplib::Response& res) {

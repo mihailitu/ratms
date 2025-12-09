@@ -14,8 +14,10 @@
 namespace ratms {
 namespace api {
 
-// Forward declaration
+// Forward declarations
 class OptimizationController;
+class TrafficDataController;
+class ContinuousOptimizationController;
 
 /**
  * @brief VehicleSnapshot - Real-time vehicle position data
@@ -130,6 +132,8 @@ private:
 
     // Controllers
     std::unique_ptr<OptimizationController> optimization_controller_;
+    std::unique_ptr<TrafficDataController> traffic_data_controller_;
+    std::unique_ptr<ContinuousOptimizationController> continuous_optimization_controller_;
 
     // Simulation thread management
     std::unique_ptr<std::thread> simulation_thread_;

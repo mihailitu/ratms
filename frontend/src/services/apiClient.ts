@@ -22,6 +22,13 @@ import type {
   SpawnRatesResponse,
   SetSpawnRatesRequest,
   SetSpawnRatesResponse,
+  TrafficProfilesResponse,
+  FlowRatesResponse,
+  SpawningStatus,
+  FlowRate,
+  ContinuousOptimizationStatus,
+  ContinuousOptimizationConfig,
+  SystemHealth,
 } from '../types/api';
 
 class ApiClient {
@@ -176,6 +183,84 @@ class ApiClient {
 
   async setSpawnRates(request: SetSpawnRatesRequest): Promise<SetSpawnRatesResponse> {
     const response = await this.client.post<SetSpawnRatesResponse>('/api/spawn-rates', request);
+    return response.data;
+  }
+
+  // Production System - Continuous Simulation
+  async startContinuousSimulation(): Promise<SimulationStartResponse> {
+    const response = await this.client.post<SimulationStartResponse>('/api/simulation/continuous', {});
+    return response.data;
+  }
+
+  async getSystemHealth(): Promise<SystemHealth> {
+    const response = await this.client.get<SystemHealth>('/api/system/health');
+    return response.data;
+  }
+
+  // Traffic Profiles and Flow Rates
+  async getTrafficProfiles(): Promise<TrafficProfilesResponse> {
+    const response = await this.client.get<TrafficProfilesResponse>('/api/traffic/profiles');
+    return response.data;
+  }
+
+  async setActiveProfile(profileName: string): Promise<{ success: boolean; data: { message: string; activeProfile: string } }> {
+    const response = await this.client.post('/api/traffic/profiles/active', { profile: profileName });
+    return response.data;
+  }
+
+  async getFlowRates(): Promise<FlowRatesResponse> {
+    const response = await this.client.get<FlowRatesResponse>('/api/traffic/flow-rates');
+    return response.data;
+  }
+
+  async setFlowRates(flowRates: FlowRate[]): Promise<{ success: boolean; data: { message: string; count: number } }> {
+    const response = await this.client.post('/api/traffic/flow-rates', { flowRates });
+    return response.data;
+  }
+
+  async startSpawning(): Promise<{ success: boolean; data: { message: string; activeProfile: string } }> {
+    const response = await this.client.post('/api/traffic/spawning/start', {});
+    return response.data;
+  }
+
+  async stopSpawning(): Promise<{ success: boolean; data: { message: string } }> {
+    const response = await this.client.post('/api/traffic/spawning/stop', {});
+    return response.data;
+  }
+
+  async getSpawningStatus(): Promise<{ success: boolean; data: SpawningStatus }> {
+    const response = await this.client.get('/api/traffic/spawning/status');
+    return response.data;
+  }
+
+  // Continuous Optimization
+  async startContinuousOptimization(config?: Partial<ContinuousOptimizationConfig>): Promise<{ success: boolean; data: { message: string; config: ContinuousOptimizationConfig } }> {
+    const response = await this.client.post('/api/optimization/continuous/start', config || {});
+    return response.data;
+  }
+
+  async stopContinuousOptimization(): Promise<{ success: boolean; data: { message: string } }> {
+    const response = await this.client.post('/api/optimization/continuous/stop', {});
+    return response.data;
+  }
+
+  async getContinuousOptimizationStatus(): Promise<{ success: boolean; data: ContinuousOptimizationStatus }> {
+    const response = await this.client.get('/api/optimization/continuous/status');
+    return response.data;
+  }
+
+  async getContinuousOptimizationConfig(): Promise<{ success: boolean; data: ContinuousOptimizationConfig }> {
+    const response = await this.client.get('/api/optimization/continuous/config');
+    return response.data;
+  }
+
+  async setContinuousOptimizationConfig(config: Partial<ContinuousOptimizationConfig>): Promise<{ success: boolean; data: { message: string } }> {
+    const response = await this.client.post('/api/optimization/continuous/config', config);
+    return response.data;
+  }
+
+  async applyOptimizationRun(runId: number): Promise<{ success: boolean; data: { message: string; runId: number; transitionDurationSeconds: number } }> {
+    const response = await this.client.post(`/api/optimization/apply/${runId}`, {});
     return response.data;
   }
 }

@@ -284,3 +284,132 @@ export interface SetSpawnRatesResponse {
 
 // Visualization types
 export type MapViewMode = 'speed' | 'density';
+
+// Traffic Data Types (Phase 3)
+export interface TrafficProfile {
+  id: number;
+  name: string;
+  description: string;
+  isActive: boolean;
+}
+
+export interface FlowRate {
+  roadId: number;
+  lane: number;
+  vehiclesPerMinute: number;
+}
+
+export interface SpawningStatus {
+  active: boolean;
+  activeProfile: string;
+  flowRateCount: number;
+}
+
+export interface TrafficProfilesResponse {
+  success: boolean;
+  data: {
+    profiles: TrafficProfile[];
+  };
+}
+
+export interface FlowRatesResponse {
+  success: boolean;
+  data: {
+    activeProfile: string;
+    flowRates: FlowRate[];
+  };
+}
+
+// Continuous Optimization Types (Phase 4)
+export interface TimingTransition {
+  roadId: number;
+  lane: number;
+  startGreen: number;
+  endGreen: number;
+  currentGreen: number;
+  startRed: number;
+  endRed: number;
+  currentRed: number;
+  progress: number;
+  isComplete: boolean;
+}
+
+export interface ContinuousOptimizationConfig {
+  optimizationIntervalSeconds: number;
+  transitionDurationSeconds: number;
+  populationSize: number;
+  generations: number;
+  simulationSteps?: number;
+  dt?: number;
+  minGreenTime?: number;
+  maxGreenTime?: number;
+  minRedTime?: number;
+  maxRedTime?: number;
+}
+
+export interface ContinuousOptimizationStatus {
+  running: boolean;
+  totalOptimizationRuns: number;
+  successfulOptimizations: number;
+  lastImprovementPercent: number;
+  secondsSinceLastOptimization: number;
+  nextOptimizationIn: number;
+  activeTransitions: TimingTransition[];
+  config: ContinuousOptimizationConfig;
+}
+
+// Travel Time Types (Phase 5)
+export interface ODPair {
+  id: number;
+  originRoadId: number;
+  destinationRoadId: number;
+  name: string;
+  description: string;
+}
+
+export interface TravelTimeSample {
+  odPairId: number;
+  vehicleId: number;
+  travelTimeSeconds: number;
+  startTime: number;
+  endTime: number;
+}
+
+export interface TravelTimeStats {
+  odPairId: number;
+  avgTime: number;
+  minTime: number;
+  maxTime: number;
+  p50Time: number;
+  p95Time: number;
+  sampleCount: number;
+}
+
+// System Health Types (Production)
+export interface SystemHealth {
+  status: string;
+  service: string;
+  version: string;
+  uptime_seconds: number;
+  simulation: {
+    running: boolean;
+    continuous_mode: boolean;
+    steps: number;
+    time: number;
+    crash_recovery_count: number;
+  };
+  database: {
+    connected: boolean;
+  };
+  optimization: {
+    controller_active: boolean;
+    continuous_active: boolean;
+    continuous_running: boolean;
+  };
+  simulator: {
+    initialized: boolean;
+    road_count?: number;
+    total_vehicles?: number;
+  };
+  timestamp: number;
+}

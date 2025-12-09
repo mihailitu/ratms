@@ -571,15 +571,15 @@ export default function MapView() {
               {/* Traffic lights always shown */}
               <div>
                 <span className="inline-block w-3 h-3 rounded-full bg-green-500 border-2 border-black mr-2"></span>
-                Green traffic lights
+                Green
               </div>
               <div>
                 <span className="inline-block w-3 h-3 rounded-full bg-yellow-500 border-2 border-black mr-2"></span>
-                Yellow traffic lights
+                Yellow
               </div>
               <div>
                 <span className="inline-block w-3 h-3 rounded-full bg-red-500 border-2 border-black mr-2"></span>
-                Red traffic lights
+                Red
               </div>
             </div>
             <p className="mt-3">

@@ -31,6 +31,9 @@ export default function Layout({ children }: LayoutProps) {
                 <Link to="/" className={navLinkClass('/')}>
                   Dashboard
                 </Link>
+                <Link to="/production" className={navLinkClass('/production')}>
+                  Production
+                </Link>
                 <Link to="/simulations" className={navLinkClass('/simulations')}>
                   Simulations
                 </Link>

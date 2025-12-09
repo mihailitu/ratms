@@ -6,6 +6,7 @@ import SimulationDetail from './pages/SimulationDetail';
 import MapView from './pages/MapView';
 import Optimization from './pages/Optimization';
 import Analytics from './pages/Analytics';
+import ProductionDashboard from './pages/ProductionDashboard';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/production" element={<ProductionDashboard />} />
           <Route path="/simulations" element={<Simulations />} />
           <Route path="/simulations/:id" element={<SimulationDetail />} />
           <Route path="/map" element={<MapView />} />
