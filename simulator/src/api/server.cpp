@@ -145,6 +145,10 @@ void Server::setDatabase(std::shared_ptr<data::DatabaseManager> db) {
         // Initialize traffic profile service
         profile_service_ = std::make_unique<TrafficProfileService>(database_, simulator_, sim_mutex_);
         LOG_INFO(LogComponent::API, "Traffic profile service initialized");
+
+        // Initialize travel time collector
+        travel_time_collector_ = std::make_shared<metrics::TravelTimeCollector>(database_);
+        LOG_INFO(LogComponent::API, "Travel time collector initialized");
     }
 }
 
@@ -330,6 +334,35 @@ void Server::setupRoutes() {
 
     http_server_.Post("/api/profiles/import", [this](const httplib::Request& req, httplib::Response& res) {
         handleImportProfile(req, res);
+    });
+
+    // Travel time endpoints
+    http_server_.Get("/api/travel-time/od-pairs", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetODPairs(req, res);
+    });
+
+    http_server_.Post("/api/travel-time/od-pairs", [this](const httplib::Request& req, httplib::Response& res) {
+        handleCreateODPair(req, res);
+    });
+
+    http_server_.Delete(R"(/api/travel-time/od-pairs/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
+        handleDeleteODPair(req, res);
+    });
+
+    http_server_.Get("/api/travel-time/stats", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetTravelTimeStats(req, res);
+    });
+
+    http_server_.Get(R"(/api/travel-time/stats/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetODPairStats(req, res);
+    });
+
+    http_server_.Get(R"(/api/travel-time/samples/(\d+))", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetTravelTimeSamples(req, res);
+    });
+
+    http_server_.Get("/api/travel-time/tracked", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetTrackedVehicles(req, res);
     });
 
     // Register optimization routes if controller is initialized
@@ -892,6 +925,11 @@ void Server::runSimulationLoop() {
                 std::lock_guard<std::mutex> lock(sim_mutex_);
                 if (simulator_) {
                     metricsCollector.collectMetrics(simulator_->cityMap, dt);
+
+                    // Update travel time tracking
+                    if (travel_time_collector_) {
+                        travel_time_collector_->update(simulator_->cityMap, dt);
+                    }
                 }
             }
 
@@ -2456,6 +2494,277 @@ void Server::handleImportProfile(const httplib::Request& req, httplib::Response&
 
     } catch (const std::exception& e) {
         sendError(res, 500, std::string("Error importing profile: ") + e.what());
+    }
+}
+
+// ============================================================================
+// Travel Time Handlers
+// ============================================================================
+
+void Server::handleGetODPairs(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!travel_time_collector_) {
+        sendError(res, 503, "Travel time collector not initialized");
+        return;
+    }
+
+    try {
+        auto odPairs = travel_time_collector_->getAllODPairs();
+
+        json pairsJson = json::array();
+        for (const auto& pair : odPairs) {
+            pairsJson.push_back({
+                {"id", pair.id},
+                {"originRoadId", pair.originRoadId},
+                {"destinationRoadId", pair.destinationRoadId},
+                {"name", pair.name},
+                {"description", pair.description}
+            });
+        }
+
+        json response = {
+            {"odPairs", pairsJson},
+            {"count", odPairs.size()}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error getting O-D pairs: ") + e.what());
+    }
+}
+
+void Server::handleCreateODPair(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!travel_time_collector_) {
+        sendError(res, 503, "Travel time collector not initialized");
+        return;
+    }
+
+    try {
+        json body = json::parse(req.body);
+
+        int originRoadId = body.value("originRoadId", -1);
+        int destinationRoadId = body.value("destinationRoadId", -1);
+        std::string name = body.value("name", "");
+        std::string description = body.value("description", "");
+
+        if (originRoadId < 0 || destinationRoadId < 0) {
+            sendError(res, 400, "originRoadId and destinationRoadId are required");
+            return;
+        }
+
+        int odPairId = travel_time_collector_->addODPair(originRoadId, destinationRoadId, name, description);
+
+        LOG_INFO(LogComponent::API, "Created O-D pair {}: {} -> {}", odPairId, originRoadId, destinationRoadId);
+
+        json response = {
+            {"success", true},
+            {"id", odPairId},
+            {"originRoadId", originRoadId},
+            {"destinationRoadId", destinationRoadId},
+            {"name", name.empty() ? "Road " + std::to_string(originRoadId) + " -> " + std::to_string(destinationRoadId) : name}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 201;
+
+    } catch (const json::exception& e) {
+        sendError(res, 400, std::string("Invalid JSON: ") + e.what());
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error creating O-D pair: ") + e.what());
+    }
+}
+
+void Server::handleDeleteODPair(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!travel_time_collector_) {
+        sendError(res, 503, "Travel time collector not initialized");
+        return;
+    }
+
+    try {
+        int odPairId = std::stoi(req.matches[1]);
+
+        travel_time_collector_->removeODPair(odPairId);
+
+        LOG_INFO(LogComponent::API, "Deleted O-D pair {}", odPairId);
+
+        json response = {
+            {"success", true},
+            {"message", "O-D pair deleted"}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error deleting O-D pair: ") + e.what());
+    }
+}
+
+void Server::handleGetTravelTimeStats(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!travel_time_collector_) {
+        sendError(res, 503, "Travel time collector not initialized");
+        return;
+    }
+
+    try {
+        auto allStats = travel_time_collector_->getAllStats();
+
+        json statsJson = json::array();
+        for (const auto& stats : allStats) {
+            statsJson.push_back({
+                {"odPairId", stats.odPairId},
+                {"avgTime", stats.avgTime},
+                {"minTime", stats.minTime},
+                {"maxTime", stats.maxTime},
+                {"p50Time", stats.p50Time},
+                {"p95Time", stats.p95Time},
+                {"sampleCount", stats.sampleCount}
+            });
+        }
+
+        json response = {
+            {"stats", statsJson},
+            {"count", allStats.size()}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error getting travel time stats: ") + e.what());
+    }
+}
+
+void Server::handleGetODPairStats(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!travel_time_collector_) {
+        sendError(res, 503, "Travel time collector not initialized");
+        return;
+    }
+
+    try {
+        int odPairId = std::stoi(req.matches[1]);
+
+        auto stats = travel_time_collector_->getStats(odPairId);
+        auto pair = travel_time_collector_->getODPair(odPairId);
+
+        if (pair.id <= 0) {
+            sendError(res, 404, "O-D pair not found");
+            return;
+        }
+
+        json response = {
+            {"odPair", {
+                {"id", pair.id},
+                {"originRoadId", pair.originRoadId},
+                {"destinationRoadId", pair.destinationRoadId},
+                {"name", pair.name},
+                {"description", pair.description}
+            }},
+            {"stats", {
+                {"avgTime", stats.avgTime},
+                {"minTime", stats.minTime},
+                {"maxTime", stats.maxTime},
+                {"p50Time", stats.p50Time},
+                {"p95Time", stats.p95Time},
+                {"sampleCount", stats.sampleCount}
+            }}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error getting O-D pair stats: ") + e.what());
+    }
+}
+
+void Server::handleGetTravelTimeSamples(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!travel_time_collector_) {
+        sendError(res, 503, "Travel time collector not initialized");
+        return;
+    }
+
+    try {
+        int odPairId = std::stoi(req.matches[1]);
+        int limit = 100;
+
+        if (req.has_param("limit")) {
+            limit = std::stoi(req.get_param_value("limit"));
+            if (limit < 1) limit = 1;
+            if (limit > 1000) limit = 1000;
+        }
+
+        auto samples = travel_time_collector_->getRecentSamples(odPairId, limit);
+
+        json samplesJson = json::array();
+        for (const auto& sample : samples) {
+            samplesJson.push_back({
+                {"odPairId", sample.odPairId},
+                {"vehicleId", sample.vehicleId},
+                {"travelTimeSeconds", sample.travelTimeSeconds},
+                {"startTime", sample.startTime},
+                {"endTime", sample.endTime}
+            });
+        }
+
+        json response = {
+            {"samples", samplesJson},
+            {"count", samples.size()},
+            {"odPairId", odPairId}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error getting travel time samples: ") + e.what());
+    }
+}
+
+void Server::handleGetTrackedVehicles(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!travel_time_collector_) {
+        sendError(res, 503, "Travel time collector not initialized");
+        return;
+    }
+
+    try {
+        auto trackedVehicles = travel_time_collector_->getTrackedVehicles();
+
+        json vehiclesJson = json::array();
+        for (const auto& vehicle : trackedVehicles) {
+            vehiclesJson.push_back({
+                {"vehicleId", vehicle.vehicleId},
+                {"odPairId", vehicle.odPairId},
+                {"originRoadId", vehicle.originRoadId},
+                {"destinationRoadId", vehicle.destinationRoadId}
+            });
+        }
+
+        json response = {
+            {"trackedVehicles", vehiclesJson},
+            {"count", trackedVehicles.size()}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error getting tracked vehicles: ") + e.what());
     }
 }
 

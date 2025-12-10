@@ -753,6 +753,74 @@ struct RolloutState {
 3. If regression > threshold: auto-rollback
 4. After monitoring duration (5 minutes): mark rollout complete
 
+### 15. TravelTimeCollector (`metrics/travel_time_collector.h/cpp`)
+
+Tracks vehicle travel times between Origin-Destination (O-D) pairs for route performance analysis.
+
+**Key Structures:**
+```cpp
+struct ODPair {
+    int id;
+    int originRoadId;
+    int destinationRoadId;
+    std::string name;
+    std::string description;
+};
+
+struct TravelTimeSample {
+    int odPairId;
+    int vehicleId;
+    double travelTimeSeconds;
+    long startTime;
+    long endTime;
+};
+
+struct TravelTimeStats {
+    int odPairId;
+    double avgTime, minTime, maxTime;
+    double p50Time, p95Time;  // Percentiles
+    int sampleCount;
+};
+```
+
+**Key Methods:**
+```cpp
+class TravelTimeCollector {
+public:
+    // O-D pair management
+    int addODPair(int originRoadId, int destinationRoadId, const std::string& name = "");
+    void removeODPair(int odPairId);
+    std::vector<ODPair> getAllODPairs() const;
+
+    // Called each simulation step to track vehicles
+    void update(const simulator::Simulator::CityMap& cityMap, double dt);
+
+    // Get statistics
+    TravelTimeStats getStats(int odPairId) const;
+    std::vector<TravelTimeStats> getAllStats() const;
+    std::vector<TravelTimeSample> getRecentSamples(int odPairId, int limit = 100) const;
+
+    // Get tracked vehicles
+    std::vector<TrackedVehicle> getTrackedVehicles() const;
+};
+```
+
+**API Endpoints:**
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/travel-time/od-pairs | List all O-D pairs |
+| POST | /api/travel-time/od-pairs | Create new O-D pair |
+| DELETE | /api/travel-time/od-pairs/:id | Delete O-D pair |
+| GET | /api/travel-time/stats | Get stats for all O-D pairs |
+| GET | /api/travel-time/stats/:id | Get stats for specific O-D pair |
+| GET | /api/travel-time/samples/:id | Get recent samples for O-D pair |
+| GET | /api/travel-time/tracked | Get currently tracked vehicles |
+
+**Algorithm:**
+1. Vehicles entering an origin road are tracked
+2. When tracked vehicle reaches destination road, travel time is recorded
+3. Statistics are calculated from accumulated samples (avg, min, max, percentiles)
+
 ## Frontend Architecture
 
 ### React + TypeScript Structure

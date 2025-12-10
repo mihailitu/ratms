@@ -5,6 +5,7 @@
 #include "../core/simulator.h"
 #include "../data/storage/database_manager.h"
 #include "../data/storage/traffic_pattern_storage.h"
+#include "../metrics/travel_time_collector.h"
 #include <memory>
 #include <string>
 #include <atomic>
@@ -146,6 +147,15 @@ private:
     void handleExportProfile(const httplib::Request& req, httplib::Response& res);
     void handleImportProfile(const httplib::Request& req, httplib::Response& res);
 
+    // Travel time handlers
+    void handleGetODPairs(const httplib::Request& req, httplib::Response& res);
+    void handleCreateODPair(const httplib::Request& req, httplib::Response& res);
+    void handleDeleteODPair(const httplib::Request& req, httplib::Response& res);
+    void handleGetTravelTimeStats(const httplib::Request& req, httplib::Response& res);
+    void handleGetODPairStats(const httplib::Request& req, httplib::Response& res);
+    void handleGetTravelTimeSamples(const httplib::Request& req, httplib::Response& res);
+    void handleGetTrackedVehicles(const httplib::Request& req, httplib::Response& res);
+
     // Middleware
     void corsMiddleware(const httplib::Request& req, httplib::Response& res);
     void loggingMiddleware(const httplib::Request& req, httplib::Response& res);
@@ -171,6 +181,9 @@ private:
     std::shared_ptr<data::TrafficPatternStorage> pattern_storage_;
     std::chrono::steady_clock::time_point last_snapshot_time_;
     int pattern_snapshot_interval_seconds_{60};  // Default: record every 60 seconds
+
+    // Travel time collection
+    std::shared_ptr<metrics::TravelTimeCollector> travel_time_collector_;
 
     // Simulation thread management
     std::unique_ptr<std::thread> simulation_thread_;

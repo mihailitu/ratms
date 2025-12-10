@@ -38,6 +38,7 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 | 25 | Dashboard Enhancements | Config panels, forecast comparison, predictive mode toggle |
 | 26 | Continuous Simulation Mode | Pause/resume, continuous mode toggle, configurable step limit |
 | 27 | Traffic Profiles | JSON-based profile system with spawn rates and traffic light timings |
+| 28 | Travel Time Metrics | O-D pair tracking, travel time stats (avg/min/max/p50/p95) |
 
 ## Current Features
 
@@ -63,6 +64,9 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 - Enhanced health endpoint with detailed simulation status
 - Traffic profile management (create, apply, capture, import/export)
 - JSON-based profile format with spawn rates and traffic light timings
+- Travel time tracking for Origin-Destination pairs
+- Travel time statistics (avg, min, max, P50, P95) per O-D pair
+- TravelTimePanel UI for monitoring route performance
 - Analytics with percentile statistics (P25, P50, P75, P95)
 - Comprehensive E2E test coverage
 - Build system with dependency installation script
@@ -127,6 +131,13 @@ cd frontend && npm run test:e2e
 | POST | /api/profiles/capture | Capture current state as profile |
 | GET | /api/profiles/:nameOrId/export | Export profile as JSON |
 | POST | /api/profiles/import | Import profile from JSON |
+| GET | /api/travel-time/od-pairs | List O-D pairs |
+| POST | /api/travel-time/od-pairs | Create O-D pair |
+| DELETE | /api/travel-time/od-pairs/:id | Delete O-D pair |
+| GET | /api/travel-time/stats | Get all travel time stats |
+| GET | /api/travel-time/stats/:id | Get stats for O-D pair |
+| GET | /api/travel-time/samples/:id | Get travel time samples |
+| GET | /api/travel-time/tracked | Get tracked vehicles |
 
 ## File Structure
 
@@ -138,13 +149,14 @@ ratms/
 │   ├── optimization/   # GeneticAlgorithm, Metrics
 │   ├── prediction/     # TrafficPredictor
 │   ├── validation/     # TimingValidator
+│   ├── metrics/        # TravelTimeCollector
 │   ├── data/storage/   # DatabaseManager, TrafficPatternStorage
 │   ├── utils/          # Logger, Config
 │   └── tests/          # Test networks
 ├── simulator/data/profiles/  # Default JSON profile templates
 ├── frontend/src/
 │   ├── pages/          # Dashboard, Map, Optimization, Analytics, Statistics
-│   ├── components/     # PipelineStatusIndicator, ProfilePanel, ConfigPanels
+│   ├── components/     # PipelineStatusIndicator, ProfilePanel, TravelTimePanel, ConfigPanels
 │   ├── services/       # API client
 │   └── types/          # TypeScript interfaces
 ├── database/migrations/
@@ -183,7 +195,7 @@ See [docs/PRODUCTION_PLAN.md](docs/PRODUCTION_PLAN.md) for full 8-stage plan.
 | 5 | Traffic profiles (JSON-based) | **Complete** |
 | 6 | Gradual timing blending | **Complete** |
 | 7 | Continuous background optimization | **Complete** |
-| 8 | Travel time metrics & dashboard | Pending |
+| 8 | Travel time metrics & dashboard | **Complete** |
 
 ## Predictive Optimization Plan
 
@@ -206,4 +218,4 @@ Component-based logging with spdlog:
 
 ---
 
-**Status:** Production-ready with 157 E2E tests. Predictive optimization plan complete (all 6 phases). Production System Plan Stage 4 (Continuous Simulation Mode) complete.
+**Status:** Production-ready with 157 E2E tests. Predictive optimization plan complete (all 6 phases). Production System Plan complete (all 8 stages).

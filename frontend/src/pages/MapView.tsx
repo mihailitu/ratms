@@ -7,6 +7,7 @@ import { useSimulationStream } from '../hooks/useSimulationStream';
 import TrafficLightPanel from '../components/TrafficLightPanel';
 import SpawnRatePanel from '../components/SpawnRatePanel';
 import ProfilePanel from '../components/ProfilePanel';
+import TravelTimePanel from '../components/TravelTimePanel';
 
 export default function MapView() {
   const mapRef = useRef<L.Map | null>(null);
@@ -24,6 +25,7 @@ export default function MapView() {
   const [trafficLightPanelOpen, setTrafficLightPanelOpen] = useState(false);
   const [spawnRatePanelOpen, setSpawnRatePanelOpen] = useState(false);
   const [profilePanelOpen, setProfilePanelOpen] = useState(false);
+  const [travelTimePanelOpen, setTravelTimePanelOpen] = useState(false);
 
   // Subscribe to simulation stream
   const { latestUpdate, isConnected, error: streamError } = useSimulationStream(streamEnabled);
@@ -491,6 +493,16 @@ export default function MapView() {
               >
                 Profiles
               </button>
+              <button
+                onClick={() => setTravelTimePanelOpen(!travelTimePanelOpen)}
+                className={`px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                  travelTimePanelOpen
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Travel Times
+              </button>
             </div>
           </div>
 
@@ -616,6 +628,11 @@ export default function MapView() {
       <ProfilePanel
         isOpen={profilePanelOpen}
         onToggle={() => setProfilePanelOpen(!profilePanelOpen)}
+      />
+      <TravelTimePanel
+        isOpen={travelTimePanelOpen}
+        onToggle={() => setTravelTimePanelOpen(!travelTimePanelOpen)}
+        roads={roads}
       />
     </div>
   );

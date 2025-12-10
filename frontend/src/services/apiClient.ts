@@ -39,6 +39,9 @@ import type {
   CreateProfileRequest,
   CaptureProfileRequest,
   ProfileImportExportFormat,
+  ODPair,
+  TravelTimeSample,
+  TravelTimeStats,
 } from '../types/api';
 
 class ApiClient {
@@ -381,6 +384,50 @@ class ApiClient {
 
   async importProfile(profile: ProfileImportExportFormat): Promise<{ success: boolean; id: number; name: string; message: string }> {
     const response = await this.client.post('/api/profiles/import', profile);
+    return response.data;
+  }
+
+  // Travel Time API (Stage 8)
+  async getODPairs(): Promise<{ success: boolean; odPairs: ODPair[]; count: number }> {
+    const response = await this.client.get('/api/travel-time/od-pairs');
+    return response.data;
+  }
+
+  async createODPair(originRoadId: number, destinationRoadId: number, name?: string, description?: string): Promise<{ success: boolean; id: number; message: string }> {
+    const response = await this.client.post('/api/travel-time/od-pairs', {
+      originRoadId,
+      destinationRoadId,
+      name: name || '',
+      description: description || ''
+    });
+    return response.data;
+  }
+
+  async deleteODPair(odPairId: number): Promise<{ success: boolean; message: string }> {
+    const response = await this.client.delete(`/api/travel-time/od-pairs/${odPairId}`);
+    return response.data;
+  }
+
+  async getAllTravelTimeStats(): Promise<{ success: boolean; stats: TravelTimeStats[]; count: number }> {
+    const response = await this.client.get('/api/travel-time/stats');
+    return response.data;
+  }
+
+  async getTravelTimeStats(odPairId: number): Promise<{ success: boolean; stats: TravelTimeStats }> {
+    const response = await this.client.get(`/api/travel-time/stats/${odPairId}`);
+    return response.data;
+  }
+
+  async getTravelTimeSamples(odPairId: number, limit?: number): Promise<{ success: boolean; samples: TravelTimeSample[]; count: number }> {
+    const url = limit
+      ? `/api/travel-time/samples/${odPairId}?limit=${limit}`
+      : `/api/travel-time/samples/${odPairId}`;
+    const response = await this.client.get(url);
+    return response.data;
+  }
+
+  async getTrackedVehicles(): Promise<{ success: boolean; vehicles: Array<{ vehicleId: number; odPairId: number; originRoadId: number; destinationRoadId: number; startTime: number }>; count: number }> {
+    const response = await this.client.get('/api/travel-time/tracked');
     return response.data;
   }
 }
