@@ -345,6 +345,8 @@ export interface ContinuousOptimizationConfig {
   maxGreenTime?: number;
   minRedTime?: number;
   maxRedTime?: number;
+  usePrediction?: boolean;
+  predictionHorizonMinutes?: number;
 }
 
 export interface ContinuousOptimizationStatus {

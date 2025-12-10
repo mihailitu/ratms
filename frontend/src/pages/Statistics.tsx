@@ -4,6 +4,9 @@ import type { PredictionResult, ValidationConfig, RolloutState, ContinuousOptimi
 import PipelineStatusIndicator from '../components/PipelineStatusIndicator';
 import RolloutMonitor from '../components/RolloutMonitor';
 import PredictionConfidenceChart from '../components/PredictionConfidenceChart';
+import PredictionConfigPanel from '../components/PredictionConfigPanel';
+import ValidationConfigPanel from '../components/ValidationConfigPanel';
+import ForecastComparison from '../components/ForecastComparison';
 
 interface ConfidenceHistoryPoint {
   timestamp: number;
@@ -32,6 +35,7 @@ export default function Statistics() {
 
   const [confidenceHistory, setConfidenceHistory] = useState<ConfidenceHistoryPoint[]>([]);
   const [isRollingBack, setIsRollingBack] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'forecast' | 'config'>('overview');
 
   const fetchData = useCallback(async () => {
     try {
@@ -127,11 +131,45 @@ export default function Statistics() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Statistics Dashboard</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Real-time metrics for predictive optimization
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Statistics Dashboard</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Real-time metrics for predictive optimization
+          </p>
+        </div>
+        <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'overview'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('forecast')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'forecast'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            Forecast
+          </button>
+          <button
+            onClick={() => setActiveTab('config')}
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === 'config'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            Configuration
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -140,7 +178,68 @@ export default function Statistics() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {activeTab === 'config' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <PredictionConfigPanel onConfigChange={fetchData} />
+          <ValidationConfigPanel onConfigChange={fetchData} />
+        </div>
+      )}
+
+      {activeTab === 'forecast' && (
+        <div className="space-y-6">
+          <ForecastComparison />
+          {prediction && prediction.roadPredictions && prediction.roadPredictions.length > 0 && (
+            <div className="bg-white rounded-lg shadow p-4">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Road Predictions
+                <span className="text-sm font-normal text-gray-500 ml-2">
+                  ({prediction.roadPredictions.length} roads)
+                </span>
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Road</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Vehicles</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Queue</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Avg Speed</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Confidence</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {prediction.roadPredictions.slice(0, 20).map(road => (
+                      <tr key={road.roadId}>
+                        <td className="px-3 py-2 text-sm text-gray-900">Road {road.roadId}</td>
+                        <td className="px-3 py-2 text-sm text-gray-700">{road.vehicleCount.toFixed(1)}</td>
+                        <td className="px-3 py-2 text-sm text-gray-700">{road.queueLength.toFixed(1)}</td>
+                        <td className="px-3 py-2 text-sm text-gray-700">{road.avgSpeed.toFixed(1)} m/s</td>
+                        <td className="px-3 py-2 text-sm">
+                          <span className={`font-medium ${
+                            road.confidence >= 0.7 ? 'text-green-600' :
+                            road.confidence >= 0.4 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {(road.confidence * 100).toFixed(0)}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {prediction.roadPredictions.length > 20 && (
+                  <p className="text-xs text-gray-500 mt-2 px-3">
+                    Showing 20 of {prediction.roadPredictions.length} roads
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'overview' && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
           <div className="text-sm text-gray-500">Prediction Confidence</div>
           <div className="text-2xl font-bold text-blue-600">
@@ -259,52 +358,7 @@ export default function Statistics() {
           )}
         </div>
       )}
-
-      {prediction && prediction.roadPredictions && prediction.roadPredictions.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Road Predictions
-            <span className="text-sm font-normal text-gray-500 ml-2">
-              ({prediction.roadPredictions.length} roads)
-            </span>
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Road</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Vehicles</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Queue</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Avg Speed</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Confidence</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {prediction.roadPredictions.slice(0, 10).map(road => (
-                  <tr key={road.roadId}>
-                    <td className="px-3 py-2 text-sm text-gray-900">Road {road.roadId}</td>
-                    <td className="px-3 py-2 text-sm text-gray-700">{road.vehicleCount.toFixed(1)}</td>
-                    <td className="px-3 py-2 text-sm text-gray-700">{road.queueLength.toFixed(1)}</td>
-                    <td className="px-3 py-2 text-sm text-gray-700">{road.avgSpeed.toFixed(1)} m/s</td>
-                    <td className="px-3 py-2 text-sm">
-                      <span className={`font-medium ${
-                        road.confidence >= 0.7 ? 'text-green-600' :
-                        road.confidence >= 0.4 ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {(road.confidence * 100).toFixed(0)}%
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {prediction.roadPredictions.length > 10 && (
-              <p className="text-xs text-gray-500 mt-2 px-3">
-                Showing 10 of {prediction.roadPredictions.length} roads
-              </p>
-            )}
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

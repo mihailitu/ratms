@@ -35,6 +35,7 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 | 22 | Predictive Optimizer | PredictiveOptimizer runs GA on predicted future traffic state |
 | 23 | Validation & Rollout | TimingValidator, RolloutMonitor, auto-rollback on regression |
 | 24 | Statistics Dashboard | Prediction confidence, rollout monitoring, pipeline status UI |
+| 25 | Dashboard Enhancements | Config panels, forecast comparison, predictive mode toggle |
 
 ## Current Features
 
@@ -52,6 +53,9 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 - Timing validation before applying optimizations
 - Rollout monitoring with auto-rollback on regression
 - Statistics dashboard with prediction confidence and pipeline status
+- Prediction/validation configuration panels with live editing
+- Forecast comparison with chart and table views
+- Predictive mode toggle for continuous optimization
 - Analytics with percentile statistics (P25, P50, P75, P95)
 - Comprehensive E2E test coverage
 - Build system with dependency installation script
@@ -118,7 +122,7 @@ ratms/
 │   └── tests/          # Test networks
 ├── frontend/src/
 │   ├── pages/          # Dashboard, Map, Optimization, Analytics, Statistics
-│   ├── components/     # PipelineStatusIndicator, RolloutMonitor, Charts
+│   ├── components/     # PipelineStatusIndicator, RolloutMonitor, ConfigPanels, Charts
 │   ├── services/       # API client
 │   └── types/          # TypeScript interfaces
 ├── database/migrations/
@@ -168,7 +172,7 @@ See [docs/PRODUCTION_PLAN.md](docs/PRODUCTION_PLAN.md) for full 8-stage plan.
 | 3 | Predictive Optimizer | **Complete** |
 | 4 | Validation & Rollout | **Complete** |
 | 5 | Statistics Dashboard | **Complete** |
-| 6 | Dashboard Enhancements | Pending |
+| 6 | Dashboard Enhancements | **Complete** |
 
 ## Logging
 
@@ -180,4 +184,4 @@ Component-based logging with spdlog:
 
 ---
 
-**Status:** Production-ready with 157 E2E tests. Implementing predictive optimization plan (Phases 1-5 complete).
+**Status:** Production-ready with 157 E2E tests. Predictive optimization plan complete (all 6 phases).
