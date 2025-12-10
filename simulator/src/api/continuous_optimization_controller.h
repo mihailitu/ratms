@@ -8,6 +8,7 @@
 #include "../data/storage/database_manager.h"
 #include "../prediction/traffic_predictor.h"
 #include "../data/storage/traffic_pattern_storage.h"
+#include "../validation/timing_validator.h"
 #include <memory>
 #include <thread>
 #include <mutex>
@@ -21,6 +22,38 @@ namespace api {
 
 // Forward declarations
 class PredictiveOptimizer;
+
+/**
+ * @brief RolloutState - Tracks the state of a timing rollout
+ *
+ * When optimized timings are applied, we monitor the rollout to detect
+ * regressions and automatically rollback if performance degrades.
+ */
+struct RolloutState {
+    int64_t startTime = 0;              // When rollout started (0 = no active rollout)
+    int64_t endTime = 0;                // When rollout completed (0 = ongoing)
+    std::string status = "idle";        // "idle", "in_progress", "complete", "rolled_back"
+
+    // Pre-rollout baseline metrics
+    double preRolloutAvgSpeed = 0.0;
+    double preRolloutAvgQueue = 0.0;
+    double preRolloutFitness = 0.0;
+
+    // Post-rollout metrics (updated periodically)
+    double postRolloutAvgSpeed = 0.0;
+    double postRolloutAvgQueue = 0.0;
+    double postRolloutFitness = 0.0;
+    double regressionPercent = 0.0;     // Negative = improvement
+
+    // The chromosomes for rollback capability
+    simulator::Chromosome currentChromosome;
+    simulator::Chromosome previousChromosome;
+
+    // Monitoring counters
+    int updateCount = 0;                // Number of metric updates since rollout
+
+    bool isActive() const { return status == "in_progress"; }
+};
 
 /**
  * @brief TimingTransition - Represents a gradual timing change for one traffic light
@@ -94,6 +127,16 @@ public:
         // Prediction mode settings
         bool usePrediction = false;           // Use predictive optimization
         int predictionHorizonMinutes = 30;    // How far ahead to predict (10-120)
+
+        // Validation settings
+        bool enableValidation = true;         // Validate before applying
+        double validationImprovementThreshold = 5.0;  // Min improvement % to pass
+        double validationRegressionThreshold = 10.0;  // Max regression % before rejection
+
+        // Rollout monitoring settings
+        bool enableRolloutMonitoring = true;  // Monitor post-rollout metrics
+        double rolloutRegressionThreshold = 15.0;  // Auto-rollback threshold %
+        int rolloutMonitoringDurationSeconds = 300;  // 5 minutes
     };
 
     ContinuousOptimizationController(
@@ -127,6 +170,15 @@ public:
     // Update transitions (called from simulation loop)
     void updateTransitions();
 
+    // Rollout monitoring
+    RolloutState getRolloutState() const;
+    bool rollback();
+    void updateRolloutMetrics(double avgSpeed, double avgQueue);
+
+    // Validation configuration
+    validation::ValidationConfig getValidationConfig() const;
+    void setValidationConfig(const validation::ValidationConfig& config);
+
 private:
     // Route handlers
     void handleStart(const httplib::Request& req, httplib::Response& res);
@@ -135,6 +187,12 @@ private:
     void handleApply(const httplib::Request& req, httplib::Response& res);
     void handleConfig(const httplib::Request& req, httplib::Response& res);
     void handleSetConfig(const httplib::Request& req, httplib::Response& res);
+
+    // Rollout and validation route handlers
+    void handleRollback(const httplib::Request& req, httplib::Response& res);
+    void handleRolloutStatus(const httplib::Request& req, httplib::Response& res);
+    void handleValidationConfig(const httplib::Request& req, httplib::Response& res);
+    void handleSetValidationConfig(const httplib::Request& req, httplib::Response& res);
 
     // Background optimization loop
     void optimizationLoop();
@@ -175,6 +233,21 @@ private:
     // Prediction support
     std::shared_ptr<prediction::TrafficPredictor> predictor_;
     std::unique_ptr<PredictiveOptimizer> predictiveOptimizer_;
+
+    // Rollout monitoring
+    RolloutState rolloutState_;
+    mutable std::mutex rolloutMutex_;
+
+    // Validation
+    std::unique_ptr<validation::TimingValidator> validator_;
+    validation::ValidationConfig validationConfig_;
+
+    // Internal rollout helpers
+    void startRollout(const simulator::Chromosome& newChromosome,
+                      const simulator::Chromosome& previousChromosome,
+                      double preRolloutSpeed, double preRolloutQueue);
+    bool checkForRegression();
+    void completeRollout();
 };
 
 } // namespace api

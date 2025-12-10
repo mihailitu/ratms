@@ -19,7 +19,9 @@ PredictiveOptimizer::PredictiveOptimizer(
     dbManager_(dbManager),
     simulator_(simulator),
     simMutex_(simMutex) {
-    LOG_INFO(LogComponent::Optimization, "PredictiveOptimizer initialized");
+    // Initialize validator with default config
+    validator_ = std::make_unique<validation::TimingValidator>(validationConfig_);
+    LOG_INFO(LogComponent::Optimization, "PredictiveOptimizer initialized with validation support");
 }
 
 void PredictiveOptimizer::setConfig(const PredictiveOptimizerConfig& config) {
@@ -140,7 +142,39 @@ PredictiveOptimizationResult PredictiveOptimizer::runOptimization(int horizonMin
                  "GA optimization complete: baseline={:.2f}, optimized={:.2f}, improvement={:.1f}%",
                  baselineFitness, bestChromosome.fitness, result.improvementPercent);
 
-        // Stage 4: APPLYING (store result, actual application is separate)
+        // Stage 4: VALIDATING (if enabled)
+        if (validationEnabled_ && result.improvementPercent > 0) {
+            currentStatus_ = PipelineStatus::VALIDATING;
+            {
+                std::lock_guard<std::mutex> lock(statusMutex_);
+                statusMessage_ = "Validating optimized timings in simulation";
+            }
+
+            auto validationResult = performValidation(predictedNetwork, bestChromosome);
+            result.validationResult = validationResult;
+
+            LOG_INFO(LogComponent::Optimization,
+                     "Validation complete: passed={}, improvement={:.1f}%, reason={}",
+                     validationResult.passed,
+                     validationResult.improvementPercent,
+                     validationResult.reason);
+
+            if (!validationResult.passed) {
+                LOG_WARN(LogComponent::Optimization,
+                         "Validation failed, not applying optimized timings");
+                result.finalStatus = PipelineStatus::COMPLETE;
+                result.endTime = std::time(nullptr);
+                currentStatus_ = PipelineStatus::COMPLETE;
+                {
+                    std::lock_guard<std::mutex> lock(statusMutex_);
+                    statusMessage_ = "Validation failed - timings not applied";
+                }
+                totalRuns_++;
+                return result;
+            }
+        }
+
+        // Stage 5: APPLYING (store result, actual application is separate)
         currentStatus_ = PipelineStatus::APPLYING;
         {
             std::lock_guard<std::mutex> lock(statusMutex_);
@@ -609,6 +643,32 @@ double PredictiveOptimizer::calculateAccuracyScore(
 
     // Score decreases with error, clamped to [0, 1]
     return std::max(0.0, 1.0 - normalizedError);
+}
+
+// ============================================================================
+// Validation Methods
+// ============================================================================
+
+void PredictiveOptimizer::setValidationConfig(const validation::ValidationConfig& config) {
+    validationConfig_ = config;
+    if (validator_) {
+        validator_->setConfig(config);
+    }
+}
+
+validation::ValidationConfig PredictiveOptimizer::getValidationConfig() const {
+    return validationConfig_;
+}
+
+validation::ValidationResult PredictiveOptimizer::performValidation(
+    const std::vector<simulator::Road>& network,
+    const simulator::Chromosome& chromosome) {
+
+    if (!validator_) {
+        validator_ = std::make_unique<validation::TimingValidator>(validationConfig_);
+    }
+
+    return validator_->validate(network, chromosome);
 }
 
 } // namespace api

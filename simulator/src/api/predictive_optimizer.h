@@ -6,6 +6,7 @@
 #include "../optimization/metrics.h"
 #include "../core/simulator.h"
 #include "../data/storage/database_manager.h"
+#include "../validation/timing_validator.h"
 #include <memory>
 #include <mutex>
 #include <atomic>
@@ -90,6 +91,9 @@ struct PredictiveOptimizationResult {
     // Best chromosome (if optimization succeeded)
     std::optional<simulator::Chromosome> bestChromosome;
 
+    // Validation result (if validation was performed)
+    std::optional<validation::ValidationResult> validationResult;
+
     // Status
     PipelineStatus finalStatus;
     std::string errorMessage;
@@ -149,6 +153,11 @@ public:
     // Configuration
     void setConfig(const PredictiveOptimizerConfig& config);
     PredictiveOptimizerConfig getConfig() const;
+
+    // Validation configuration
+    void setValidationConfig(const validation::ValidationConfig& config);
+    validation::ValidationConfig getValidationConfig() const;
+    void setValidationEnabled(bool enabled) { validationEnabled_ = enabled; }
 
     // Run optimization (blocking)
     PredictiveOptimizationResult runOptimization();
@@ -220,6 +229,16 @@ private:
     std::atomic<int> totalRuns_{0};
     std::atomic<int> successfulRuns_{0};
     std::atomic<double> averageImprovement_{0.0};
+
+    // Validation
+    std::unique_ptr<validation::TimingValidator> validator_;
+    validation::ValidationConfig validationConfig_;
+    std::atomic<bool> validationEnabled_{true};
+
+    // Validation helper
+    validation::ValidationResult performValidation(
+        const std::vector<simulator::Road>& network,
+        const simulator::Chromosome& chromosome);
 };
 
 } // namespace api

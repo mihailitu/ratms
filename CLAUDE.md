@@ -645,7 +645,7 @@ public:
 1. PREDICTING: Get traffic prediction for T+N minutes using TrafficPredictor
 2. Create predicted network by copying current network and adjusting vehicle counts
 3. OPTIMIZING: Run GA optimization on predicted network state
-4. VALIDATING: (Future) Validate optimized timings in simulation
+4. VALIDATING: Validate optimized timings using TimingValidator
 5. APPLYING: Apply optimized timings gradually via ContinuousOptimizationController
 6. Track prediction accuracy over time for continuous improvement
 
@@ -664,6 +664,94 @@ POST /api/continuous-optimization/start
     "predictionHorizonMinutes": 30
 }
 ```
+
+### 13. TimingValidator (`validation/timing_validator.h/cpp`)
+
+Validates optimized traffic light timings before applying them to the live simulation.
+
+**Key Structures:**
+```cpp
+struct ValidationConfig {
+    int simulationSteps = 500;           // Steps to run validation simulation
+    double dt = 0.1;                     // Time step (seconds)
+    double improvementThreshold = 5.0;   // Minimum improvement % to pass
+    double regressionThreshold = 10.0;   // Max regression % before rejection
+};
+
+struct ValidationResult {
+    bool passed;                         // Whether validation passed
+    double baselineFitness;              // Fitness with current timings
+    double optimizedFitness;             // Fitness with new timings
+    double improvementPercent;           // (baseline - optimized) / baseline * 100
+    std::string reason;                  // Why it passed/failed
+    int64_t timestamp;
+};
+
+class TimingValidator {
+public:
+    explicit TimingValidator(ValidationConfig config = {});
+    ValidationResult validate(
+        const std::vector<simulator::Road>& network,
+        const simulator::Chromosome& chromosome);
+    void setConfig(const ValidationConfig& config);
+    ValidationConfig getConfig() const;
+};
+```
+
+**Algorithm:**
+1. Copy the network for baseline simulation
+2. Run baseline simulation with current timings, measure fitness
+3. Copy the network for optimized simulation
+4. Apply chromosome timings to the copy
+5. Run optimized simulation, measure fitness
+6. Compare fitness values and determine pass/fail
+
+**Validation Criteria:**
+- PASS: Improvement >= improvementThreshold OR no regression
+- PASS: Minor regression within tolerance
+- FAIL: Regression > regressionThreshold
+
+### 14. RolloutMonitor (in `ContinuousOptimizationController`)
+
+Monitors the application of optimized timings and auto-rollbacks if performance degrades.
+
+**Key Structures:**
+```cpp
+struct RolloutState {
+    int64_t startTime;
+    int64_t endTime;
+    std::string status;  // "idle", "in_progress", "complete", "rolled_back"
+
+    // Pre-rollout baseline metrics
+    double preRolloutAvgSpeed;
+    double preRolloutAvgQueue;
+    double preRolloutFitness;
+
+    // Post-rollout metrics (updated periodically)
+    double postRolloutAvgSpeed;
+    double postRolloutAvgQueue;
+    double postRolloutFitness;
+    double regressionPercent;
+
+    // Chromosomes for rollback capability
+    simulator::Chromosome currentChromosome;
+    simulator::Chromosome previousChromosome;
+};
+```
+
+**API Endpoints:**
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/optimization/rollout/status | Current rollout state |
+| POST | /api/optimization/rollback | Manual rollback to previous timings |
+| GET | /api/optimization/validation/config | Get validation config |
+| POST | /api/optimization/validation/config | Update validation config |
+
+**Rollback Algorithm:**
+1. Monitor metrics every 30 seconds after rollout starts
+2. Calculate fitness from current metrics
+3. If regression > threshold: auto-rollback
+4. After monitoring duration (5 minutes): mark rollout complete
 
 ## Frontend Architecture
 
@@ -1087,6 +1175,8 @@ curl http://localhost:8080/api/spawn-rates
 - Core: `simulator/src/core/`
 - API: `simulator/src/api/`
 - GA: `simulator/src/optimization/`
+- Prediction: `simulator/src/prediction/`
+- Validation: `simulator/src/validation/`
 - Database: `simulator/src/data/storage/`
 - Tests: `simulator/src/tests/`
 
@@ -1164,6 +1254,9 @@ cd frontend && npm run lint && npx tsc --noEmit && npm test -- --run
 - Server routes: `simulator/src/api/server.cpp:setupRoutes()`
 - Simulation loop: `simulator/src/api/server.cpp:runSimulationLoop()`
 - IDM physics: `simulator/src/core/vehicle.cpp:getNewAcceleration()`
+- Predictive optimizer: `simulator/src/api/predictive_optimizer.cpp`
+- Timing validation: `simulator/src/validation/timing_validator.cpp`
+- Continuous optimization: `simulator/src/api/continuous_optimization_controller.cpp`
 - API client: `frontend/src/services/apiClient.ts`
 - Type definitions: `frontend/src/types/api.ts`
 - Control panels: `frontend/src/components/TrafficLightPanel.tsx`, `SpawnRatePanel.tsx`

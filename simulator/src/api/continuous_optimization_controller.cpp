@@ -101,6 +101,23 @@ void ContinuousOptimizationController::registerRoutes(httplib::Server& server) {
         handleSetConfig(req, res);
     });
 
+    // Rollout and validation endpoints
+    server.Post("/api/optimization/rollback", [this](const httplib::Request& req, httplib::Response& res) {
+        handleRollback(req, res);
+    });
+
+    server.Get("/api/optimization/rollout/status", [this](const httplib::Request& req, httplib::Response& res) {
+        handleRolloutStatus(req, res);
+    });
+
+    server.Get("/api/optimization/validation/config", [this](const httplib::Request& req, httplib::Response& res) {
+        handleValidationConfig(req, res);
+    });
+
+    server.Post("/api/optimization/validation/config", [this](const httplib::Request& req, httplib::Response& res) {
+        handleSetValidationConfig(req, res);
+    });
+
     LOG_INFO(LogComponent::API, "Continuous optimization routes registered");
 }
 
@@ -678,6 +695,267 @@ std::vector<simulator::Road> ContinuousOptimizationController::copyCurrentNetwor
     }
 
     return networkCopy;
+}
+
+// ============================================================================
+// Rollout Monitoring Implementation
+// ============================================================================
+
+RolloutState ContinuousOptimizationController::getRolloutState() const {
+    std::lock_guard<std::mutex> lock(rolloutMutex_);
+    return rolloutState_;
+}
+
+void ContinuousOptimizationController::startRollout(
+    const simulator::Chromosome& newChromosome,
+    const simulator::Chromosome& previousChromosome,
+    double preRolloutSpeed,
+    double preRolloutQueue) {
+
+    std::lock_guard<std::mutex> lock(rolloutMutex_);
+
+    rolloutState_.startTime = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    rolloutState_.endTime = 0;
+    rolloutState_.status = "in_progress";
+
+    rolloutState_.preRolloutAvgSpeed = preRolloutSpeed;
+    rolloutState_.preRolloutAvgQueue = preRolloutQueue;
+    // Calculate baseline fitness from metrics
+    rolloutState_.preRolloutFitness = preRolloutQueue * 100.0 + (10.0 - preRolloutSpeed) * 0.5;
+
+    rolloutState_.postRolloutAvgSpeed = 0.0;
+    rolloutState_.postRolloutAvgQueue = 0.0;
+    rolloutState_.postRolloutFitness = 0.0;
+    rolloutState_.regressionPercent = 0.0;
+
+    rolloutState_.currentChromosome = newChromosome;
+    rolloutState_.previousChromosome = previousChromosome;
+    rolloutState_.updateCount = 0;
+
+    LOG_INFO(LogComponent::Optimization, "Rollout started: preSpeed={:.2f}, preQueue={:.2f}",
+             preRolloutSpeed, preRolloutQueue);
+}
+
+void ContinuousOptimizationController::updateRolloutMetrics(double avgSpeed, double avgQueue) {
+    std::lock_guard<std::mutex> lock(rolloutMutex_);
+
+    if (rolloutState_.status != "in_progress") return;
+
+    rolloutState_.postRolloutAvgSpeed = avgSpeed;
+    rolloutState_.postRolloutAvgQueue = avgQueue;
+    rolloutState_.postRolloutFitness = avgQueue * 100.0 + (10.0 - avgSpeed) * 0.5;
+    rolloutState_.updateCount++;
+
+    // Calculate regression (positive = worse)
+    if (rolloutState_.preRolloutFitness > 0) {
+        rolloutState_.regressionPercent =
+            (rolloutState_.postRolloutFitness - rolloutState_.preRolloutFitness) /
+            rolloutState_.preRolloutFitness * 100.0;
+    }
+
+    // Check if monitoring period is complete
+    int64_t now = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    int64_t elapsed = now - rolloutState_.startTime;
+
+    if (elapsed >= config_.rolloutMonitoringDurationSeconds) {
+        completeRollout();
+    }
+}
+
+bool ContinuousOptimizationController::checkForRegression() {
+    std::lock_guard<std::mutex> lock(rolloutMutex_);
+
+    if (rolloutState_.status != "in_progress") return false;
+
+    // Need at least a few updates before checking
+    if (rolloutState_.updateCount < 3) return false;
+
+    // Check if regression exceeds threshold
+    if (rolloutState_.regressionPercent > config_.rolloutRegressionThreshold) {
+        LOG_WARN(LogComponent::Optimization,
+                 "Regression detected: {:.1f}% (threshold: {:.1f}%)",
+                 rolloutState_.regressionPercent, config_.rolloutRegressionThreshold);
+        return true;
+    }
+
+    return false;
+}
+
+void ContinuousOptimizationController::completeRollout() {
+    // Assumes rolloutMutex_ is already held
+    rolloutState_.endTime = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    rolloutState_.status = "complete";
+
+    LOG_INFO(LogComponent::Optimization,
+             "Rollout completed: postSpeed={:.2f}, postQueue={:.2f}, regression={:.1f}%",
+             rolloutState_.postRolloutAvgSpeed, rolloutState_.postRolloutAvgQueue,
+             rolloutState_.regressionPercent);
+}
+
+bool ContinuousOptimizationController::rollback() {
+    RolloutState state;
+    {
+        std::lock_guard<std::mutex> lock(rolloutMutex_);
+        if (rolloutState_.status != "in_progress") {
+            LOG_WARN(LogComponent::Optimization, "Rollback requested but no active rollout");
+            return false;
+        }
+        state = rolloutState_;
+    }
+
+    // Apply previous chromosome
+    if (state.previousChromosome.genes.empty()) {
+        LOG_ERROR(LogComponent::Optimization, "Rollback failed: no previous chromosome stored");
+        return false;
+    }
+
+    applyChromosomeGradually(state.previousChromosome);
+
+    {
+        std::lock_guard<std::mutex> lock(rolloutMutex_);
+        rolloutState_.endTime = std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+        rolloutState_.status = "rolled_back";
+    }
+
+    LOG_INFO(LogComponent::Optimization, "Rollback completed successfully");
+    return true;
+}
+
+// ============================================================================
+// Validation Configuration
+// ============================================================================
+
+validation::ValidationConfig ContinuousOptimizationController::getValidationConfig() const {
+    return validationConfig_;
+}
+
+void ContinuousOptimizationController::setValidationConfig(
+    const validation::ValidationConfig& config) {
+    validationConfig_ = config;
+    if (validator_) {
+        validator_->setConfig(config);
+    }
+}
+
+// ============================================================================
+// Rollout and Validation Route Handlers
+// ============================================================================
+
+void ContinuousOptimizationController::handleRollback(
+    const httplib::Request& req, httplib::Response& res) {
+
+    if (rollback()) {
+        sendSuccess(res, {
+            {"message", "Rollback initiated"},
+            {"transitionDurationSeconds", config_.transitionDurationSeconds}
+        });
+    } else {
+        sendError(res, 400, "No active rollout to rollback or no previous chromosome available");
+    }
+}
+
+void ContinuousOptimizationController::handleRolloutStatus(
+    const httplib::Request& req, httplib::Response& res) {
+
+    RolloutState state = getRolloutState();
+
+    json stateJson = {
+        {"status", state.status},
+        {"startTime", state.startTime},
+        {"endTime", state.endTime},
+        {"preRollout", {
+            {"avgSpeed", state.preRolloutAvgSpeed},
+            {"avgQueue", state.preRolloutAvgQueue},
+            {"fitness", state.preRolloutFitness}
+        }},
+        {"postRollout", {
+            {"avgSpeed", state.postRolloutAvgSpeed},
+            {"avgQueue", state.postRolloutAvgQueue},
+            {"fitness", state.postRolloutFitness}
+        }},
+        {"regressionPercent", state.regressionPercent},
+        {"updateCount", state.updateCount},
+        {"hasCurrentChromosome", !state.currentChromosome.genes.empty()},
+        {"hasPreviousChromosome", !state.previousChromosome.genes.empty()},
+        {"config", {
+            {"enableRolloutMonitoring", config_.enableRolloutMonitoring},
+            {"rolloutRegressionThreshold", config_.rolloutRegressionThreshold},
+            {"rolloutMonitoringDurationSeconds", config_.rolloutMonitoringDurationSeconds}
+        }}
+    };
+
+    sendSuccess(res, stateJson);
+}
+
+void ContinuousOptimizationController::handleValidationConfig(
+    const httplib::Request& req, httplib::Response& res) {
+
+    sendSuccess(res, {
+        {"simulationSteps", validationConfig_.simulationSteps},
+        {"dt", validationConfig_.dt},
+        {"improvementThreshold", validationConfig_.improvementThreshold},
+        {"regressionThreshold", validationConfig_.regressionThreshold},
+        {"enabled", config_.enableValidation}
+    });
+}
+
+void ContinuousOptimizationController::handleSetValidationConfig(
+    const httplib::Request& req, httplib::Response& res) {
+
+    try {
+        json body = json::parse(req.body);
+
+        if (body.contains("simulationSteps")) {
+            int val = body["simulationSteps"];
+            if (val < 100 || val > 2000) {
+                sendError(res, 400, "simulationSteps must be between 100 and 2000");
+                return;
+            }
+            validationConfig_.simulationSteps = val;
+        }
+        if (body.contains("dt")) {
+            double val = body["dt"];
+            if (val < 0.01 || val > 1.0) {
+                sendError(res, 400, "dt must be between 0.01 and 1.0");
+                return;
+            }
+            validationConfig_.dt = val;
+        }
+        if (body.contains("improvementThreshold")) {
+            double val = body["improvementThreshold"];
+            if (val < 0 || val > 50) {
+                sendError(res, 400, "improvementThreshold must be between 0 and 50");
+                return;
+            }
+            validationConfig_.improvementThreshold = val;
+        }
+        if (body.contains("regressionThreshold")) {
+            double val = body["regressionThreshold"];
+            if (val < 0 || val > 50) {
+                sendError(res, 400, "regressionThreshold must be between 0 and 50");
+                return;
+            }
+            validationConfig_.regressionThreshold = val;
+        }
+        if (body.contains("enabled")) {
+            config_.enableValidation = body["enabled"].get<bool>();
+        }
+
+        // Update validator if it exists
+        if (validator_) {
+            validator_->setConfig(validationConfig_);
+        }
+
+        LOG_INFO(LogComponent::Optimization, "Validation config updated");
+        sendSuccess(res, {{"message", "Validation configuration updated"}});
+
+    } catch (const std::exception& e) {
+        sendError(res, 400, e.what());
+    }
 }
 
 } // namespace api
