@@ -9,6 +9,15 @@
 #include <chrono>
 #include <thread>
 
+// OpenMP support with fallback for non-OpenMP builds
+#ifdef _OPENMP
+    #include <omp.h>
+#else
+    inline int omp_get_max_threads() { return 1; }
+    inline int omp_get_thread_num() { return 0; }
+    inline void omp_set_num_threads(int) {}
+#endif
+
 using json = nlohmann::json;
 using namespace ratms;
 
@@ -623,7 +632,7 @@ void Server::runSimulationLoop() {
         while (!simulation_should_stop_ && simulation_steps_ < maxSteps) {
             int currentStep = simulation_steps_;
 
-            // PHASE 1: Update all roads and collect pending transitions
+            // PHASE 1: Parallel road updates with per-thread transition vectors
             std::vector<simulator::RoadTransition> pendingTransitions;
             {
                 std::lock_guard<std::mutex> lock(sim_mutex_);
@@ -632,8 +641,37 @@ void Server::runSimulationLoop() {
                     break;
                 }
 
-                for (auto& roadPair : simulator_->cityMap) {
-                    roadPair.second.update(dt, simulator_->cityMap, pendingTransitions);
+                // Convert map to vector for parallel iteration (map iterators not random-access)
+                std::vector<simulator::Road*> roadPtrs;
+                roadPtrs.reserve(simulator_->cityMap.size());
+                for (auto& [id, road] : simulator_->cityMap) {
+                    roadPtrs.push_back(&road);
+                }
+
+                // Thread-local transition storage to avoid contention
+                const int numThreads = omp_get_max_threads();
+                std::vector<std::vector<simulator::RoadTransition>> threadTransitions(numThreads);
+
+                // Pre-reserve to reduce allocations during parallel execution
+                for (auto& tv : threadTransitions) {
+                    tv.reserve(roadPtrs.size() / numThreads + 1);
+                }
+
+                // Parallel road updates - each thread writes to its own transition vector
+                #pragma omp parallel for schedule(dynamic, 50)
+                for (size_t i = 0; i < roadPtrs.size(); ++i) {
+                    int tid = omp_get_thread_num();
+                    roadPtrs[i]->update(dt, simulator_->cityMap, threadTransitions[tid]);
+                }
+
+                // Merge thread-local transitions into single vector
+                size_t totalTransitions = 0;
+                for (const auto& tv : threadTransitions) {
+                    totalTransitions += tv.size();
+                }
+                pendingTransitions.reserve(totalTransitions);
+                for (const auto& tv : threadTransitions) {
+                    pendingTransitions.insert(pendingTransitions.end(), tv.begin(), tv.end());
                 }
             }
 
@@ -1378,6 +1416,24 @@ void Server::populateRoadsWithVehicles(double density) {
 
     LOG_INFO(LogComponent::Simulation, "Pre-populated roads with {} vehicles (density={:.0f}%)",
              totalSpawned, density * 100);
+}
+
+void Server::setNumThreads(int n) {
+    num_threads_ = n;
+    if (n > 0) {
+        omp_set_num_threads(n);
+        LOG_INFO(LogComponent::Simulation, "Set thread count to {}", n);
+    } else {
+        // Auto: use hardware concurrency
+        int hw = std::thread::hardware_concurrency();
+        omp_set_num_threads(hw);
+        num_threads_ = 0;  // Keep as 0 to indicate auto mode
+        LOG_INFO(LogComponent::Simulation, "Auto thread count: {} logical cores", hw);
+    }
+}
+
+int Server::getNumThreads() const {
+    return num_threads_ > 0 ? num_threads_ : omp_get_max_threads();
 }
 
 } // namespace api

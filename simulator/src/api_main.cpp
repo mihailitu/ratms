@@ -26,9 +26,11 @@ void printUsage(const char* progName) {
   std::cout << "Options:" << std::endl;
   std::cout << "  --network <file.json>  Load road network from JSON file" << std::endl;
   std::cout << "  --port <port>          Server port (default: 8080)" << std::endl;
+  std::cout << "  --threads <n>          Number of threads for simulation (default: 0 = auto)" << std::endl;
   std::cout << "  --help                 Show this help message" << std::endl;
   std::cout << std::endl;
   std::cout << "If no network file is specified, uses default test network." << std::endl;
+  std::cout << "Thread count 0 uses all available CPU cores." << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -37,6 +39,7 @@ int main(int argc, char* argv[]) {
 
   std::string networkFile;
   int port = 8080;
+  int threads = 0;  // 0 = auto (use all CPU cores)
 
   // Parse command line arguments
   for (int i = 1; i < argc; i++) {
@@ -44,6 +47,8 @@ int main(int argc, char* argv[]) {
       networkFile = argv[++i];
     } else if (std::strcmp(argv[i], "--port") == 0 && i + 1 < argc) {
       port = std::atoi(argv[++i]);
+    } else if (std::strcmp(argv[i], "--threads") == 0 && i + 1 < argc) {
+      threads = std::atoi(argv[++i]);
     } else if (std::strcmp(argv[i], "--help") == 0) {
       printUsage(argv[0]);
       return 0;
@@ -110,6 +115,7 @@ int main(int argc, char* argv[]) {
   ratms::api::Server api_server(port);
   api_server.setSimulator(simulator);
   api_server.setDatabase(database);
+  api_server.setNumThreads(threads);  // Configure parallel simulation threads
   api_server.start();
 
   // Initialize default spawn rates for entry roads (10 vehicles/minute)

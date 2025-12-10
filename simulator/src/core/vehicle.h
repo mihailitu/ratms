@@ -3,6 +3,7 @@
 
 #include "defs.h"
 
+#include <atomic>
 #include <ostream>
 #include <vector>
 
@@ -18,7 +19,7 @@ public:
                     };
 
 private:
-    static int idGen;
+    static std::atomic<int> idGen;  // Thread-safe for parallel road updates
     int id;
     /* the length of the car.
      * We can have:

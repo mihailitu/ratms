@@ -9,7 +9,7 @@ using namespace ratms;
 namespace simulator
 {
 
-int Vehicle::idGen = 0;
+std::atomic<int> Vehicle::idGen{0};
 
 Vehicle::Vehicle( double _x_orig, double _length, double maxV, ElementType vType ) :
     length(_length), xOrig(_x_orig), xPos(_x_orig), v0(maxV), type(vType)

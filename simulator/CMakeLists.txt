@@ -74,6 +74,7 @@ add_executable(api_server ${API_SERVER_SOURCES})
 # Find required libraries
 find_package(Threads REQUIRED)
 find_package(SQLite3 REQUIRED)
+find_package(OpenMP)
 
 # Link libraries for API server
 target_link_libraries(api_server
@@ -81,6 +82,14 @@ target_link_libraries(api_server
     Threads::Threads
     SQLite::SQLite3
 )
+
+# Enable OpenMP for parallel road updates
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(api_server OpenMP::OpenMP_CXX)
+    message(STATUS "OpenMP found - parallel simulation enabled")
+else()
+    message(STATUS "OpenMP not found - simulation will run single-threaded")
+endif()
 
 # GA Optimizer executable
 set(GA_OPTIMIZER_SOURCES

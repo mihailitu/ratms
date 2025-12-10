@@ -143,6 +143,9 @@ private:
     std::atomic<int> simulation_steps_{0};
     std::atomic<double> simulation_time_{0.0};
 
+    // Parallel simulation configuration
+    int num_threads_{0};  // 0 = auto (use hardware concurrency)
+
     // Real-time streaming
     SimulationSnapshot latest_snapshot_;
     std::mutex snapshot_mutex_;
@@ -162,6 +165,10 @@ public:
     std::vector<simulator::roadID> detectEntryRoads();
     void initializeDefaultSpawnRates(double vehiclesPerMinute = 10.0);
     void populateRoadsWithVehicles(double density = 0.3);
+
+    // Thread configuration for parallel simulation
+    void setNumThreads(int n);  // Set thread count (0 = auto)
+    int getNumThreads() const;
 };
 
 } // namespace api
