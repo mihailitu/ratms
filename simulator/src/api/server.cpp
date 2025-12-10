@@ -1255,5 +1255,65 @@ void Server::processVehicleSpawning(double dt) {
     }
 }
 
+/**
+ * @brief Detect entry roads (roads with no incoming connections)
+ * @return Vector of road IDs that are network entry points
+ *
+ * An entry road is one that no other road connects to.
+ * These are the natural spawn points for vehicles entering the network.
+ */
+std::vector<int> Server::detectEntryRoads() {
+    std::lock_guard<std::mutex> lock(sim_mutex_);
+
+    if (!simulator_) {
+        return {};
+    }
+
+    // Build set of all roads that are connection targets
+    std::set<int> hasIncoming;
+    for (const auto& [roadId, road] : simulator_->cityMap) {
+        // Check all lanes for outgoing connections
+        const auto& connections = road.getConnections();
+        for (size_t lane = 0; lane < connections.size(); lane++) {
+            for (const auto& [targetId, prob] : connections[lane]) {
+                hasIncoming.insert(static_cast<int>(targetId));
+            }
+        }
+    }
+
+    // Entry roads = roads NOT in hasIncoming set
+    std::vector<int> entryRoads;
+    for (const auto& [roadId, road] : simulator_->cityMap) {
+        if (hasIncoming.find(static_cast<int>(roadId)) == hasIncoming.end()) {
+            entryRoads.push_back(static_cast<int>(roadId));
+        }
+    }
+
+    return entryRoads;
+}
+
+/**
+ * @brief Initialize default spawn rates for all entry roads
+ * @param vehiclesPerMinute - Spawn rate to apply to each entry road
+ *
+ * Automatically detects entry roads (roads with no incoming connections)
+ * and sets a spawn rate for each. This enables automatic vehicle spawning
+ * when loading map files.
+ */
+void Server::initializeDefaultSpawnRates(double vehiclesPerMinute) {
+    auto entryRoads = detectEntryRoads();
+
+    {
+        std::lock_guard<std::mutex> lock(spawn_mutex_);
+
+        for (int roadId : entryRoads) {
+            spawn_rates_[roadId] = SpawnRate{roadId, vehiclesPerMinute, 0.0};
+        }
+    }
+
+    std::cout << "[Server] Initialized spawn rates for " << entryRoads.size()
+              << " entry roads at " << vehiclesPerMinute << " vehicles/minute each" << std::endl;
+}
+
 } // namespace api
 } // namespace ratms

@@ -10,6 +10,8 @@
 #include <thread>
 #include <mutex>
 #include <map>
+#include <set>
+#include <vector>
 
 namespace ratms {
 namespace api {
@@ -154,6 +156,11 @@ private:
     std::map<int, SpawnRate> spawn_rates_;  // roadId -> spawn rate config
     std::mutex spawn_mutex_;
     void processVehicleSpawning(double dt);
+
+public:
+    // Entry road detection and auto-spawn initialization
+    std::vector<int> detectEntryRoads();
+    void initializeDefaultSpawnRates(double vehiclesPerMinute = 10.0);
 };
 
 } // namespace api

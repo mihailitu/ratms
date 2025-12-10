@@ -1,0 +1,80 @@
+{
+  "version": "1.0",
+  "description": "Mock historical traffic patterns for RATMS. These profiles can be extended with real traffic data in the future.",
+  "defaultProfile": "midday",
+  "baseRateVehiclesPerMinute": 10.0,
+  "profiles": [
+    {
+      "name": "morning_rush",
+      "description": "Morning rush hour (7-9 AM) - Heavy commuter traffic",
+      "hours": [7, 8, 9],
+      "rateMultiplier": 1.5,
+      "characteristics": {
+        "avgSpeed": "slow",
+        "congestionLevel": "high",
+        "typicalDuration": "2-3 hours"
+      }
+    },
+    {
+      "name": "midday",
+      "description": "Midday traffic (10 AM - 4 PM) - Normal flow",
+      "hours": [10, 11, 12, 13, 14, 15, 16],
+      "rateMultiplier": 1.0,
+      "characteristics": {
+        "avgSpeed": "normal",
+        "congestionLevel": "moderate",
+        "typicalDuration": "6 hours"
+      }
+    },
+    {
+      "name": "evening_rush",
+      "description": "Evening rush hour (5-7 PM) - Peak commuter traffic",
+      "hours": [17, 18, 19],
+      "rateMultiplier": 1.8,
+      "characteristics": {
+        "avgSpeed": "very slow",
+        "congestionLevel": "very high",
+        "typicalDuration": "2-3 hours"
+      }
+    },
+    {
+      "name": "evening",
+      "description": "Evening traffic (8-10 PM) - Decreasing activity",
+      "hours": [20, 21, 22],
+      "rateMultiplier": 0.6,
+      "characteristics": {
+        "avgSpeed": "normal",
+        "congestionLevel": "low",
+        "typicalDuration": "3 hours"
+      }
+    },
+    {
+      "name": "night",
+      "description": "Night traffic (11 PM - 6 AM) - Minimal activity",
+      "hours": [23, 0, 1, 2, 3, 4, 5, 6],
+      "rateMultiplier": 0.2,
+      "characteristics": {
+        "avgSpeed": "fast",
+        "congestionLevel": "minimal",
+        "typicalDuration": "8 hours"
+      }
+    },
+    {
+      "name": "weekend_day",
+      "description": "Weekend daytime (9 AM - 6 PM) - Leisure traffic",
+      "hours": [9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+      "rateMultiplier": 0.8,
+      "characteristics": {
+        "avgSpeed": "normal",
+        "congestionLevel": "moderate",
+        "typicalDuration": "10 hours",
+        "note": "Shopping and leisure patterns differ from weekday"
+      }
+    }
+  ],
+  "notes": {
+    "dataSource": "Mock data based on typical urban traffic patterns",
+    "futureIntegration": "This file format supports integration with real traffic data from sources like Google Traffic API, TomTom, or municipal traffic sensors",
+    "customization": "Rate multipliers can be adjusted based on local traffic studies"
+  }
+}

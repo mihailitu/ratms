@@ -184,6 +184,9 @@ public:
     const std::vector<TrafficLight>& getTrafficLights() const { return trafficLights; }
     std::vector<TrafficLight>& getTrafficLightsMutable() { return trafficLights; }
 
+    // Connection accessors
+    const std::vector<std::vector<std::pair<roadID, double>>>& getConnections() const { return connections; }
+
     // Vehicle spawning - spawns at position 0 on lane with fewest vehicles
     bool spawnVehicle(double velocity = 10.0, double length = 5.0);
     // Spawn vehicle on specific lane with given velocity and aggressivity

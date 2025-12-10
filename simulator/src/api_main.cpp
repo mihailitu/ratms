@@ -107,6 +107,10 @@ int main(int argc, char* argv[]) {
   api_server.setDatabase(database);
   api_server.start();
 
+  // Initialize default spawn rates for entry roads (10 vehicles/minute)
+  // This enables automatic vehicle spawning when loading map files
+  api_server.initializeDefaultSpawnRates(10.0);
+
   LOG_INFO(LogComponent::API, "RATMS API Server running on http://localhost:{}", port);
   LOG_INFO(LogComponent::General, "Press Ctrl+C to stop");
 

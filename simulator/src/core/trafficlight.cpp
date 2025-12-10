@@ -1,12 +1,36 @@
 #include "trafficlight.h"
 #include "../utils/logger.h"
+#include <cstdlib>
 
 using namespace ratms;
 
 namespace simulator {
 
 TrafficLight::TrafficLight()
+    : counter(0.0)
+    , currentLightColor(green_light)
 {
+    // Set sensible default timings: green=30s, yellow=3s, red=27s (60s total cycle)
+    lightsTime[green_light] = 30.0;
+    lightsTime[yellow_light] = 3.0;
+    lightsTime[red_light] = 27.0;
+
+    // Randomize starting phase to prevent all lights being synchronized
+    // This creates more realistic traffic patterns
+    double totalCycle = lightsTime[green_light] + lightsTime[yellow_light] + lightsTime[red_light];
+    double randomOffset = static_cast<double>(rand() % static_cast<int>(totalCycle));
+
+    // Set the current phase based on the random offset
+    if (randomOffset < lightsTime[green_light]) {
+        currentLightColor = green_light;
+        counter = randomOffset;
+    } else if (randomOffset < lightsTime[green_light] + lightsTime[yellow_light]) {
+        currentLightColor = yellow_light;
+        counter = randomOffset - lightsTime[green_light];
+    } else {
+        currentLightColor = red_light;
+        counter = randomOffset - lightsTime[green_light] - lightsTime[yellow_light];
+    }
 }
 
 TrafficLight::TrafficLight(double g, double y, double r, LightColor initialColor, double startTime):
