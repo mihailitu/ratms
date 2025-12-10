@@ -6,6 +6,13 @@
 #include <iostream>
 #include <limits>
 
+// OpenMP support for parallel fitness evaluation
+#ifdef _OPENMP
+    #include <omp.h>
+#else
+    inline int omp_get_max_threads() { return 1; }
+#endif
+
 using namespace ratms;
 
 namespace simulator {
@@ -151,8 +158,10 @@ Chromosome GeneticAlgorithm::uniformCrossover(const Chromosome& parent1, const C
 }
 
 void GeneticAlgorithm::evaluatePopulation() {
-    for (auto& chromosome : population_) {
-        chromosome.fitness = fitnessFunc_(chromosome);
+    // Parallel fitness evaluation - each chromosome is independent
+    #pragma omp parallel for schedule(dynamic)
+    for (size_t i = 0; i < population_.size(); ++i) {
+        population_[i].fitness = fitnessFunc_(population_[i]);
     }
 }
 

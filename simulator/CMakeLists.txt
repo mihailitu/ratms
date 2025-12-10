@@ -106,6 +106,11 @@ target_link_libraries(ga_optimizer
     SQLite::SQLite3
 )
 
+# Enable OpenMP for parallel fitness evaluation
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(ga_optimizer OpenMP::OpenMP_CXX)
+endif()
+
 # =============================================================================
 # OSM Import Tool
 # =============================================================================
