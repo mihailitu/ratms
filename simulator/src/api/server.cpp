@@ -626,7 +626,6 @@ void Server::runSimulationLoop() {
             // PHASE 1: Update all roads and collect pending transitions
             std::vector<simulator::RoadTransition> pendingTransitions;
             {
-                TIMED_SCOPE(LogComponent::Simulation, "simulation_step");
                 std::lock_guard<std::mutex> lock(sim_mutex_);
                 if (!simulator_) {
                     LOG_ERROR(LogComponent::Simulation, "Simulator became null during simulation");
@@ -698,6 +697,14 @@ void Server::runSimulationLoop() {
                     LOG_DEBUG(LogComponent::Database, "Saved metrics at step {}: avg_queue={:.2f}, avg_speed={:.2f}, exited={:.0f}",
                              currentStep, avgQueueLength, avgSpeed, metrics.vehiclesExited);
                 }
+
+                // Log periodic simulation status (every 10 seconds of sim time)
+                int vehicleCount = 0;
+                for (const auto& [_, road] : simulator_->cityMap) {
+                    vehicleCount += road.getVehicleCount();
+                }
+                LOG_INFO(LogComponent::Simulation, "Step {}: {:.1f}s sim time, {} vehicles active, {:.0f} exited",
+                         currentStep, simulation_time_.load(), vehicleCount, metricsCollector.getMetrics().vehiclesExited);
             }
 
             // Update counters
