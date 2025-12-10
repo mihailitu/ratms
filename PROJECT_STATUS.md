@@ -181,8 +181,8 @@ See [docs/PRODUCTION_PLAN.md](docs/PRODUCTION_PLAN.md) for full 8-stage plan.
 | 3 | Dynamic vehicle spawning | **Complete** |
 | 4 | Continuous simulation mode | **Complete** |
 | 5 | Traffic profiles (JSON-based) | **Complete** |
-| 6 | Gradual timing blending | Pending |
-| 7 | Continuous background optimization | Pending |
+| 6 | Gradual timing blending | **Complete** |
+| 7 | Continuous background optimization | **Complete** |
 | 8 | Travel time metrics & dashboard | Pending |
 
 ## Predictive Optimization Plan
