@@ -180,7 +180,7 @@ See [docs/PRODUCTION_PLAN.md](docs/PRODUCTION_PLAN.md) for full 8-stage plan.
 | 2 | Runtime traffic light modification | **Complete** |
 | 3 | Dynamic vehicle spawning | **Complete** |
 | 4 | Continuous simulation mode | **Complete** |
-| 5 | Traffic profiles (JSON-based) | Pending |
+| 5 | Traffic profiles (JSON-based) | **Complete** |
 | 6 | Gradual timing blending | Pending |
 | 7 | Continuous background optimization | Pending |
 | 8 | Travel time metrics & dashboard | Pending |
