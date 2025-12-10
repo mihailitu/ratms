@@ -395,11 +395,13 @@ frontend/src/
 │   ├── Dashboard.tsx        # Main overview page
 │   ├── Simulations.tsx      # Simulation history list
 │   ├── SimulationDetail.tsx # Single simulation analysis
-│   ├── MapView.tsx          # Live vehicle map
+│   ├── MapView.tsx          # Live vehicle map with control panels
 │   └── Optimization.tsx     # GA configuration and results
 ├── components/
 │   ├── Layout.tsx           # Navigation wrapper
 │   ├── SimulationControl.tsx # Start/stop controls
+│   ├── TrafficLightPanel.tsx # Traffic light timing editor
+│   ├── SpawnRatePanel.tsx    # Vehicle spawn rate controls
 │   └── GAVisualizer.tsx     # Fitness charts
 ├── services/
 │   └── apiClient.ts         # Type-safe API client
@@ -709,34 +711,71 @@ const data: VehicleData = JSON.parse(jsonStr);
 
 ## Testing
 
-### Backend Testing
+### Backend Unit Tests (GTest)
 
-Run api_server with test network:
 ```bash
 cd simulator/build
-./api_server
-# Uses manyRandomVehicleTestMap(10) by default
+make unit_tests           # Build unit tests
+./unit_tests              # Run all tests
+./unit_tests --gtest_filter="VehicleTest.*"  # Run specific test suite
+ctest --output-on-failure # Run via CTest
 ```
 
-Test API endpoints:
+Test files: `simulator/src/unit_tests/*.cpp` (vehicle_test, road_test, trafficlight_test, genetic_algorithm_test)
+
+### Frontend Unit Tests (Vitest)
+
+```bash
+cd frontend
+npm test                  # Run tests in watch mode
+npm run test:ui           # Run with UI
+npm run test:coverage     # Run with coverage report
+npm test -- --run         # Run once without watch
+npm test -- SimulationControl  # Run specific test file
+```
+
+Test files: `frontend/src/**/*.test.{ts,tsx}` (apiClient.test.ts, useSimulationStream.test.ts, SimulationControl.test.tsx)
+
+### Frontend E2E Tests (Playwright)
+
+```bash
+cd frontend
+npm run test:e2e          # Run all E2E tests (headless)
+npm run test:e2e:headed   # Run with browser visible
+npm run test:e2e:ui       # Run with Playwright UI
+npm run test:e2e:debug    # Debug mode
+npm run test:e2e:integration  # Integration tests only
+npx playwright test dashboard.spec.ts  # Run specific test file
+```
+
+Test files: `frontend/tests/e2e/*.spec.ts` (dashboard, map-view, optimization, simulations, etc.)
+
+### Linting
+
+```bash
+cd frontend
+npm run lint              # Run ESLint
+npx tsc --noEmit          # Type check only
+```
+
+### Quick Verification
+
+```bash
+# Full frontend check
+cd frontend && npm run lint && npx tsc --noEmit && npm test -- --run
+
+# Backend build + test
+cd simulator/build && make api_server unit_tests && ./unit_tests
+```
+
+### Manual API Testing
+
 ```bash
 curl http://localhost:8080/api/health
 curl http://localhost:8080/api/simulation/status
 curl -X POST http://localhost:8080/api/simulation/start
-```
-
-### Frontend Testing
-
-Type checking:
-```bash
-cd frontend
-npx tsc --noEmit
-```
-
-Build check:
-```bash
-cd frontend
-npm run build
+curl http://localhost:8080/api/traffic-lights
+curl http://localhost:8080/api/spawn-rates
 ```
 
 ## Performance Considerations
@@ -757,11 +796,10 @@ npm run build
 
 ## Known Issues and Limitations
 
-1. **GA Persistence**: Optimization results stored in-memory only
-2. **Road Geometry**: Polylines are straight (no curves)
-3. **Traffic Lights on Map**: Not visualized yet
-4. **Lane Selection**: Logic needs refinement at intersections
-5. **Pedestrians**: Not implemented
+1. **Road Geometry**: Polylines are straight (no curves)
+2. **Traffic Lights on Map**: Not visualized on map yet (available in control panel)
+3. **Lane Selection**: Logic needs refinement at intersections
+4. **Pedestrians**: Not implemented
 
 ## File Locations
 
@@ -827,12 +865,29 @@ make ga_optimizer
 ./ga_optimizer --pop 50 --gen 100
 ```
 
+### Test Commands
+```bash
+# Backend unit tests
+cd simulator/build && make unit_tests && ./unit_tests
+
+# Frontend unit tests
+cd frontend && npm test -- --run
+
+# Frontend E2E tests
+cd frontend && npm run test:e2e
+
+# Full verification
+cd frontend && npm run lint && npx tsc --noEmit && npm test -- --run
+```
+
 ### Important Files to Check
 - Server routes: `simulator/src/api/server.cpp:setupRoutes()`
 - Simulation loop: `simulator/src/api/server.cpp:runSimulationLoop()`
 - IDM physics: `simulator/src/core/vehicle.cpp:getNewAcceleration()`
 - API client: `frontend/src/services/apiClient.ts`
 - Type definitions: `frontend/src/types/api.ts`
+- Control panels: `frontend/src/components/TrafficLightPanel.tsx`, `SpawnRatePanel.tsx`
+- E2E test mocks: `frontend/tests/helpers/apiMocks.ts`
 
 ### Debugging Tips
 - Server logs to stdout (no file logging yet)
