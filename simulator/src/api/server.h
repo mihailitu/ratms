@@ -95,6 +95,7 @@ private:
     // Route handlers
     void handleHealth(const httplib::Request& req, httplib::Response& res);
     void handleSimulationStart(const httplib::Request& req, httplib::Response& res);
+    void handleSimulationStartContinuous(const httplib::Request& req, httplib::Response& res);
     void handleSimulationStop(const httplib::Request& req, httplib::Response& res);
     void handleSimulationStatus(const httplib::Request& req, httplib::Response& res);
     void handleSimulationStream(const httplib::Request& req, httplib::Response& res);

@@ -269,6 +269,10 @@ void Server::setupRoutes() {
         handleSetSimulationConfig(req, res);
     });
 
+    http_server_.Post("/api/simulation/continuous", [this](const httplib::Request& req, httplib::Response& res) {
+        handleSimulationStartContinuous(req, res);
+    });
+
     // Traffic pattern endpoints
     http_server_.Get("/api/patterns", [this](const httplib::Request& req, httplib::Response& res) {
         handleGetPatterns(req, res);
@@ -385,6 +389,65 @@ void Server::handleSimulationStart(const httplib::Request& req, httplib::Respons
     json response = {
         {"message", "Simulation started successfully"},
         {"status", "running"},
+        {"simulation_id", current_simulation_id_.load()},
+        {"timestamp", std::time(nullptr)}
+    };
+
+    res.set_content(response.dump(2), "application/json");
+    res.status = 200;
+}
+
+void Server::handleSimulationStartContinuous(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+    std::lock_guard<std::mutex> lock(sim_mutex_);
+
+    if (simulation_running_) {
+        LOG_WARN(LogComponent::API, "Continuous start request rejected: simulation already running");
+        sendError(res, 400, "Simulation already running");
+        return;
+    }
+
+    if (!simulator_) {
+        LOG_ERROR(LogComponent::API, "Continuous start request failed: simulator not initialized");
+        sendError(res, 500, "Simulator not initialized");
+        return;
+    }
+
+    // Enable continuous mode
+    continuous_mode_ = true;
+    LOG_INFO(LogComponent::Simulation, "Continuous mode enabled");
+
+    // Create database record if database is available
+    if (database_ && database_->isConnected()) {
+        int sim_id = database_->createSimulation(
+            "Continuous Simulation",
+            "Continuous simulation started via REST API",
+            1, // Default network ID
+            "{\"continuous\": true}"
+        );
+        if (sim_id > 0) {
+            current_simulation_id_ = sim_id;
+            database_->updateSimulationStatus(sim_id, "running");
+            LOG_INFO(LogComponent::Database, "Continuous simulation record created with ID: {}", sim_id);
+        }
+    }
+
+    // Reset simulation state
+    simulation_should_stop_ = false;
+    simulation_paused_ = false;
+    simulation_steps_ = 0;
+    simulation_time_ = 0.0;
+    simulation_running_ = true;
+
+    // Start simulation in background thread
+    simulation_thread_ = std::make_unique<std::thread>(&Server::runSimulationLoop, this);
+
+    LOG_INFO(LogComponent::Simulation, "Continuous simulation started via API");
+
+    json response = {
+        {"message", "Continuous simulation started successfully"},
+        {"status", "running"},
+        {"continuousMode", true},
         {"simulation_id", current_simulation_id_.load()},
         {"timestamp", std::time(nullptr)}
     };

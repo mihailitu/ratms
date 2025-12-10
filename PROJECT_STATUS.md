@@ -114,6 +114,7 @@ cd frontend && npm run test:e2e
 | POST | /api/simulation/resume | Resume paused simulation |
 | GET | /api/simulation/config | Get simulation configuration |
 | POST | /api/simulation/config | Update simulation configuration |
+| POST | /api/simulation/continuous | Start simulation in continuous mode |
 
 ## File Structure
 
