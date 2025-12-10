@@ -32,6 +32,7 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 | 19 | Control Panel UI | Traffic light editor, spawn rate controls in MapView |
 | 20 | Traffic Pattern Storage | Time-of-day pattern storage, snapshot recording, aggregation |
 | 21 | Prediction Service | TrafficPredictor blends patterns with current state, 10-120min horizon |
+| 22 | Predictive Optimizer | PredictiveOptimizer runs GA on predicted future traffic state |
 
 ## Current Features
 
@@ -45,6 +46,7 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 - Dynamic vehicle spawning with configurable rates
 - Traffic pattern storage with time-of-day aggregation
 - Traffic prediction service with configurable horizon (10-120min)
+- Predictive optimization (GA on predicted future traffic state)
 - Analytics with percentile statistics (P25, P50, P75, P95)
 - Comprehensive E2E test coverage
 - Build system with dependency installation script
@@ -152,7 +154,7 @@ See [docs/PRODUCTION_PLAN.md](docs/PRODUCTION_PLAN.md) for full 8-stage plan.
 |-------|-------------|--------|
 | 1 | Traffic Pattern Storage | **Complete** |
 | 2 | Prediction Service | **Complete** |
-| 3 | Predictive Optimizer | Pending |
+| 3 | Predictive Optimizer | **Complete** |
 | 4 | Validation & Rollout | Pending |
 | 5 | Statistics Dashboard | Pending |
 | 6 | Dashboard Enhancements | Pending |
@@ -167,4 +169,4 @@ Component-based logging with spdlog:
 
 ---
 
-**Status:** Production-ready with 157 E2E tests. Implementing predictive optimization plan (Phases 1-2 complete).
+**Status:** Production-ready with 157 E2E tests. Implementing predictive optimization plan (Phases 1-3 complete).

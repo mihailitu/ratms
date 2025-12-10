@@ -6,6 +6,8 @@
 #include "../optimization/metrics.h"
 #include "../core/simulator.h"
 #include "../data/storage/database_manager.h"
+#include "../prediction/traffic_predictor.h"
+#include "../data/storage/traffic_pattern_storage.h"
 #include <memory>
 #include <thread>
 #include <mutex>
@@ -16,6 +18,9 @@
 
 namespace ratms {
 namespace api {
+
+// Forward declarations
+class PredictiveOptimizer;
 
 /**
  * @brief TimingTransition - Represents a gradual timing change for one traffic light
@@ -85,6 +90,10 @@ public:
         double maxGreenTime = 60.0;
         double minRedTime = 10.0;
         double maxRedTime = 60.0;
+
+        // Prediction mode settings
+        bool usePrediction = false;           // Use predictive optimization
+        int predictionHorizonMinutes = 30;    // How far ahead to predict (10-120)
     };
 
     ContinuousOptimizationController(
@@ -93,6 +102,9 @@ public:
         std::mutex& simMutex
     );
     ~ContinuousOptimizationController();
+
+    // Set up prediction support (called after pattern storage is initialized)
+    void setPredictor(std::shared_ptr<prediction::TrafficPredictor> predictor);
 
     // Register API routes
     void registerRoutes(httplib::Server& server);
@@ -159,6 +171,10 @@ private:
     std::atomic<double> lastImprovementPercent_{0.0};
     std::chrono::steady_clock::time_point lastOptimizationTime_;
     mutable std::mutex statsMutex_;
+
+    // Prediction support
+    std::shared_ptr<prediction::TrafficPredictor> predictor_;
+    std::unique_ptr<PredictiveOptimizer> predictiveOptimizer_;
 };
 
 } // namespace api

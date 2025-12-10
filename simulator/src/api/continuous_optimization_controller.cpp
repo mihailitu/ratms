@@ -1,4 +1,5 @@
 #include "continuous_optimization_controller.h"
+#include "predictive_optimizer.h"
 #include "../tests/testmap.h"
 #include "../utils/logger.h"
 #include <nlohmann/json.hpp>
@@ -63,6 +64,18 @@ ContinuousOptimizationController::~ContinuousOptimizationController() {
     stop();
 }
 
+void ContinuousOptimizationController::setPredictor(
+    std::shared_ptr<prediction::TrafficPredictor> predictor) {
+    predictor_ = predictor;
+
+    // Create predictive optimizer if we have all dependencies
+    if (predictor_ && dbManager_ && simulator_) {
+        predictiveOptimizer_ = std::make_unique<PredictiveOptimizer>(
+            predictor_, dbManager_, simulator_, simMutex_);
+        LOG_INFO(LogComponent::Optimization, "PredictiveOptimizer initialized");
+    }
+}
+
 void ContinuousOptimizationController::registerRoutes(httplib::Server& server) {
     server.Post("/api/optimization/continuous/start", [this](const httplib::Request& req, httplib::Response& res) {
         handleStart(req, res);
@@ -115,20 +128,45 @@ void ContinuousOptimizationController::handleStart(const httplib::Request& req, 
             if (body.contains("generations")) {
                 config_.generations = body["generations"];
             }
+            if (body.contains("usePrediction")) {
+                config_.usePrediction = body["usePrediction"].get<bool>();
+            }
+            if (body.contains("predictionHorizonMinutes")) {
+                int horizon = body["predictionHorizonMinutes"].get<int>();
+                if (horizon >= 10 && horizon <= 120) {
+                    config_.predictionHorizonMinutes = horizon;
+                }
+            }
         } catch (const std::exception& e) {
             LOG_WARN(LogComponent::API, "Failed to parse config from request: {}", e.what());
         }
     }
 
+    // Check prediction mode requirements
+    if (config_.usePrediction && !predictiveOptimizer_) {
+        sendError(res, 400, "Prediction mode enabled but predictor not initialized. "
+                           "Ensure traffic pattern storage is set up.");
+        return;
+    }
+
     start();
+
+    std::string mode = config_.usePrediction ? "predictive" : "reactive";
+    LOG_INFO(LogComponent::Optimization, "Starting continuous optimization in {} mode", mode);
+
+    json configJson = {
+        {"optimizationIntervalSeconds", config_.optimizationIntervalSeconds},
+        {"transitionDurationSeconds", config_.transitionDurationSeconds},
+        {"populationSize", config_.populationSize},
+        {"generations", config_.generations},
+        {"usePrediction", config_.usePrediction},
+        {"predictionHorizonMinutes", config_.predictionHorizonMinutes}
+    };
+
     sendSuccess(res, {
         {"message", "Continuous optimization started"},
-        {"config", {
-            {"optimizationIntervalSeconds", config_.optimizationIntervalSeconds},
-            {"transitionDurationSeconds", config_.transitionDurationSeconds},
-            {"populationSize", config_.populationSize},
-            {"generations", config_.generations}
-        }}
+        {"mode", mode},
+        {"config", configJson}
     });
 }
 
@@ -176,19 +214,37 @@ void ContinuousOptimizationController::handleStatus(const httplib::Request& req,
         secondsSinceLastOptimization = elapsed.count();
     }
 
+    // Build prediction status
+    json predictionStatus = {
+        {"enabled", config_.usePrediction},
+        {"available", predictiveOptimizer_ != nullptr},
+        {"horizonMinutes", config_.predictionHorizonMinutes}
+    };
+
+    if (predictiveOptimizer_) {
+        predictionStatus["pipelineStatus"] = pipelineStatusToString(predictiveOptimizer_->getStatus());
+        predictionStatus["averageAccuracy"] = predictiveOptimizer_->getAverageAccuracy();
+    }
+
+    std::string mode = config_.usePrediction ? "predictive" : "reactive";
+
     sendSuccess(res, {
         {"running", running_.load()},
+        {"mode", mode},
         {"totalOptimizationRuns", totalOptimizationRuns_.load()},
         {"successfulOptimizations", successfulOptimizations_.load()},
         {"lastImprovementPercent", lastImprovementPercent_.load()},
         {"secondsSinceLastOptimization", secondsSinceLastOptimization},
         {"nextOptimizationIn", std::max(0, config_.optimizationIntervalSeconds - static_cast<int>(secondsSinceLastOptimization))},
         {"activeTransitions", transitionsJson},
+        {"prediction", predictionStatus},
         {"config", {
             {"optimizationIntervalSeconds", config_.optimizationIntervalSeconds},
             {"transitionDurationSeconds", config_.transitionDurationSeconds},
             {"populationSize", config_.populationSize},
-            {"generations", config_.generations}
+            {"generations", config_.generations},
+            {"usePrediction", config_.usePrediction},
+            {"predictionHorizonMinutes", config_.predictionHorizonMinutes}
         }}
     });
 }
@@ -224,7 +280,10 @@ void ContinuousOptimizationController::handleConfig(const httplib::Request& req,
         {"minGreenTime", config_.minGreenTime},
         {"maxGreenTime", config_.maxGreenTime},
         {"minRedTime", config_.minRedTime},
-        {"maxRedTime", config_.maxRedTime}
+        {"maxRedTime", config_.maxRedTime},
+        {"usePrediction", config_.usePrediction},
+        {"predictionHorizonMinutes", config_.predictionHorizonMinutes},
+        {"predictionAvailable", predictiveOptimizer_ != nullptr}
     });
 }
 
@@ -264,6 +323,22 @@ void ContinuousOptimizationController::handleSetConfig(const httplib::Request& r
                 return;
             }
             config_.generations = val;
+        }
+        if (body.contains("usePrediction")) {
+            bool usePred = body["usePrediction"].get<bool>();
+            if (usePred && !predictiveOptimizer_) {
+                sendError(res, 400, "Cannot enable prediction - predictor not initialized");
+                return;
+            }
+            config_.usePrediction = usePred;
+        }
+        if (body.contains("predictionHorizonMinutes")) {
+            int val = body["predictionHorizonMinutes"];
+            if (val < 10 || val > 120) {
+                sendError(res, 400, "predictionHorizonMinutes must be between 10 and 120");
+                return;
+            }
+            config_.predictionHorizonMinutes = val;
         }
 
         LOG_INFO(LogComponent::Optimization, "Continuous optimization config updated");
@@ -363,7 +438,50 @@ void ContinuousOptimizationController::optimizationLoop() {
 }
 
 void ContinuousOptimizationController::runOptimizationCycle() {
-    LOG_INFO(LogComponent::Optimization, "Starting optimization cycle");
+    // Get current config
+    Config config;
+    {
+        std::lock_guard<std::mutex> lock(configMutex_);
+        config = config_;
+    }
+
+    // Use predictive optimization if enabled and available
+    if (config.usePrediction && predictiveOptimizer_) {
+        LOG_INFO(LogComponent::Optimization,
+                 "Starting predictive optimization cycle (horizon={}min)",
+                 config.predictionHorizonMinutes);
+
+        // Record actual metrics for previous predictions (for accuracy tracking)
+        predictiveOptimizer_->recordActualMetrics();
+
+        // Run predictive optimization
+        auto result = predictiveOptimizer_->runOptimization(config.predictionHorizonMinutes);
+
+        if (result.finalStatus == PipelineStatus::COMPLETE &&
+            result.bestChromosome.has_value() &&
+            result.improvementPercent > 0) {
+
+            // Apply with gradual transition
+            applyChromosomeGradually(result.bestChromosome.value());
+            successfulOptimizations_++;
+            lastImprovementPercent_ = result.improvementPercent;
+
+            LOG_INFO(LogComponent::Optimization,
+                     "Predictive optimization cycle complete: improvement={:.1f}%, confidence={:.2f}",
+                     result.improvementPercent, result.averagePredictionConfidence);
+        } else if (result.finalStatus == PipelineStatus::ERROR) {
+            LOG_ERROR(LogComponent::Optimization,
+                      "Predictive optimization failed: {}", result.errorMessage);
+        } else {
+            LOG_INFO(LogComponent::Optimization,
+                     "Predictive optimization found no improvement");
+        }
+
+        return;
+    }
+
+    // Fall back to reactive (current state) optimization
+    LOG_INFO(LogComponent::Optimization, "Starting reactive optimization cycle");
 
     // Copy current network for optimization (instead of hardcoded test network)
     std::vector<simulator::Road> testNetwork = copyCurrentNetwork();
@@ -379,13 +497,6 @@ void ContinuousOptimizationController::runOptimizationCycle() {
     size_t totalTrafficLights = 0;
     for (const auto& road : testNetwork) {
         totalTrafficLights += road.getLanesNo();
-    }
-
-    // Get current config
-    Config config;
-    {
-        std::lock_guard<std::mutex> lock(configMutex_);
-        config = config_;
     }
 
     // Setup GA parameters for quick optimization

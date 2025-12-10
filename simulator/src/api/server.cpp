@@ -132,6 +132,13 @@ void Server::setDatabase(std::shared_ptr<data::DatabaseManager> db) {
                 pattern_storage_, simulator_, sim_mutex_);
             prediction_controller_ = std::make_unique<PredictionController>(predictor);
             LOG_INFO(LogComponent::API, "Prediction controller initialized");
+
+            // Connect predictor to continuous optimization controller for predictive mode
+            if (continuous_optimization_controller_) {
+                continuous_optimization_controller_->setPredictor(predictor);
+                LOG_INFO(LogComponent::Optimization,
+                         "Connected predictor to continuous optimization controller");
+            }
         }
     }
 }

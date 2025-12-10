@@ -563,6 +563,108 @@ curl -X POST http://localhost:8080/api/prediction/config \
   -d '{"patternWeight": 0.8, "currentWeight": 0.2}'
 ```
 
+### 12. PredictiveOptimizer (`api/predictive_optimizer.h/cpp`)
+
+Combines traffic prediction with GA optimization to proactively optimize traffic light timings for anticipated future conditions.
+
+**Pipeline Stages:**
+```cpp
+enum class PipelineStatus {
+    IDLE,           // Not running
+    PREDICTING,     // Getting traffic prediction
+    OPTIMIZING,     // Running GA optimization
+    VALIDATING,     // Validating optimized timings
+    APPLYING,       // Applying timings to simulation
+    COMPLETE,       // Cycle complete
+    ERROR           // Error occurred
+};
+```
+
+**Key Structures:**
+```cpp
+struct PredictiveOptimizerConfig {
+    int predictionHorizonMinutes = 30;    // 10-120 range
+    int populationSize = 30;
+    int generations = 30;
+    int simulationSteps = 500;
+    double dt = 0.1;
+    double minGreenTime = 10.0;
+    double maxGreenTime = 60.0;
+    double minRedTime = 10.0;
+    double maxRedTime = 60.0;
+    double vehicleScaleFactor = 1.0;
+    bool adjustSpawnRates = true;
+};
+
+struct PredictiveOptimizationResult {
+    int runId;
+    int64_t startTime, endTime;
+    int horizonMinutes;
+    int predictedDayOfWeek, predictedTimeSlot;
+    std::string predictedTimeSlotString;
+    double averagePredictionConfidence;
+    double baselineFitness, optimizedFitness, improvementPercent;
+    std::optional<simulator::Chromosome> bestChromosome;
+    PipelineStatus finalStatus;
+    std::string errorMessage;
+};
+```
+
+**Key Methods:**
+```cpp
+class PredictiveOptimizer {
+public:
+    PredictiveOptimizer(
+        std::shared_ptr<prediction::TrafficPredictor> predictor,
+        std::shared_ptr<data::DatabaseManager> dbManager,
+        std::shared_ptr<simulator::Simulator> simulator,
+        std::mutex& simMutex
+    );
+
+    // Run optimization (blocking)
+    PredictiveOptimizationResult runOptimization();
+    PredictiveOptimizationResult runOptimization(int horizonMinutes);
+
+    // Pipeline status
+    PipelineStatus getStatus() const;
+    std::string getStatusMessage() const;
+    double getProgress() const;
+
+    // Accuracy tracking
+    void recordActualMetrics();
+    std::vector<PredictionAccuracy> getAccuracyHistory() const;
+    double getAverageAccuracy() const;
+
+    // Configuration
+    void setConfig(const PredictiveOptimizerConfig& config);
+    PredictiveOptimizerConfig getConfig() const;
+};
+```
+
+**Algorithm:**
+1. PREDICTING: Get traffic prediction for T+N minutes using TrafficPredictor
+2. Create predicted network by copying current network and adjusting vehicle counts
+3. OPTIMIZING: Run GA optimization on predicted network state
+4. VALIDATING: (Future) Validate optimized timings in simulation
+5. APPLYING: Apply optimized timings gradually via ContinuousOptimizationController
+6. Track prediction accuracy over time for continuous improvement
+
+**Integration with ContinuousOptimizationController:**
+```cpp
+// Enable predictive optimization
+struct ContinuousOptimizationController::Config {
+    bool usePrediction = false;           // Enable prediction mode
+    int predictionHorizonMinutes = 30;    // Prediction horizon
+};
+
+// Via API
+POST /api/continuous-optimization/start
+{
+    "usePrediction": true,
+    "predictionHorizonMinutes": 30
+}
+```
+
 ## Frontend Architecture
 
 ### React + TypeScript Structure
