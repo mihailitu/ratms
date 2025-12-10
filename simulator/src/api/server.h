@@ -22,6 +22,7 @@ namespace api {
 class OptimizationController;
 class TrafficDataController;
 class ContinuousOptimizationController;
+class PredictionController;
 
 /**
  * @brief VehicleSnapshot - Real-time vehicle position data
@@ -144,6 +145,7 @@ private:
     std::unique_ptr<OptimizationController> optimization_controller_;
     std::unique_ptr<TrafficDataController> traffic_data_controller_;
     std::unique_ptr<ContinuousOptimizationController> continuous_optimization_controller_;
+    std::unique_ptr<PredictionController> prediction_controller_;
 
     // Traffic pattern storage
     std::shared_ptr<data::TrafficPatternStorage> pattern_storage_;

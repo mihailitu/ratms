@@ -460,6 +460,109 @@ static std::string timeSlotToString(int slot);  // "08:00-08:30"
 **Snapshot Recording:**
 Called every 60 real seconds during simulation to capture road metrics.
 
+### 10. TrafficPredictor (`prediction/traffic_predictor.h/cpp`)
+
+Traffic prediction service that blends historical patterns with current simulation state.
+
+**Key Structures:**
+```cpp
+struct PredictionConfig {
+    int horizonMinutes = 30;           // Default prediction horizon
+    int minHorizonMinutes = 10;        // Minimum allowed horizon
+    int maxHorizonMinutes = 120;       // Maximum allowed horizon
+    double patternWeight = 0.7;        // Weight for historical patterns
+    double currentWeight = 0.3;        // Weight for current state
+    int minSamplesForFullConfidence = 10;
+    int cacheDurationSeconds = 30;
+};
+
+struct PredictedMetrics {
+    int roadId;
+    double vehicleCount, queueLength, avgSpeed, flowRate;
+    double confidence;                 // 0.0-1.0
+    int historicalSampleCount;
+    bool hasCurrentData, hasHistoricalPattern;
+    // Component values for transparency
+    double patternVehicleCount, currentVehicleCount;
+    int predictionDayOfWeek, predictionTimeSlot;
+};
+
+struct PredictionResult {
+    int64_t predictionTimestamp, targetTimestamp;
+    int horizonMinutes;
+    int targetDayOfWeek, targetTimeSlot;
+    std::string targetTimeSlotString;  // "08:00-08:30"
+    std::vector<PredictedMetrics> roadPredictions;
+    double averageConfidence;
+    PredictionConfig configUsed;
+};
+```
+
+**Key Methods:**
+```cpp
+// Main prediction methods
+PredictionResult predictCurrent();                    // Current time slot
+PredictionResult predictForecast(int horizonMinutes); // T+N minutes
+std::optional<PredictedMetrics> predictRoad(int roadId, int horizonMinutes);
+
+// Configuration
+void setConfig(const PredictionConfig& config);
+PredictionConfig getConfig() const;
+
+// Static utilities
+static std::pair<int, int> getFutureTimeSlot(int horizonMinutes);
+static double calculateConfidence(int sampleCount, double stddev,
+                                  double avgValue, int minSamples);
+static std::string timeSlotToString(int timeSlot);
+```
+
+**Algorithm:**
+1. Get target time slot from horizonMinutes
+2. Fetch historical patterns from TrafficPatternStorage
+3. Get current state from simulator
+4. Blend values: `patternWeight * pattern + currentWeight * current`
+5. Calculate confidence from sample count and variability
+
+**Confidence Calculation:**
+```cpp
+sampleFactor = min(1.0, sampleCount / minSamples)
+variabilityFactor = 1.0 - min(coefficientOfVariation, 1.0)
+confidence = sampleFactor * variabilityFactor
+```
+
+**Caching:**
+Results are cached for `cacheDurationSeconds` to reduce computation.
+
+### 11. PredictionController (`api/prediction_controller.h/cpp`)
+
+REST API controller for traffic prediction endpoints.
+
+**Endpoints:**
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/prediction/current | Current time slot prediction |
+| GET | /api/prediction/forecast?horizon=N | Prediction for T+N minutes |
+| GET | /api/prediction/road/:id?horizon=N | Single road prediction |
+| GET | /api/prediction/config | Get prediction configuration |
+| POST | /api/prediction/config | Update prediction configuration |
+
+**Usage Example:**
+```bash
+# Current prediction
+curl http://localhost:8080/api/prediction/current
+
+# 30-minute forecast
+curl "http://localhost:8080/api/prediction/forecast?horizon=30"
+
+# Specific road
+curl "http://localhost:8080/api/prediction/road/1?horizon=30"
+
+# Update config
+curl -X POST http://localhost:8080/api/prediction/config \
+  -H "Content-Type: application/json" \
+  -d '{"patternWeight": 0.8, "currentWeight": 0.2}'
+```
+
 ## Frontend Architecture
 
 ### React + TypeScript Structure

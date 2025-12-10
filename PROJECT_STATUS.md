@@ -31,6 +31,7 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 | 18 | Production Plan Stage 3 | Dynamic vehicle spawning API with configurable rates |
 | 19 | Control Panel UI | Traffic light editor, spawn rate controls in MapView |
 | 20 | Traffic Pattern Storage | Time-of-day pattern storage, snapshot recording, aggregation |
+| 21 | Prediction Service | TrafficPredictor blends patterns with current state, 10-120min horizon |
 
 ## Current Features
 
@@ -43,6 +44,7 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 - Traffic light timing editor with live updates
 - Dynamic vehicle spawning with configurable rates
 - Traffic pattern storage with time-of-day aggregation
+- Traffic prediction service with configurable horizon (10-120min)
 - Analytics with percentile statistics (P25, P50, P75, P95)
 - Comprehensive E2E test coverage
 - Build system with dependency installation script
@@ -84,6 +86,11 @@ cd frontend && npm run test:e2e
 | GET | /api/snapshots | Get raw traffic snapshots |
 | POST | /api/patterns/aggregate | Aggregate snapshots into patterns |
 | POST | /api/patterns/prune | Prune old snapshots |
+| GET | /api/prediction/current | Current time slot prediction |
+| GET | /api/prediction/forecast | Prediction for T+N minutes |
+| GET | /api/prediction/road/:id | Per-road prediction |
+| GET | /api/prediction/config | Prediction configuration |
+| POST | /api/prediction/config | Update prediction config |
 
 ## File Structure
 
@@ -93,6 +100,7 @@ ratms/
 │   ├── core/           # Simulator, Road, Vehicle, TrafficLight
 │   ├── api/            # REST server, OptimizationController
 │   ├── optimization/   # GeneticAlgorithm, Metrics
+│   ├── prediction/     # TrafficPredictor
 │   ├── data/storage/   # DatabaseManager, TrafficPatternStorage
 │   ├── utils/          # Logger, Config
 │   └── tests/          # Test networks
@@ -143,7 +151,7 @@ See [docs/PRODUCTION_PLAN.md](docs/PRODUCTION_PLAN.md) for full 8-stage plan.
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 1 | Traffic Pattern Storage | **Complete** |
-| 2 | Prediction Service | Pending |
+| 2 | Prediction Service | **Complete** |
 | 3 | Predictive Optimizer | Pending |
 | 4 | Validation & Rollout | Pending |
 | 5 | Statistics Dashboard | Pending |
@@ -159,4 +167,4 @@ Component-based logging with spdlog:
 
 ---
 
-**Status:** Production-ready with 157 E2E tests. Implementing predictive optimization plan (Phase 1 complete).
+**Status:** Production-ready with 157 E2E tests. Implementing predictive optimization plan (Phases 1-2 complete).

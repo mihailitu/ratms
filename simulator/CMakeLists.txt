@@ -40,6 +40,7 @@ file(GLOB OPTIMIZATION_SOURCES "src/optimization/*.cpp")
 file(GLOB API_SOURCES "src/api/*.cpp")
 file(GLOB DATA_SOURCES "src/data/storage/*.cpp")
 file(GLOB METRICS_SOURCES "src/metrics/*.cpp")
+file(GLOB PREDICTION_SOURCES "src/prediction/*.cpp")
 file(GLOB TEST_SOURCES "src/tests/*.cpp")
 
 # Shared library sources (used by both executables)
@@ -48,6 +49,7 @@ set(SHARED_SOURCES
     ${UTILS_SOURCES}
     ${MAPPING_SOURCES}
     ${OPTIMIZATION_SOURCES}
+    ${PREDICTION_SOURCES}
     ${METRICS_SOURCES}
     ${DATA_SOURCES}
     ${TEST_SOURCES}

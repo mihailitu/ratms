@@ -2,6 +2,8 @@
 #include "optimization_controller.h"
 #include "traffic_data_controller.h"
 #include "continuous_optimization_controller.h"
+#include "prediction_controller.h"
+#include "../prediction/traffic_predictor.h"
 #include "../utils/logger.h"
 #include "../optimization/metrics.h"
 #include "../core/defs.h"
@@ -123,6 +125,14 @@ void Server::setDatabase(std::shared_ptr<data::DatabaseManager> db) {
         continuous_optimization_controller_ = std::make_unique<ContinuousOptimizationController>(
             database_, simulator_, sim_mutex_);
         LOG_INFO(LogComponent::Optimization, "Continuous optimization controller initialized");
+
+        // Initialize prediction controller (requires pattern storage and simulator)
+        if (pattern_storage_) {
+            auto predictor = std::make_shared<prediction::TrafficPredictor>(
+                pattern_storage_, simulator_, sim_mutex_);
+            prediction_controller_ = std::make_unique<PredictionController>(predictor);
+            LOG_INFO(LogComponent::API, "Prediction controller initialized");
+        }
     }
 }
 
@@ -268,6 +278,12 @@ void Server::setupRoutes() {
     if (continuous_optimization_controller_) {
         continuous_optimization_controller_->registerRoutes(http_server_);
         LOG_INFO(LogComponent::API, "Continuous optimization routes registered");
+    }
+
+    // Register prediction routes if controller is initialized
+    if (prediction_controller_) {
+        prediction_controller_->registerRoutes(http_server_);
+        LOG_INFO(LogComponent::API, "Prediction routes registered");
     }
 
     LOG_INFO(LogComponent::API, "API routes configured");
