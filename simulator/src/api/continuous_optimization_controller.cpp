@@ -365,8 +365,15 @@ void ContinuousOptimizationController::optimizationLoop() {
 void ContinuousOptimizationController::runOptimizationCycle() {
     LOG_INFO(LogComponent::Optimization, "Starting optimization cycle");
 
-    // Create test network copy for optimization
-    std::vector<simulator::Road> testNetwork = simulator::manyRandomVehicleTestMap(10);
+    // Copy current network for optimization (instead of hardcoded test network)
+    std::vector<simulator::Road> testNetwork = copyCurrentNetwork();
+
+    if (testNetwork.empty()) {
+        LOG_WARN(LogComponent::Optimization, "No network loaded, skipping optimization");
+        return;
+    }
+
+    LOG_INFO(LogComponent::Optimization, "Optimizing network with {} roads", testNetwork.size());
 
     // Count traffic lights
     size_t totalTrafficLights = 0;
@@ -399,8 +406,8 @@ void ContinuousOptimizationController::runOptimizationCycle() {
     // Create fitness evaluator
     simulator::FitnessEvaluator evaluator(config.simulationSteps, config.dt);
 
-    // Run baseline simulation
-    std::vector<simulator::Road> baselineNetwork = simulator::manyRandomVehicleTestMap(10);
+    // Run baseline simulation using copy of current network
+    std::vector<simulator::Road> baselineNetwork = copyCurrentNetwork();
     simulator::Simulator baseSim;
     for (auto& road : baselineNetwork) {
         baseSim.addRoadToMap(road);
@@ -546,6 +553,20 @@ bool ContinuousOptimizationController::applyOptimizationRun(int runId) {
         LOG_ERROR(LogComponent::Optimization, "Failed to parse chromosome for run {}: {}", runId, e.what());
         return false;
     }
+}
+
+std::vector<simulator::Road> ContinuousOptimizationController::copyCurrentNetwork() {
+    std::lock_guard<std::mutex> lock(simMutex_);
+    if (!simulator_) return {};
+
+    std::vector<simulator::Road> networkCopy;
+    networkCopy.reserve(simulator_->cityMap.size());
+
+    for (const auto& [id, road] : simulator_->cityMap) {
+        networkCopy.push_back(road);  // Road copy constructor
+    }
+
+    return networkCopy;
 }
 
 } // namespace api

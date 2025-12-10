@@ -136,6 +136,9 @@ private:
     // Apply current transition values to traffic lights
     void applyCurrentTransitionValues();
 
+    // Create a copy of the current network for optimization
+    std::vector<simulator::Road> copyCurrentNetwork();
+
     std::shared_ptr<data::DatabaseManager> dbManager_;
     std::shared_ptr<simulator::Simulator> simulator_;
     std::mutex& simMutex_;
