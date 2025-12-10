@@ -116,9 +116,9 @@ int main(int argc, char* argv[]) {
   // This enables automatic vehicle spawning when loading map files
   api_server.initializeDefaultSpawnRates(10.0);
 
-  // Pre-populate roads with vehicles (30% density)
+  // Pre-populate roads with vehicles (50% density)
   // Simulates production data feeders - roads won't be empty at startup
-  api_server.populateRoadsWithVehicles(0.3);
+  api_server.populateRoadsWithVehicles(0.5);
 
   LOG_INFO(LogComponent::API, "RATMS API Server running on http://localhost:{}", port);
   LOG_INFO(LogComponent::General, "Press Ctrl+C to stop");

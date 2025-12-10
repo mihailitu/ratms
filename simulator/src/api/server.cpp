@@ -1347,10 +1347,11 @@ void Server::populateRoadsWithVehicles(double density) {
         double maxSpeed = road.getMaxSpeed();
 
         // Skip very short roads
-        if (roadLength < 20.0) continue;
+        if (roadLength < 15.0) continue;
 
-        // Calculate safe following distance: ~2s headway at max speed + vehicle length
-        double safeDistance = maxSpeed * 2.0 + 7.0;  // 7m = vehicle (5m) + min gap (2m)
+        // Calculate safe following distance: ~1s headway at max speed + vehicle length
+        // Tighter spacing = more vehicles on longer roads
+        double safeDistance = maxSpeed * 1.0 + 8.0;  // 8m = vehicle (5m) + min gap (3m)
 
         // Calculate vehicles per lane based on density
         int vehiclesPerLane = static_cast<int>((roadLength / safeDistance) * density);
