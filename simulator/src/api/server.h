@@ -161,6 +161,7 @@ public:
     // Entry road detection and auto-spawn initialization
     std::vector<simulator::roadID> detectEntryRoads();
     void initializeDefaultSpawnRates(double vehiclesPerMinute = 10.0);
+    void populateRoadsWithVehicles(double density = 0.3);
 };
 
 } // namespace api

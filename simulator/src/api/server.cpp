@@ -1325,5 +1325,59 @@ void Server::initializeDefaultSpawnRates(double vehiclesPerMinute) {
              entryRoads.size(), vehiclesPerMinute);
 }
 
+/**
+ * @brief Pre-populate roads with vehicles at startup
+ * @param density - Fraction of road capacity to fill (0.0-1.0)
+ *
+ * Distributes vehicles along all roads based on safe following distance.
+ * This simulates how production data feeders would populate the network,
+ * providing immediate visual feedback instead of waiting for spawning.
+ */
+void Server::populateRoadsWithVehicles(double density) {
+    std::lock_guard<std::mutex> lock(sim_mutex_);
+
+    if (!simulator_) {
+        LOG_WARN(LogComponent::Simulation, "Cannot populate roads - simulator not initialized");
+        return;
+    }
+
+    int totalSpawned = 0;
+    for (auto& [roadId, road] : simulator_->cityMap) {
+        double roadLength = road.getLength();
+        double maxSpeed = road.getMaxSpeed();
+
+        // Skip very short roads
+        if (roadLength < 20.0) continue;
+
+        // Calculate safe following distance: ~2s headway at max speed + vehicle length
+        double safeDistance = maxSpeed * 2.0 + 7.0;  // 7m = vehicle (5m) + min gap (2m)
+
+        // Calculate vehicles per lane based on density
+        int vehiclesPerLane = static_cast<int>((roadLength / safeDistance) * density);
+        if (vehiclesPerLane < 1) continue;
+
+        for (unsigned lane = 0; lane < road.getLanesNo(); ++lane) {
+            for (int i = 0; i < vehiclesPerLane; ++i) {
+                double position = i * safeDistance + 5.0;  // Start 5m in from road start
+                if (position >= roadLength - 10.0) break;  // Leave room at road end
+
+                // Random velocity between 50-100% of max speed
+                double velocity = maxSpeed * (0.5 + (rand() % 50) / 100.0);
+
+                // Random aggressivity (0.3-0.7 for normal distribution)
+                double aggressivity = 0.3 + (rand() % 40) / 100.0;
+
+                simulator::Vehicle v(position, 5.0, velocity);
+                v.setAggressivity(aggressivity);
+                road.addVehicle(v, lane);
+                totalSpawned++;
+            }
+        }
+    }
+
+    LOG_INFO(LogComponent::Simulation, "Pre-populated roads with {} vehicles (density={:.0f}%)",
+             totalSpawned, density * 100);
+}
+
 } // namespace api
 } // namespace ratms
