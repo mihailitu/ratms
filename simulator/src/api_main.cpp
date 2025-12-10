@@ -6,6 +6,8 @@
 #include "utils/logger.h"
 #include <atomic>
 #include <csignal>
+#include <cstdlib>
+#include <ctime>
 #include <memory>
 #include <cstring>
 
@@ -30,6 +32,9 @@ void printUsage(const char* progName) {
 }
 
 int main(int argc, char* argv[]) {
+  // Initialize random seed for traffic light phase randomization
+  std::srand(static_cast<unsigned>(std::time(nullptr)));
+
   std::string networkFile;
   int port = 8080;
 

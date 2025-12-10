@@ -58,7 +58,7 @@ struct SimulationSnapshot {
  * @brief SpawnRate - Vehicle spawn rate configuration per road
  */
 struct SpawnRate {
-    int roadId;
+    simulator::roadID roadId;
     double vehiclesPerMinute;  // Spawn rate
     double accumulator;        // Partial vehicle accumulator
 };
@@ -153,13 +153,13 @@ private:
     void captureSimulationSnapshot();
 
     // Vehicle spawning
-    std::map<int, SpawnRate> spawn_rates_;  // roadId -> spawn rate config
+    std::map<simulator::roadID, SpawnRate> spawn_rates_;  // roadId -> spawn rate config
     std::mutex spawn_mutex_;
     void processVehicleSpawning(double dt);
 
 public:
     // Entry road detection and auto-spawn initialization
-    std::vector<int> detectEntryRoads();
+    std::vector<simulator::roadID> detectEntryRoads();
     void initializeDefaultSpawnRates(double vehiclesPerMinute = 10.0);
 };
 

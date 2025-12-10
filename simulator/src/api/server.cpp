@@ -1174,7 +1174,7 @@ void Server::handleSetSpawnRates(const httplib::Request& req, httplib::Response&
                 continue;
             }
 
-            int roadId = rateObj["roadId"].get<int>();
+            simulator::roadID roadId = rateObj["roadId"].get<simulator::roadID>();
             double vpm = rateObj["vehiclesPerMinute"].get<double>();
 
             // Validate road exists
@@ -1229,6 +1229,7 @@ void Server::handleSetSpawnRates(const httplib::Request& req, httplib::Response&
  */
 void Server::processVehicleSpawning(double dt) {
     std::lock_guard<std::mutex> lock(spawn_mutex_);
+    std::lock_guard<std::mutex> sim_lock(sim_mutex_);  // Protect simulator_ access
 
     for (auto& [roadId, rate] : spawn_rates_) {
         // Add partial vehicles based on rate and time step
@@ -1243,11 +1244,13 @@ void Server::processVehicleSpawning(double dt) {
                 double initialVelocity = roadIt->second.getMaxSpeed() * 0.8;  // 80% of max speed
                 if (roadIt->second.spawnVehicle(initialVelocity)) {
                     rate.accumulator -= 1.0;
+                    LOG_DEBUG(LogComponent::Simulation, "Spawned vehicle on road {}", roadId);
                 } else {
                     // Road is full, stop trying to spawn more this step
                     break;
                 }
             } else {
+                LOG_WARN(LogComponent::Simulation, "Road {} not found for spawning", roadId);
                 rate.accumulator = 0.0;
                 break;
             }
@@ -1262,7 +1265,7 @@ void Server::processVehicleSpawning(double dt) {
  * An entry road is one that no other road connects to.
  * These are the natural spawn points for vehicles entering the network.
  */
-std::vector<int> Server::detectEntryRoads() {
+std::vector<simulator::roadID> Server::detectEntryRoads() {
     std::lock_guard<std::mutex> lock(sim_mutex_);
 
     if (!simulator_) {
@@ -1270,22 +1273,22 @@ std::vector<int> Server::detectEntryRoads() {
     }
 
     // Build set of all roads that are connection targets
-    std::set<int> hasIncoming;
+    std::set<simulator::roadID> hasIncoming;
     for (const auto& [roadId, road] : simulator_->cityMap) {
         // Check all lanes for outgoing connections
         const auto& connections = road.getConnections();
         for (size_t lane = 0; lane < connections.size(); lane++) {
             for (const auto& [targetId, prob] : connections[lane]) {
-                hasIncoming.insert(static_cast<int>(targetId));
+                hasIncoming.insert(targetId);
             }
         }
     }
 
     // Entry roads = roads NOT in hasIncoming set
-    std::vector<int> entryRoads;
+    std::vector<simulator::roadID> entryRoads;
     for (const auto& [roadId, road] : simulator_->cityMap) {
-        if (hasIncoming.find(static_cast<int>(roadId)) == hasIncoming.end()) {
-            entryRoads.push_back(static_cast<int>(roadId));
+        if (hasIncoming.find(roadId) == hasIncoming.end()) {
+            entryRoads.push_back(roadId);
         }
     }
 
@@ -1306,13 +1309,13 @@ void Server::initializeDefaultSpawnRates(double vehiclesPerMinute) {
     {
         std::lock_guard<std::mutex> lock(spawn_mutex_);
 
-        for (int roadId : entryRoads) {
+        for (simulator::roadID roadId : entryRoads) {
             spawn_rates_[roadId] = SpawnRate{roadId, vehiclesPerMinute, 0.0};
         }
     }
 
-    std::cout << "[Server] Initialized spawn rates for " << entryRoads.size()
-              << " entry roads at " << vehiclesPerMinute << " vehicles/minute each" << std::endl;
+    LOG_INFO(LogComponent::Simulation, "Initialized spawn rates for {} entry roads at {} vehicles/minute each",
+             entryRoads.size(), vehiclesPerMinute);
 }
 
 } // namespace api

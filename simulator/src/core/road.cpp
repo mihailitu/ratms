@@ -31,7 +31,8 @@ Road::Road(roadID /*rId*/, double rLength, unsigned lanes, unsigned maxSpeed_mps
     for(unsigned i = 0; i < lanesNo; ++i) {
         vehicles.push_back(std::list<Vehicle>());
         connections.push_back(std::vector<std::pair<roadID, double>>());
-        trafficLights.push_back(TrafficLight(10, 3, 30, TrafficLight::green_light));
+        // Use default constructor which has randomized phase offset
+        trafficLights.push_back(TrafficLight());
     }
 
     trafficLightObject = Vehicle(length, 0.0, 0.0, Vehicle::traffic_light);
