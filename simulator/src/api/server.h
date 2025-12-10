@@ -121,6 +121,12 @@ private:
     void handleGetSpawnRates(const httplib::Request& req, httplib::Response& res);
     void handleSetSpawnRates(const httplib::Request& req, httplib::Response& res);
 
+    // Continuous simulation mode handlers
+    void handleSimulationPause(const httplib::Request& req, httplib::Response& res);
+    void handleSimulationResume(const httplib::Request& req, httplib::Response& res);
+    void handleGetSimulationConfig(const httplib::Request& req, httplib::Response& res);
+    void handleSetSimulationConfig(const httplib::Request& req, httplib::Response& res);
+
     // Traffic pattern handlers
     void handleGetPatterns(const httplib::Request& req, httplib::Response& res);
     void handleGetSnapshots(const httplib::Request& req, httplib::Response& res);
@@ -157,6 +163,13 @@ private:
     std::atomic<bool> simulation_should_stop_{false};
     std::atomic<int> simulation_steps_{0};
     std::atomic<double> simulation_time_{0.0};
+
+    // Continuous simulation mode
+    std::atomic<bool> continuous_mode_{false};
+    std::atomic<bool> simulation_paused_{false};
+    std::atomic<int> restart_count_{0};
+    int step_limit_{10000};  // Configurable step limit (ignored in continuous mode)
+    std::chrono::steady_clock::time_point server_start_time_;
 
     // Parallel simulation configuration
     int num_threads_{0};  // 0 = auto (use hardware concurrency)

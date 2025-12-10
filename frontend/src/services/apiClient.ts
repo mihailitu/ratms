@@ -29,6 +29,7 @@ import type {
   ContinuousOptimizationStatus,
   ContinuousOptimizationConfig,
   SystemHealth,
+  SimulationConfig,
   PredictionResult,
   PredictionConfig,
   ValidationConfig,
@@ -197,7 +198,28 @@ class ApiClient {
   }
 
   async getSystemHealth(): Promise<SystemHealth> {
-    const response = await this.client.get<SystemHealth>('/api/system/health');
+    const response = await this.client.get<SystemHealth>('/api/health');
+    return response.data;
+  }
+
+  // Simulation Control - Pause/Resume (Stage 4)
+  async pauseSimulation(): Promise<{ success: boolean; message: string; step: number; time: number }> {
+    const response = await this.client.post('/api/simulation/pause', {});
+    return response.data;
+  }
+
+  async resumeSimulation(): Promise<{ success: boolean; message: string; step: number; time: number }> {
+    const response = await this.client.post('/api/simulation/resume', {});
+    return response.data;
+  }
+
+  async getSimulationConfig(): Promise<SimulationConfig> {
+    const response = await this.client.get<SimulationConfig>('/api/simulation/config');
+    return response.data;
+  }
+
+  async setSimulationConfig(config: Partial<SimulationConfig>): Promise<{ success: boolean; stepLimit: number; continuousMode: boolean }> {
+    const response = await this.client.post('/api/simulation/config', config);
     return response.data;
   }
 

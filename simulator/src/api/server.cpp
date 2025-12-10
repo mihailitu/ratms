@@ -44,7 +44,7 @@ static void sendSuccess(httplib::Response& res, const json& data) {
     res.set_content(response.dump(2), "application/json");
 }
 
-Server::Server(int port) : port_(port) {
+Server::Server(int port) : port_(port), server_start_time_(std::chrono::steady_clock::now()) {
     LOG_INFO(LogComponent::API, "API Server initialized on port {}", port_);
 }
 
@@ -252,6 +252,23 @@ void Server::setupRoutes() {
         handleSetSpawnRates(req, res);
     });
 
+    // Continuous simulation mode endpoints
+    http_server_.Post("/api/simulation/pause", [this](const httplib::Request& req, httplib::Response& res) {
+        handleSimulationPause(req, res);
+    });
+
+    http_server_.Post("/api/simulation/resume", [this](const httplib::Request& req, httplib::Response& res) {
+        handleSimulationResume(req, res);
+    });
+
+    http_server_.Get("/api/simulation/config", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetSimulationConfig(req, res);
+    });
+
+    http_server_.Post("/api/simulation/config", [this](const httplib::Request& req, httplib::Response& res) {
+        handleSetSimulationConfig(req, res);
+    });
+
     // Traffic pattern endpoints
     http_server_.Get("/api/patterns", [this](const httplib::Request& req, httplib::Response& res) {
         handleGetPatterns(req, res);
@@ -297,11 +314,26 @@ void Server::setupRoutes() {
 }
 
 void Server::handleHealth(const httplib::Request& req, httplib::Response& res) {
+    // Calculate uptime
+    auto now = std::chrono::steady_clock::now();
+    auto uptime_seconds = std::chrono::duration_cast<std::chrono::seconds>(
+        now - server_start_time_).count();
+
     json response = {
         {"status", "healthy"},
         {"service", "RATMS API Server"},
-        {"version", "0.1.0"},
-        {"timestamp", std::time(nullptr)}
+        {"version", "0.2.0"},
+        {"timestamp", std::time(nullptr)},
+        {"simulation", {
+            {"running", simulation_running_.load()},
+            {"paused", simulation_paused_.load()},
+            {"continuousMode", continuous_mode_.load()},
+            {"currentStep", simulation_steps_.load()},
+            {"stepLimit", step_limit_},
+            {"simulationTime", simulation_time_.load()}
+        }},
+        {"restartCount", restart_count_.load()},
+        {"uptime", uptime_seconds}
     };
 
     res.set_content(response.dump(2), "application/json");
@@ -664,17 +696,23 @@ void Server::handleGetNetworks(const httplib::Request& req, httplib::Response& r
 }
 
 void Server::runSimulationLoop() {
-    LOG_INFO(LogComponent::Simulation, "Simulation loop started");
+    LOG_INFO(LogComponent::Simulation, "Simulation loop started (continuous_mode={}, step_limit={})",
+             continuous_mode_.load(), step_limit_);
 
     const double dt = 0.1;  // Time step
-    const int maxSteps = 10000;  // Maximum steps
     const int metricsInterval = 10;  // Collect metrics every 10 steps
     const int dbWriteInterval = 100;  // Write to DB every 100 steps
 
     simulator::MetricsCollector metricsCollector;
 
     try {
-        while (!simulation_should_stop_ && simulation_steps_ < maxSteps) {
+        // Loop condition: stop if requested OR (not continuous mode AND reached step limit)
+        while (!simulation_should_stop_ && (continuous_mode_ || simulation_steps_ < step_limit_)) {
+            // Pause checkpoint - wait while paused
+            while (simulation_paused_ && !simulation_should_stop_) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            }
+            if (simulation_should_stop_) break;
             int currentStep = simulation_steps_;
 
             // PHASE 1: Parallel road updates with per-thread transition vectors
@@ -871,15 +909,21 @@ void Server::runSimulationLoop() {
 
         if (simulation_should_stop_) {
             LOG_INFO(LogComponent::Simulation, "Simulation stopped by user request at step {}", simulation_steps_.load());
+        } else if (!continuous_mode_ && simulation_steps_ >= step_limit_) {
+            LOG_INFO(LogComponent::Simulation, "Simulation completed: reached step limit {} at step {}",
+                     step_limit_, simulation_steps_.load());
         } else {
             LOG_INFO(LogComponent::Simulation, "Simulation completed naturally at step {}", simulation_steps_.load());
         }
 
     } catch (const std::exception& e) {
         LOG_ERROR(LogComponent::Simulation, "Exception in simulation loop: {}", e.what());
+        restart_count_++;
+        LOG_WARN(LogComponent::Simulation, "Restart count incremented to {}", restart_count_.load());
     }
 
-    LOG_INFO(LogComponent::Simulation, "Simulation loop ended: steps={}, time={:.2f}", simulation_steps_.load(), simulation_time_.load());
+    LOG_INFO(LogComponent::Simulation, "Simulation loop ended: steps={}, time={:.2f}, continuous_mode={}",
+             simulation_steps_.load(), simulation_time_.load(), continuous_mode_.load());
 }
 
 void Server::captureSimulationSnapshot() {
@@ -1394,6 +1438,112 @@ void Server::processVehicleSpawning(double dt) {
                 break;
             }
         }
+    }
+}
+
+// ============================================================================
+// Continuous Simulation Mode Handlers
+// ============================================================================
+
+void Server::handleSimulationPause(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!simulation_running_) {
+        sendError(res, 400, "Simulation not running");
+        return;
+    }
+
+    if (simulation_paused_) {
+        sendError(res, 400, "Simulation already paused");
+        return;
+    }
+
+    simulation_paused_ = true;
+    LOG_INFO(LogComponent::Simulation, "Simulation paused at step {}", simulation_steps_.load());
+
+    json response = {
+        {"success", true},
+        {"message", "Simulation paused"},
+        {"step", simulation_steps_.load()},
+        {"time", simulation_time_.load()}
+    };
+
+    res.set_content(response.dump(2), "application/json");
+    res.status = 200;
+}
+
+void Server::handleSimulationResume(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!simulation_running_) {
+        sendError(res, 400, "Simulation not running");
+        return;
+    }
+
+    if (!simulation_paused_) {
+        sendError(res, 400, "Simulation not paused");
+        return;
+    }
+
+    simulation_paused_ = false;
+    LOG_INFO(LogComponent::Simulation, "Simulation resumed at step {}", simulation_steps_.load());
+
+    json response = {
+        {"success", true},
+        {"message", "Simulation resumed"},
+        {"step", simulation_steps_.load()},
+        {"time", simulation_time_.load()}
+    };
+
+    res.set_content(response.dump(2), "application/json");
+    res.status = 200;
+}
+
+void Server::handleGetSimulationConfig(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    json response = {
+        {"stepLimit", step_limit_},
+        {"continuousMode", continuous_mode_.load()}
+    };
+
+    res.set_content(response.dump(2), "application/json");
+    res.status = 200;
+}
+
+void Server::handleSetSimulationConfig(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    try {
+        json body = json::parse(req.body);
+
+        if (body.contains("stepLimit")) {
+            int newLimit = body["stepLimit"].get<int>();
+            if (newLimit < 100) {
+                sendError(res, 400, "stepLimit must be at least 100");
+                return;
+            }
+            step_limit_ = newLimit;
+            LOG_INFO(LogComponent::Simulation, "Step limit updated to {}", step_limit_);
+        }
+
+        if (body.contains("continuousMode")) {
+            bool newMode = body["continuousMode"].get<bool>();
+            continuous_mode_ = newMode;
+            LOG_INFO(LogComponent::Simulation, "Continuous mode set to {}", newMode);
+        }
+
+        json response = {
+            {"success", true},
+            {"stepLimit", step_limit_},
+            {"continuousMode", continuous_mode_.load()}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 400, std::string("Invalid JSON: ") + e.what());
     }
 }
 

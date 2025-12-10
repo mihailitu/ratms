@@ -19,6 +19,7 @@
     "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
+    "-": "^0.0.1",
     "@tailwindcss/postcss": "^4.1.15",
     "axios": "^1.12.2",
     "leaflet": "^1.9.4",

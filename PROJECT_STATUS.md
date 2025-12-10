@@ -36,6 +36,7 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 | 23 | Validation & Rollout | TimingValidator, RolloutMonitor, auto-rollback on regression |
 | 24 | Statistics Dashboard | Prediction confidence, rollout monitoring, pipeline status UI |
 | 25 | Dashboard Enhancements | Config panels, forecast comparison, predictive mode toggle |
+| 26 | Continuous Simulation Mode | Pause/resume, continuous mode toggle, configurable step limit |
 
 ## Current Features
 
@@ -56,6 +57,9 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 - Prediction/validation configuration panels with live editing
 - Forecast comparison with chart and table views
 - Predictive mode toggle for continuous optimization
+- Continuous simulation mode with pause/resume capability
+- Configurable step limit or unlimited continuous mode
+- Enhanced health endpoint with detailed simulation status
 - Analytics with percentile statistics (P25, P50, P75, P95)
 - Comprehensive E2E test coverage
 - Build system with dependency installation script
@@ -106,6 +110,10 @@ cd frontend && npm run test:e2e
 | POST | /api/optimization/rollback | Manual rollback to previous timings |
 | GET | /api/optimization/validation/config | Validation configuration |
 | POST | /api/optimization/validation/config | Update validation config |
+| POST | /api/simulation/pause | Pause running simulation |
+| POST | /api/simulation/resume | Resume paused simulation |
+| GET | /api/simulation/config | Get simulation configuration |
+| POST | /api/simulation/config | Update simulation configuration |
 
 ## File Structure
 
@@ -157,7 +165,7 @@ See [docs/PRODUCTION_PLAN.md](docs/PRODUCTION_PLAN.md) for full 8-stage plan.
 | 1 | Density-based visualization | **Complete** |
 | 2 | Runtime traffic light modification | **Complete** |
 | 3 | Dynamic vehicle spawning | **Complete** |
-| 4 | Continuous simulation mode | Pending |
+| 4 | Continuous simulation mode | **Complete** |
 | 5 | Traffic profiles (JSON-based) | Pending |
 | 6 | Gradual timing blending | Pending |
 | 7 | Continuous background optimization | Pending |
@@ -184,4 +192,4 @@ Component-based logging with spdlog:
 
 ---
 
-**Status:** Production-ready with 157 E2E tests. Predictive optimization plan complete (all 6 phases).
+**Status:** Production-ready with 157 E2E tests. Predictive optimization plan complete (all 6 phases). Production System Plan Stage 4 (Continuous Simulation Mode) complete.

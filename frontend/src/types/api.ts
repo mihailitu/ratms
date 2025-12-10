@@ -392,28 +392,23 @@ export interface SystemHealth {
   status: string;
   service: string;
   version: string;
-  uptime_seconds: number;
+  timestamp: number;
   simulation: {
     running: boolean;
-    continuous_mode: boolean;
-    steps: number;
-    time: number;
-    crash_recovery_count: number;
+    paused: boolean;
+    continuousMode: boolean;
+    currentStep: number;
+    stepLimit: number;
+    simulationTime: number;
   };
-  database: {
-    connected: boolean;
-  };
-  optimization: {
-    controller_active: boolean;
-    continuous_active: boolean;
-    continuous_running: boolean;
-  };
-  simulator: {
-    initialized: boolean;
-    road_count?: number;
-    total_vehicles?: number;
-  };
-  timestamp: number;
+  restartCount: number;
+  uptime: number;
+}
+
+// Simulation Configuration (Stage 4)
+export interface SimulationConfig {
+  stepLimit: number;
+  continuousMode: boolean;
 }
 
 // Prediction Types (Phase 5)
