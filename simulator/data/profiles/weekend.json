@@ -1,0 +1,18 @@
+{
+  "name": "weekend",
+  "description": "Weekend traffic - Medium volume with balanced timings",
+  "spawnRates": [
+    {"roadId": 0, "lane": 0, "vehiclesPerMinute": 10},
+    {"roadId": 0, "lane": 1, "vehiclesPerMinute": 10}
+  ],
+  "trafficLights": [
+    {"roadId": 0, "lane": 0, "greenTime": 35, "yellowTime": 3, "redTime": 35},
+    {"roadId": 0, "lane": 1, "greenTime": 35, "yellowTime": 3, "redTime": 35},
+    {"roadId": 1, "lane": 0, "greenTime": 35, "yellowTime": 3, "redTime": 35},
+    {"roadId": 1, "lane": 1, "greenTime": 35, "yellowTime": 3, "redTime": 35},
+    {"roadId": 2, "lane": 0, "greenTime": 35, "yellowTime": 3, "redTime": 35},
+    {"roadId": 2, "lane": 1, "greenTime": 35, "yellowTime": 3, "redTime": 35},
+    {"roadId": 3, "lane": 0, "greenTime": 35, "yellowTime": 3, "redTime": 35},
+    {"roadId": 3, "lane": 1, "greenTime": 35, "yellowTime": 3, "redTime": 35}
+  ]
+}

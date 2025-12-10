@@ -291,6 +291,53 @@ export interface TrafficProfile {
   name: string;
   description: string;
   isActive: boolean;
+  createdAt?: number;
+  spawnRateCount?: number;
+  trafficLightCount?: number;
+}
+
+// Full Traffic Profile with spawn rates and traffic lights (Stage 5)
+export interface ProfileSpawnRate {
+  roadId: number;
+  lane: number;
+  vehiclesPerMinute: number;
+}
+
+export interface ProfileTrafficLight {
+  roadId: number;
+  lane: number;
+  greenTime: number;
+  yellowTime: number;
+  redTime: number;
+}
+
+export interface FullTrafficProfile extends TrafficProfile {
+  spawnRates: ProfileSpawnRate[];
+  trafficLights: ProfileTrafficLight[];
+}
+
+export interface ProfilesListResponse {
+  profiles: TrafficProfile[];
+  count: number;
+}
+
+export interface CreateProfileRequest {
+  name: string;
+  description?: string;
+  spawnRates?: ProfileSpawnRate[];
+  trafficLights?: ProfileTrafficLight[];
+}
+
+export interface CaptureProfileRequest {
+  name: string;
+  description?: string;
+}
+
+export interface ProfileImportExportFormat {
+  name: string;
+  description: string;
+  spawnRates: ProfileSpawnRate[];
+  trafficLights: ProfileTrafficLight[];
 }
 
 export interface FlowRate {

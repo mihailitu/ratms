@@ -77,6 +77,15 @@ bool DatabaseManager::runMigrations(const std::string& migrations_dir) {
         return false;
     }
 
+    // Run migration 006 (profile traffic lights)
+    std::string migration_file_006 = migrations_dir + "/006_profile_traffic_lights.sql";
+    LOG_INFO(LogComponent::Database, "Running database migration: {}", migration_file_006);
+
+    if (!executeSQLFile(migration_file_006)) {
+        LOG_ERROR(LogComponent::Database, "Migration 006 failed: {}", last_error_);
+        return false;
+    }
+
     LOG_INFO(LogComponent::Database, "Database migrations completed successfully");
     return true;
 }
@@ -1421,6 +1430,419 @@ std::vector<DatabaseManager::TrafficPatternRecord> DatabaseManager::getAllTraffi
 
     sqlite3_finalize(stmt);
     return results;
+}
+
+// Traffic profile operations
+int DatabaseManager::createProfile(const std::string& name, const std::string& description) {
+    std::string sql = "INSERT INTO traffic_profiles (name, description, is_active, created_at) "
+                     "VALUES (?, ?, 0, ?)";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return -1;
+    }
+
+    sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, description.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int64(stmt, 3, std::time(nullptr));
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (rc != SQLITE_DONE) {
+        last_error_ = sqlite3_errmsg(db_);
+        return -1;
+    }
+
+    int profile_id = static_cast<int>(sqlite3_last_insert_rowid(db_));
+    LOG_INFO(LogComponent::Database, "Created traffic profile '{}' with ID: {}", name, profile_id);
+    return profile_id;
+}
+
+DatabaseManager::ProfileRecord DatabaseManager::getProfile(int profile_id) {
+    ProfileRecord record{};
+
+    std::string sql = "SELECT id, name, description, is_active, created_at FROM traffic_profiles WHERE id = ?";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return record;
+    }
+
+    sqlite3_bind_int(stmt, 1, profile_id);
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        record.id = sqlite3_column_int(stmt, 0);
+        record.name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        const char* desc = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        record.description = desc ? desc : "";
+        record.is_active = sqlite3_column_int(stmt, 3) != 0;
+        record.created_at = sqlite3_column_int64(stmt, 4);
+    }
+
+    sqlite3_finalize(stmt);
+    return record;
+}
+
+DatabaseManager::ProfileRecord DatabaseManager::getProfileByName(const std::string& name) {
+    ProfileRecord record{};
+
+    std::string sql = "SELECT id, name, description, is_active, created_at FROM traffic_profiles WHERE name = ?";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return record;
+    }
+
+    sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        record.id = sqlite3_column_int(stmt, 0);
+        record.name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        const char* desc = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        record.description = desc ? desc : "";
+        record.is_active = sqlite3_column_int(stmt, 3) != 0;
+        record.created_at = sqlite3_column_int64(stmt, 4);
+    }
+
+    sqlite3_finalize(stmt);
+    return record;
+}
+
+std::vector<DatabaseManager::ProfileRecord> DatabaseManager::getAllProfiles() {
+    std::vector<ProfileRecord> results;
+
+    std::string sql = "SELECT id, name, description, is_active, created_at FROM traffic_profiles ORDER BY name";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return results;
+    }
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        ProfileRecord record;
+        record.id = sqlite3_column_int(stmt, 0);
+        record.name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        const char* desc = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        record.description = desc ? desc : "";
+        record.is_active = sqlite3_column_int(stmt, 3) != 0;
+        record.created_at = sqlite3_column_int64(stmt, 4);
+        results.push_back(record);
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+bool DatabaseManager::updateProfile(int profile_id, const std::string& name, const std::string& description) {
+    std::string sql = "UPDATE traffic_profiles SET name = ?, description = ? WHERE id = ?";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 2, description.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 3, profile_id);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    return rc == SQLITE_DONE;
+}
+
+bool DatabaseManager::deleteProfile(int profile_id) {
+    // Delete related records first (cascade should handle but be explicit)
+    clearProfileSpawnRates(profile_id);
+    clearProfileTrafficLights(profile_id);
+
+    std::string sql = "DELETE FROM traffic_profiles WHERE id = ?";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, profile_id);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (rc == SQLITE_DONE) {
+        LOG_INFO(LogComponent::Database, "Deleted traffic profile ID: {}", profile_id);
+        return true;
+    }
+    return false;
+}
+
+bool DatabaseManager::setActiveProfile(int profile_id) {
+    // First, deactivate all profiles
+    if (!executeSQL("UPDATE traffic_profiles SET is_active = 0")) {
+        return false;
+    }
+
+    // Then activate the specified profile
+    std::string sql = "UPDATE traffic_profiles SET is_active = 1 WHERE id = ?";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, profile_id);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (rc == SQLITE_DONE) {
+        LOG_INFO(LogComponent::Database, "Set active traffic profile ID: {}", profile_id);
+        return true;
+    }
+    return false;
+}
+
+DatabaseManager::ProfileRecord DatabaseManager::getActiveProfile() {
+    ProfileRecord record{};
+
+    std::string sql = "SELECT id, name, description, is_active, created_at FROM traffic_profiles WHERE is_active = 1 LIMIT 1";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return record;
+    }
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        record.id = sqlite3_column_int(stmt, 0);
+        record.name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+        const char* desc = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        record.description = desc ? desc : "";
+        record.is_active = true;
+        record.created_at = sqlite3_column_int64(stmt, 4);
+    }
+
+    sqlite3_finalize(stmt);
+    return record;
+}
+
+// Profile spawn rate operations
+bool DatabaseManager::saveProfileSpawnRates(int profile_id, const std::vector<ProfileSpawnRateRecord>& rates) {
+    // Clear existing rates first
+    clearProfileSpawnRates(profile_id);
+
+    if (rates.empty()) return true;
+
+    executeSQL("BEGIN TRANSACTION");
+
+    std::string sql = "INSERT INTO road_flow_rates (profile_id, road_id, lane, vehicles_per_minute, created_at) "
+                     "VALUES (?, ?, ?, ?, ?)";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        executeSQL("ROLLBACK");
+        return false;
+    }
+
+    int64_t now = std::time(nullptr);
+
+    for (const auto& rate : rates) {
+        sqlite3_reset(stmt);
+        sqlite3_bind_int(stmt, 1, profile_id);
+        sqlite3_bind_int(stmt, 2, rate.road_id);
+        sqlite3_bind_int(stmt, 3, rate.lane);
+        sqlite3_bind_double(stmt, 4, rate.vehicles_per_minute);
+        sqlite3_bind_int64(stmt, 5, now);
+
+        if (sqlite3_step(stmt) != SQLITE_DONE) {
+            last_error_ = sqlite3_errmsg(db_);
+            sqlite3_finalize(stmt);
+            executeSQL("ROLLBACK");
+            return false;
+        }
+    }
+
+    sqlite3_finalize(stmt);
+    executeSQL("COMMIT");
+
+    LOG_DEBUG(LogComponent::Database, "Saved {} spawn rates for profile {}", rates.size(), profile_id);
+    return true;
+}
+
+std::vector<DatabaseManager::ProfileSpawnRateRecord> DatabaseManager::getProfileSpawnRates(int profile_id) {
+    std::vector<ProfileSpawnRateRecord> results;
+
+    std::string sql = "SELECT id, profile_id, road_id, lane, vehicles_per_minute, created_at "
+                     "FROM road_flow_rates WHERE profile_id = ? ORDER BY road_id, lane";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return results;
+    }
+
+    sqlite3_bind_int(stmt, 1, profile_id);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        ProfileSpawnRateRecord record;
+        record.id = sqlite3_column_int(stmt, 0);
+        record.profile_id = sqlite3_column_int(stmt, 1);
+        record.road_id = sqlite3_column_int(stmt, 2);
+        record.lane = sqlite3_column_int(stmt, 3);
+        record.vehicles_per_minute = sqlite3_column_double(stmt, 4);
+        record.created_at = sqlite3_column_int64(stmt, 5);
+        results.push_back(record);
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+bool DatabaseManager::clearProfileSpawnRates(int profile_id) {
+    std::string sql = "DELETE FROM road_flow_rates WHERE profile_id = ?";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, profile_id);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    return rc == SQLITE_DONE;
+}
+
+// Profile traffic light operations
+bool DatabaseManager::saveProfileTrafficLights(int profile_id, const std::vector<ProfileTrafficLightRecord>& lights) {
+    // Clear existing lights first
+    clearProfileTrafficLights(profile_id);
+
+    if (lights.empty()) return true;
+
+    executeSQL("BEGIN TRANSACTION");
+
+    std::string sql = "INSERT INTO profile_traffic_lights (profile_id, road_id, lane, green_time, yellow_time, red_time, created_at) "
+                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        executeSQL("ROLLBACK");
+        return false;
+    }
+
+    int64_t now = std::time(nullptr);
+
+    for (const auto& light : lights) {
+        sqlite3_reset(stmt);
+        sqlite3_bind_int(stmt, 1, profile_id);
+        sqlite3_bind_int(stmt, 2, light.road_id);
+        sqlite3_bind_int(stmt, 3, light.lane);
+        sqlite3_bind_double(stmt, 4, light.green_time);
+        sqlite3_bind_double(stmt, 5, light.yellow_time);
+        sqlite3_bind_double(stmt, 6, light.red_time);
+        sqlite3_bind_int64(stmt, 7, now);
+
+        if (sqlite3_step(stmt) != SQLITE_DONE) {
+            last_error_ = sqlite3_errmsg(db_);
+            sqlite3_finalize(stmt);
+            executeSQL("ROLLBACK");
+            return false;
+        }
+    }
+
+    sqlite3_finalize(stmt);
+    executeSQL("COMMIT");
+
+    LOG_DEBUG(LogComponent::Database, "Saved {} traffic lights for profile {}", lights.size(), profile_id);
+    return true;
+}
+
+std::vector<DatabaseManager::ProfileTrafficLightRecord> DatabaseManager::getProfileTrafficLights(int profile_id) {
+    std::vector<ProfileTrafficLightRecord> results;
+
+    std::string sql = "SELECT id, profile_id, road_id, lane, green_time, yellow_time, red_time, created_at "
+                     "FROM profile_traffic_lights WHERE profile_id = ? ORDER BY road_id, lane";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return results;
+    }
+
+    sqlite3_bind_int(stmt, 1, profile_id);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        ProfileTrafficLightRecord record;
+        record.id = sqlite3_column_int(stmt, 0);
+        record.profile_id = sqlite3_column_int(stmt, 1);
+        record.road_id = sqlite3_column_int(stmt, 2);
+        record.lane = sqlite3_column_int(stmt, 3);
+        record.green_time = sqlite3_column_double(stmt, 4);
+        record.yellow_time = sqlite3_column_double(stmt, 5);
+        record.red_time = sqlite3_column_double(stmt, 6);
+        record.created_at = sqlite3_column_int64(stmt, 7);
+        results.push_back(record);
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+bool DatabaseManager::clearProfileTrafficLights(int profile_id) {
+    std::string sql = "DELETE FROM profile_traffic_lights WHERE profile_id = ?";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, profile_id);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    return rc == SQLITE_DONE;
 }
 
 } // namespace data

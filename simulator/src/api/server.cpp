@@ -3,6 +3,7 @@
 #include "traffic_data_controller.h"
 #include "continuous_optimization_controller.h"
 #include "prediction_controller.h"
+#include "traffic_profile_service.h"
 #include "../prediction/traffic_predictor.h"
 #include "../utils/logger.h"
 #include "../optimization/metrics.h"
@@ -140,6 +141,10 @@ void Server::setDatabase(std::shared_ptr<data::DatabaseManager> db) {
                          "Connected predictor to continuous optimization controller");
             }
         }
+
+        // Initialize traffic profile service
+        profile_service_ = std::make_unique<TrafficProfileService>(database_, simulator_, sim_mutex_);
+        LOG_INFO(LogComponent::API, "Traffic profile service initialized");
     }
 }
 
@@ -288,6 +293,43 @@ void Server::setupRoutes() {
 
     http_server_.Post("/api/patterns/prune", [this](const httplib::Request& req, httplib::Response& res) {
         handlePruneSnapshots(req, res);
+    });
+
+    // Traffic profile endpoints
+    http_server_.Get("/api/profiles", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetProfiles(req, res);
+    });
+
+    http_server_.Get(R"(/api/profiles/([^/]+)/export)", [this](const httplib::Request& req, httplib::Response& res) {
+        handleExportProfile(req, res);
+    });
+
+    http_server_.Post(R"(/api/profiles/([^/]+)/apply)", [this](const httplib::Request& req, httplib::Response& res) {
+        handleApplyProfile(req, res);
+    });
+
+    http_server_.Get(R"(/api/profiles/([^/]+))", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetProfile(req, res);
+    });
+
+    http_server_.Post("/api/profiles", [this](const httplib::Request& req, httplib::Response& res) {
+        handleCreateProfile(req, res);
+    });
+
+    http_server_.Put(R"(/api/profiles/([^/]+))", [this](const httplib::Request& req, httplib::Response& res) {
+        handleUpdateProfile(req, res);
+    });
+
+    http_server_.Delete(R"(/api/profiles/([^/]+))", [this](const httplib::Request& req, httplib::Response& res) {
+        handleDeleteProfile(req, res);
+    });
+
+    http_server_.Post("/api/profiles/capture", [this](const httplib::Request& req, httplib::Response& res) {
+        handleCaptureProfile(req, res);
+    });
+
+    http_server_.Post("/api/profiles/import", [this](const httplib::Request& req, httplib::Response& res) {
+        handleImportProfile(req, res);
     });
 
     // Register optimization routes if controller is initialized
@@ -1957,6 +1999,463 @@ void Server::handlePruneSnapshots(const httplib::Request& req, httplib::Response
 
     } catch (const std::exception& e) {
         sendError(res, 500, std::string("Error pruning snapshots: ") + e.what());
+    }
+}
+
+// ============================================================================
+// Traffic Profile Handlers
+// ============================================================================
+
+void Server::handleGetProfiles(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!profile_service_) {
+        sendError(res, 503, "Profile service not initialized");
+        return;
+    }
+
+    try {
+        auto profiles = profile_service_->getAllProfiles();
+
+        json profilesJson = json::array();
+        for (const auto& p : profiles) {
+            profilesJson.push_back({
+                {"id", p.id},
+                {"name", p.name},
+                {"description", p.description},
+                {"isActive", p.isActive},
+                {"createdAt", p.createdAt},
+                {"spawnRateCount", p.spawnRates.size()},
+                {"trafficLightCount", p.trafficLights.size()}
+            });
+        }
+
+        json response = {
+            {"profiles", profilesJson},
+            {"count", profiles.size()}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error getting profiles: ") + e.what());
+    }
+}
+
+void Server::handleGetProfile(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!profile_service_) {
+        sendError(res, 503, "Profile service not initialized");
+        return;
+    }
+
+    try {
+        std::string nameOrId = req.matches[1];
+
+        TrafficProfileService::TrafficProfile profile;
+
+        // Check if it's a numeric ID or a name
+        try {
+            int profileId = std::stoi(nameOrId);
+            profile = profile_service_->getProfile(profileId);
+        } catch (const std::invalid_argument&) {
+            profile = profile_service_->getProfileByName(nameOrId);
+        }
+
+        if (profile.id <= 0) {
+            sendError(res, 404, "Profile not found");
+            return;
+        }
+
+        // Build spawn rates JSON
+        json spawnRatesJson = json::array();
+        for (const auto& rate : profile.spawnRates) {
+            spawnRatesJson.push_back({
+                {"roadId", rate.road_id},
+                {"lane", rate.lane},
+                {"vehiclesPerMinute", rate.vehicles_per_minute}
+            });
+        }
+
+        // Build traffic lights JSON
+        json trafficLightsJson = json::array();
+        for (const auto& light : profile.trafficLights) {
+            trafficLightsJson.push_back({
+                {"roadId", light.road_id},
+                {"lane", light.lane},
+                {"greenTime", light.green_time},
+                {"yellowTime", light.yellow_time},
+                {"redTime", light.red_time}
+            });
+        }
+
+        json response = {
+            {"id", profile.id},
+            {"name", profile.name},
+            {"description", profile.description},
+            {"isActive", profile.isActive},
+            {"createdAt", profile.createdAt},
+            {"spawnRates", spawnRatesJson},
+            {"trafficLights", trafficLightsJson}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error getting profile: ") + e.what());
+    }
+}
+
+void Server::handleCreateProfile(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!profile_service_) {
+        sendError(res, 503, "Profile service not initialized");
+        return;
+    }
+
+    try {
+        json body = json::parse(req.body);
+
+        std::string name = body.value("name", "");
+        std::string description = body.value("description", "");
+
+        if (name.empty()) {
+            sendError(res, 400, "Profile name is required");
+            return;
+        }
+
+        int profileId = profile_service_->createProfile(name, description);
+
+        if (profileId <= 0) {
+            sendError(res, 500, "Failed to create profile");
+            return;
+        }
+
+        // Save spawn rates if provided
+        if (body.contains("spawnRates") && body["spawnRates"].is_array()) {
+            std::vector<data::DatabaseManager::ProfileSpawnRateRecord> spawnRates;
+            for (const auto& rate : body["spawnRates"]) {
+                data::DatabaseManager::ProfileSpawnRateRecord record;
+                record.profile_id = profileId;
+                record.road_id = rate.value("roadId", 0);
+                record.lane = rate.value("lane", 0);
+                record.vehicles_per_minute = rate.value("vehiclesPerMinute", 10.0);
+                spawnRates.push_back(record);
+            }
+
+            std::vector<data::DatabaseManager::ProfileTrafficLightRecord> trafficLights;
+            if (body.contains("trafficLights") && body["trafficLights"].is_array()) {
+                for (const auto& light : body["trafficLights"]) {
+                    data::DatabaseManager::ProfileTrafficLightRecord record;
+                    record.profile_id = profileId;
+                    record.road_id = light.value("roadId", 0);
+                    record.lane = light.value("lane", 0);
+                    record.green_time = light.value("greenTime", 30.0);
+                    record.yellow_time = light.value("yellowTime", 3.0);
+                    record.red_time = light.value("redTime", 30.0);
+                    trafficLights.push_back(record);
+                }
+            }
+
+            profile_service_->saveProfileData(profileId, spawnRates, trafficLights);
+        }
+
+        LOG_INFO(LogComponent::API, "Created profile '{}' with ID {}", name, profileId);
+
+        json response = {
+            {"success", true},
+            {"id", profileId},
+            {"name", name}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 201;
+
+    } catch (const json::exception& e) {
+        sendError(res, 400, std::string("Invalid JSON: ") + e.what());
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error creating profile: ") + e.what());
+    }
+}
+
+void Server::handleUpdateProfile(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!profile_service_) {
+        sendError(res, 503, "Profile service not initialized");
+        return;
+    }
+
+    try {
+        std::string nameOrId = req.matches[1];
+        json body = json::parse(req.body);
+
+        // Find profile by name or ID
+        TrafficProfileService::TrafficProfile profile;
+        try {
+            int profileId = std::stoi(nameOrId);
+            profile = profile_service_->getProfile(profileId);
+        } catch (const std::invalid_argument&) {
+            profile = profile_service_->getProfileByName(nameOrId);
+        }
+
+        if (profile.id <= 0) {
+            sendError(res, 404, "Profile not found");
+            return;
+        }
+
+        std::string newName = body.value("name", profile.name);
+        std::string newDescription = body.value("description", profile.description);
+
+        bool success = profile_service_->updateProfile(profile.id, newName, newDescription);
+
+        // Update spawn rates if provided
+        if (body.contains("spawnRates") && body["spawnRates"].is_array()) {
+            std::vector<data::DatabaseManager::ProfileSpawnRateRecord> spawnRates;
+            for (const auto& rate : body["spawnRates"]) {
+                data::DatabaseManager::ProfileSpawnRateRecord record;
+                record.profile_id = profile.id;
+                record.road_id = rate.value("roadId", 0);
+                record.lane = rate.value("lane", 0);
+                record.vehicles_per_minute = rate.value("vehiclesPerMinute", 10.0);
+                spawnRates.push_back(record);
+            }
+
+            std::vector<data::DatabaseManager::ProfileTrafficLightRecord> trafficLights;
+            if (body.contains("trafficLights") && body["trafficLights"].is_array()) {
+                for (const auto& light : body["trafficLights"]) {
+                    data::DatabaseManager::ProfileTrafficLightRecord record;
+                    record.profile_id = profile.id;
+                    record.road_id = light.value("roadId", 0);
+                    record.lane = light.value("lane", 0);
+                    record.green_time = light.value("greenTime", 30.0);
+                    record.yellow_time = light.value("yellowTime", 3.0);
+                    record.red_time = light.value("redTime", 30.0);
+                    trafficLights.push_back(record);
+                }
+            }
+
+            profile_service_->saveProfileData(profile.id, spawnRates, trafficLights);
+        }
+
+        if (success) {
+            LOG_INFO(LogComponent::API, "Updated profile '{}' (ID {})", newName, profile.id);
+        }
+
+        json response = {
+            {"success", success},
+            {"id", profile.id},
+            {"name", newName}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = success ? 200 : 500;
+
+    } catch (const json::exception& e) {
+        sendError(res, 400, std::string("Invalid JSON: ") + e.what());
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error updating profile: ") + e.what());
+    }
+}
+
+void Server::handleDeleteProfile(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!profile_service_) {
+        sendError(res, 503, "Profile service not initialized");
+        return;
+    }
+
+    try {
+        std::string nameOrId = req.matches[1];
+
+        // Find profile by name or ID
+        TrafficProfileService::TrafficProfile profile;
+        try {
+            int profileId = std::stoi(nameOrId);
+            profile = profile_service_->getProfile(profileId);
+        } catch (const std::invalid_argument&) {
+            profile = profile_service_->getProfileByName(nameOrId);
+        }
+
+        if (profile.id <= 0) {
+            sendError(res, 404, "Profile not found");
+            return;
+        }
+
+        bool success = profile_service_->deleteProfile(profile.id);
+
+        if (success) {
+            LOG_INFO(LogComponent::API, "Deleted profile '{}' (ID {})", profile.name, profile.id);
+        }
+
+        json response = {
+            {"success", success},
+            {"message", success ? "Profile deleted" : "Failed to delete profile"}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = success ? 200 : 500;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error deleting profile: ") + e.what());
+    }
+}
+
+void Server::handleApplyProfile(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!profile_service_) {
+        sendError(res, 503, "Profile service not initialized");
+        return;
+    }
+
+    try {
+        std::string nameOrId = req.matches[1];
+
+        bool success = false;
+
+        // Try to apply by ID first, then by name
+        try {
+            int profileId = std::stoi(nameOrId);
+            success = profile_service_->applyProfile(profileId);
+        } catch (const std::invalid_argument&) {
+            success = profile_service_->applyProfileByName(nameOrId);
+        }
+
+        if (!success) {
+            sendError(res, 404, "Profile not found or failed to apply");
+            return;
+        }
+
+        LOG_INFO(LogComponent::API, "Applied profile '{}'", nameOrId);
+
+        json response = {
+            {"success", true},
+            {"message", "Profile applied successfully"}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error applying profile: ") + e.what());
+    }
+}
+
+void Server::handleCaptureProfile(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!profile_service_) {
+        sendError(res, 503, "Profile service not initialized");
+        return;
+    }
+
+    try {
+        json body = json::parse(req.body);
+
+        std::string name = body.value("name", "Captured Profile");
+        std::string description = body.value("description", "Captured from current simulation state");
+
+        int profileId = profile_service_->captureCurrentState(name, description);
+
+        if (profileId <= 0) {
+            sendError(res, 500, "Failed to capture current state");
+            return;
+        }
+
+        LOG_INFO(LogComponent::API, "Captured current state as profile '{}' (ID {})", name, profileId);
+
+        json response = {
+            {"success", true},
+            {"id", profileId},
+            {"name", name},
+            {"message", "Current state captured as new profile"}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 201;
+
+    } catch (const json::exception& e) {
+        sendError(res, 400, std::string("Invalid JSON: ") + e.what());
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error capturing profile: ") + e.what());
+    }
+}
+
+void Server::handleExportProfile(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!profile_service_) {
+        sendError(res, 503, "Profile service not initialized");
+        return;
+    }
+
+    try {
+        std::string nameOrId = req.matches[1];
+
+        std::string jsonStr;
+
+        // Try to export by ID first, then by name
+        try {
+            int profileId = std::stoi(nameOrId);
+            jsonStr = profile_service_->exportProfileToJson(profileId);
+        } catch (const std::invalid_argument&) {
+            jsonStr = profile_service_->exportProfileToJson(nameOrId);
+        }
+
+        if (jsonStr == "{}") {
+            sendError(res, 404, "Profile not found");
+            return;
+        }
+
+        res.set_header("Content-Type", "application/json");
+        res.set_header("Content-Disposition",
+                      "attachment; filename=\"profile_" + nameOrId + ".json\"");
+        res.set_content(jsonStr, "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error exporting profile: ") + e.what());
+    }
+}
+
+void Server::handleImportProfile(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!profile_service_) {
+        sendError(res, 503, "Profile service not initialized");
+        return;
+    }
+
+    try {
+        int profileId = profile_service_->importProfileFromJson(req.body);
+
+        if (profileId <= 0) {
+            sendError(res, 400, "Failed to import profile - invalid JSON format");
+            return;
+        }
+
+        auto profile = profile_service_->getProfile(profileId);
+
+        LOG_INFO(LogComponent::API, "Imported profile '{}' (ID {})", profile.name, profileId);
+
+        json response = {
+            {"success", true},
+            {"id", profileId},
+            {"name", profile.name},
+            {"message", "Profile imported successfully"}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 201;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error importing profile: ") + e.what());
     }
 }
 

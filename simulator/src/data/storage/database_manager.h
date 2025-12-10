@@ -125,6 +125,35 @@ public:
         int64_t last_updated;
     };
 
+    // Traffic profile records
+    struct ProfileRecord {
+        int id;
+        std::string name;
+        std::string description;
+        bool is_active;
+        int64_t created_at;
+    };
+
+    struct ProfileSpawnRateRecord {
+        int id;
+        int profile_id;
+        int road_id;
+        int lane;
+        double vehicles_per_minute;
+        int64_t created_at;
+    };
+
+    struct ProfileTrafficLightRecord {
+        int id;
+        int profile_id;
+        int road_id;
+        int lane;
+        double green_time;
+        double yellow_time;
+        double red_time;
+        int64_t created_at;
+    };
+
     DatabaseManager(const std::string& db_path = "ratms.db");
     ~DatabaseManager();
 
@@ -190,6 +219,26 @@ public:
     std::vector<TrafficPatternRecord> getTrafficPatterns(int day_of_week, int time_slot);
     std::vector<TrafficPatternRecord> getTrafficPatternsForRoad(int road_id);
     std::vector<TrafficPatternRecord> getAllTrafficPatterns();
+
+    // Traffic profile operations
+    int createProfile(const std::string& name, const std::string& description);
+    ProfileRecord getProfile(int profile_id);
+    ProfileRecord getProfileByName(const std::string& name);
+    std::vector<ProfileRecord> getAllProfiles();
+    bool updateProfile(int profile_id, const std::string& name, const std::string& description);
+    bool deleteProfile(int profile_id);
+    bool setActiveProfile(int profile_id);
+    ProfileRecord getActiveProfile();
+
+    // Profile spawn rate operations
+    bool saveProfileSpawnRates(int profile_id, const std::vector<ProfileSpawnRateRecord>& rates);
+    std::vector<ProfileSpawnRateRecord> getProfileSpawnRates(int profile_id);
+    bool clearProfileSpawnRates(int profile_id);
+
+    // Profile traffic light operations
+    bool saveProfileTrafficLights(int profile_id, const std::vector<ProfileTrafficLightRecord>& lights);
+    std::vector<ProfileTrafficLightRecord> getProfileTrafficLights(int profile_id);
+    bool clearProfileTrafficLights(int profile_id);
 
     // Analytics operations
     struct MetricStatistics {

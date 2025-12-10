@@ -1,0 +1,18 @@
+{
+  "name": "evening_rush",
+  "description": "Evening rush hour (5pm-7pm) - Optimized for outbound commuter traffic",
+  "spawnRates": [
+    {"roadId": 0, "lane": 0, "vehiclesPerMinute": 18},
+    {"roadId": 0, "lane": 1, "vehiclesPerMinute": 18}
+  ],
+  "trafficLights": [
+    {"roadId": 0, "lane": 0, "greenTime": 30, "yellowTime": 3, "redTime": 45},
+    {"roadId": 0, "lane": 1, "greenTime": 30, "yellowTime": 3, "redTime": 45},
+    {"roadId": 1, "lane": 0, "greenTime": 45, "yellowTime": 3, "redTime": 30},
+    {"roadId": 1, "lane": 1, "greenTime": 45, "yellowTime": 3, "redTime": 30},
+    {"roadId": 2, "lane": 0, "greenTime": 30, "yellowTime": 3, "redTime": 45},
+    {"roadId": 2, "lane": 1, "greenTime": 30, "yellowTime": 3, "redTime": 45},
+    {"roadId": 3, "lane": 0, "greenTime": 45, "yellowTime": 3, "redTime": 30},
+    {"roadId": 3, "lane": 1, "greenTime": 45, "yellowTime": 3, "redTime": 30}
+  ]
+}

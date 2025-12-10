@@ -6,6 +6,7 @@ import type { NetworkRecord, RoadGeometry, MapViewMode } from '../types/api';
 import { useSimulationStream } from '../hooks/useSimulationStream';
 import TrafficLightPanel from '../components/TrafficLightPanel';
 import SpawnRatePanel from '../components/SpawnRatePanel';
+import ProfilePanel from '../components/ProfilePanel';
 
 export default function MapView() {
   const mapRef = useRef<L.Map | null>(null);
@@ -22,6 +23,7 @@ export default function MapView() {
   const [viewMode, setViewMode] = useState<MapViewMode>('speed');
   const [trafficLightPanelOpen, setTrafficLightPanelOpen] = useState(false);
   const [spawnRatePanelOpen, setSpawnRatePanelOpen] = useState(false);
+  const [profilePanelOpen, setProfilePanelOpen] = useState(false);
 
   // Subscribe to simulation stream
   const { latestUpdate, isConnected, error: streamError } = useSimulationStream(streamEnabled);
@@ -479,6 +481,16 @@ export default function MapView() {
               >
                 Traffic Lights
               </button>
+              <button
+                onClick={() => setProfilePanelOpen(!profilePanelOpen)}
+                className={`px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                  profilePanelOpen
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Profiles
+              </button>
             </div>
           </div>
 
@@ -600,6 +612,10 @@ export default function MapView() {
         isOpen={spawnRatePanelOpen}
         onToggle={() => setSpawnRatePanelOpen(!spawnRatePanelOpen)}
         roads={roads}
+      />
+      <ProfilePanel
+        isOpen={profilePanelOpen}
+        onToggle={() => setProfilePanelOpen(!profilePanelOpen)}
       />
     </div>
   );

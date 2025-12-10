@@ -37,6 +37,7 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 | 24 | Statistics Dashboard | Prediction confidence, rollout monitoring, pipeline status UI |
 | 25 | Dashboard Enhancements | Config panels, forecast comparison, predictive mode toggle |
 | 26 | Continuous Simulation Mode | Pause/resume, continuous mode toggle, configurable step limit |
+| 27 | Traffic Profiles | JSON-based profile system with spawn rates and traffic light timings |
 
 ## Current Features
 
@@ -60,6 +61,8 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 - Continuous simulation mode with pause/resume capability
 - Configurable step limit or unlimited continuous mode
 - Enhanced health endpoint with detailed simulation status
+- Traffic profile management (create, apply, capture, import/export)
+- JSON-based profile format with spawn rates and traffic light timings
 - Analytics with percentile statistics (P25, P50, P75, P95)
 - Comprehensive E2E test coverage
 - Build system with dependency installation script
@@ -115,6 +118,15 @@ cd frontend && npm run test:e2e
 | GET | /api/simulation/config | Get simulation configuration |
 | POST | /api/simulation/config | Update simulation configuration |
 | POST | /api/simulation/continuous | Start simulation in continuous mode |
+| GET | /api/profiles | List all traffic profiles |
+| GET | /api/profiles/:nameOrId | Get profile details |
+| POST | /api/profiles | Create new profile |
+| PUT | /api/profiles/:nameOrId | Update profile |
+| DELETE | /api/profiles/:nameOrId | Delete profile |
+| POST | /api/profiles/:nameOrId/apply | Apply profile to simulation |
+| POST | /api/profiles/capture | Capture current state as profile |
+| GET | /api/profiles/:nameOrId/export | Export profile as JSON |
+| POST | /api/profiles/import | Import profile from JSON |
 
 ## File Structure
 
@@ -122,16 +134,17 @@ cd frontend && npm run test:e2e
 ratms/
 ├── simulator/src/
 │   ├── core/           # Simulator, Road, Vehicle, TrafficLight
-│   ├── api/            # REST server, OptimizationController, PredictiveOptimizer
+│   ├── api/            # REST server, OptimizationController, TrafficProfileService
 │   ├── optimization/   # GeneticAlgorithm, Metrics
 │   ├── prediction/     # TrafficPredictor
 │   ├── validation/     # TimingValidator
 │   ├── data/storage/   # DatabaseManager, TrafficPatternStorage
 │   ├── utils/          # Logger, Config
 │   └── tests/          # Test networks
+├── simulator/data/profiles/  # Default JSON profile templates
 ├── frontend/src/
 │   ├── pages/          # Dashboard, Map, Optimization, Analytics, Statistics
-│   ├── components/     # PipelineStatusIndicator, RolloutMonitor, ConfigPanels, Charts
+│   ├── components/     # PipelineStatusIndicator, ProfilePanel, ConfigPanels
 │   ├── services/       # API client
 │   └── types/          # TypeScript interfaces
 ├── database/migrations/

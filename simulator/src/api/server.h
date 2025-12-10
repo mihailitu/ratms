@@ -23,6 +23,7 @@ class OptimizationController;
 class TrafficDataController;
 class ContinuousOptimizationController;
 class PredictionController;
+class TrafficProfileService;
 
 /**
  * @brief VehicleSnapshot - Real-time vehicle position data
@@ -134,6 +135,17 @@ private:
     void handleAggregatePatterns(const httplib::Request& req, httplib::Response& res);
     void handlePruneSnapshots(const httplib::Request& req, httplib::Response& res);
 
+    // Traffic profile handlers
+    void handleGetProfiles(const httplib::Request& req, httplib::Response& res);
+    void handleGetProfile(const httplib::Request& req, httplib::Response& res);
+    void handleCreateProfile(const httplib::Request& req, httplib::Response& res);
+    void handleUpdateProfile(const httplib::Request& req, httplib::Response& res);
+    void handleDeleteProfile(const httplib::Request& req, httplib::Response& res);
+    void handleApplyProfile(const httplib::Request& req, httplib::Response& res);
+    void handleCaptureProfile(const httplib::Request& req, httplib::Response& res);
+    void handleExportProfile(const httplib::Request& req, httplib::Response& res);
+    void handleImportProfile(const httplib::Request& req, httplib::Response& res);
+
     // Middleware
     void corsMiddleware(const httplib::Request& req, httplib::Response& res);
     void loggingMiddleware(const httplib::Request& req, httplib::Response& res);
@@ -153,6 +165,7 @@ private:
     std::unique_ptr<TrafficDataController> traffic_data_controller_;
     std::unique_ptr<ContinuousOptimizationController> continuous_optimization_controller_;
     std::unique_ptr<PredictionController> prediction_controller_;
+    std::unique_ptr<TrafficProfileService> profile_service_;
 
     // Traffic pattern storage
     std::shared_ptr<data::TrafficPatternStorage> pattern_storage_;

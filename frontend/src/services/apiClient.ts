@@ -34,6 +34,11 @@ import type {
   PredictionConfig,
   ValidationConfig,
   RolloutState,
+  ProfilesListResponse,
+  FullTrafficProfile,
+  CreateProfileRequest,
+  CaptureProfileRequest,
+  ProfileImportExportFormat,
 } from '../types/api';
 
 class ApiClient {
@@ -330,6 +335,52 @@ class ApiClient {
 
   async rollback(): Promise<{ success: boolean; data: { message: string; transitionDurationSeconds: number } }> {
     const response = await this.client.post('/api/optimization/rollback', {});
+    return response.data;
+  }
+
+  // Traffic Profiles API (Stage 5)
+  async getProfiles(): Promise<ProfilesListResponse> {
+    const response = await this.client.get<ProfilesListResponse>('/api/profiles');
+    return response.data;
+  }
+
+  async getProfile(nameOrId: string | number): Promise<FullTrafficProfile> {
+    const response = await this.client.get<FullTrafficProfile>(`/api/profiles/${nameOrId}`);
+    return response.data;
+  }
+
+  async createProfile(profile: CreateProfileRequest): Promise<{ success: boolean; id: number; name: string }> {
+    const response = await this.client.post('/api/profiles', profile);
+    return response.data;
+  }
+
+  async updateProfile(nameOrId: string | number, profile: Partial<CreateProfileRequest>): Promise<{ success: boolean; id: number; name: string }> {
+    const response = await this.client.put(`/api/profiles/${nameOrId}`, profile);
+    return response.data;
+  }
+
+  async deleteProfile(nameOrId: string | number): Promise<{ success: boolean; message: string }> {
+    const response = await this.client.delete(`/api/profiles/${nameOrId}`);
+    return response.data;
+  }
+
+  async applyProfile(nameOrId: string | number): Promise<{ success: boolean; message: string }> {
+    const response = await this.client.post(`/api/profiles/${nameOrId}/apply`, {});
+    return response.data;
+  }
+
+  async captureCurrentAsProfile(request: CaptureProfileRequest): Promise<{ success: boolean; id: number; name: string; message: string }> {
+    const response = await this.client.post('/api/profiles/capture', request);
+    return response.data;
+  }
+
+  async exportProfile(nameOrId: string | number): Promise<ProfileImportExportFormat> {
+    const response = await this.client.get<ProfileImportExportFormat>(`/api/profiles/${nameOrId}/export`);
+    return response.data;
+  }
+
+  async importProfile(profile: ProfileImportExportFormat): Promise<{ success: boolean; id: number; name: string; message: string }> {
+    const response = await this.client.post('/api/profiles/import', profile);
     return response.data;
   }
 }
