@@ -107,6 +107,11 @@ void Server::setDatabase(std::shared_ptr<data::DatabaseManager> db) {
     if (database_) {
         optimization_controller_ = std::make_unique<OptimizationController>(database_);
         LOG_INFO(LogComponent::Optimization, "Optimization controller initialized");
+
+        // Initialize traffic pattern storage
+        pattern_storage_ = std::make_shared<data::TrafficPatternStorage>(database_);
+        last_snapshot_time_ = std::chrono::steady_clock::now();
+        LOG_INFO(LogComponent::Database, "Traffic pattern storage initialized");
     }
 
     // Initialize traffic data controller (requires both database and simulator)
@@ -228,6 +233,23 @@ void Server::setupRoutes() {
 
     http_server_.Post("/api/spawn-rates", [this](const httplib::Request& req, httplib::Response& res) {
         handleSetSpawnRates(req, res);
+    });
+
+    // Traffic pattern endpoints
+    http_server_.Get("/api/patterns", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetPatterns(req, res);
+    });
+
+    http_server_.Get("/api/snapshots", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetSnapshots(req, res);
+    });
+
+    http_server_.Post("/api/patterns/aggregate", [this](const httplib::Request& req, httplib::Response& res) {
+        handleAggregatePatterns(req, res);
+    });
+
+    http_server_.Post("/api/patterns/prune", [this](const httplib::Request& req, httplib::Response& res) {
+        handlePruneSnapshots(req, res);
     });
 
     // Register optimization routes if controller is initialized
@@ -743,6 +765,55 @@ void Server::runSimulationLoop() {
                 }
                 LOG_INFO(LogComponent::Simulation, "Step {}: {:.1f}s sim time, {} vehicles active, {:.0f} exited",
                          currentStep, simulation_time_.load(), vehicleCount, metricsCollector.getMetrics().vehiclesExited);
+            }
+
+            // PHASE 4.5: Record traffic pattern snapshots periodically (real-time interval)
+            if (pattern_storage_) {
+                auto now = std::chrono::steady_clock::now();
+                auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - last_snapshot_time_).count();
+
+                if (elapsed >= pattern_snapshot_interval_seconds_) {
+                    std::lock_guard<std::mutex> lock(sim_mutex_);
+                    if (simulator_) {
+                        std::vector<data::RoadMetrics> roadMetrics;
+                        roadMetrics.reserve(simulator_->cityMap.size());
+
+                        for (auto& [roadId, road] : simulator_->cityMap) {
+                            data::RoadMetrics rm;
+                            rm.roadId = roadId;
+                            rm.vehicleCount = road.getVehicleCount();
+
+                            // Calculate queue length (vehicles within 50m of traffic light)
+                            double queueLength = 0;
+                            double totalSpeed = 0;
+                            int vehicleCountForSpeed = 0;
+
+                            for (unsigned lane = 0; lane < road.getLanesNo(); ++lane) {
+                                for (const auto& v : road.getVehicles()[lane]) {
+                                    double distToEnd = road.getLength() - v.getPos();
+                                    if (distToEnd < 50.0) {
+                                        queueLength += 1.0;
+                                    }
+                                    totalSpeed += v.getVelocity();
+                                    vehicleCountForSpeed++;
+                                }
+                            }
+
+                            rm.queueLength = queueLength;
+                            rm.avgSpeed = vehicleCountForSpeed > 0 ? totalSpeed / vehicleCountForSpeed : 0.0;
+                            rm.flowRate = 0.0;  // TODO: Calculate from vehicle exits
+
+                            roadMetrics.push_back(rm);
+                        }
+
+                        if (!roadMetrics.empty()) {
+                            pattern_storage_->recordSnapshotBatch(roadMetrics);
+                            LOG_DEBUG(LogComponent::Database, "Recorded traffic pattern snapshot for {} roads", roadMetrics.size());
+                        }
+                    }
+
+                    last_snapshot_time_ = now;
+                }
             }
 
             // Update counters
@@ -1434,6 +1505,223 @@ void Server::setNumThreads(int n) {
 
 int Server::getNumThreads() const {
     return num_threads_ > 0 ? num_threads_ : omp_get_max_threads();
+}
+
+// Traffic Pattern Handlers
+
+void Server::handleGetPatterns(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!pattern_storage_) {
+        sendError(res, 503, "Traffic pattern storage not initialized");
+        return;
+    }
+
+    try {
+        json response;
+
+        // Check for query parameters
+        if (req.has_param("day") && req.has_param("slot")) {
+            int dayOfWeek = std::stoi(req.get_param_value("day"));
+            int timeSlot = std::stoi(req.get_param_value("slot"));
+
+            auto patterns = pattern_storage_->getPatterns(dayOfWeek, timeSlot);
+
+            json patternsJson = json::array();
+            for (const auto& p : patterns) {
+                patternsJson.push_back({
+                    {"id", p.id},
+                    {"roadId", p.roadId},
+                    {"dayOfWeek", p.dayOfWeek},
+                    {"timeSlot", p.timeSlot},
+                    {"timeSlotString", data::TrafficPatternStorage::timeSlotToString(p.timeSlot)},
+                    {"avgVehicleCount", p.avgVehicleCount},
+                    {"avgQueueLength", p.avgQueueLength},
+                    {"avgSpeed", p.avgSpeed},
+                    {"avgFlowRate", p.avgFlowRate},
+                    {"minVehicleCount", p.minVehicleCount},
+                    {"maxVehicleCount", p.maxVehicleCount},
+                    {"stddevVehicleCount", p.stddevVehicleCount},
+                    {"sampleCount", p.sampleCount},
+                    {"lastUpdated", p.lastUpdated}
+                });
+            }
+
+            response = {
+                {"status", "ok"},
+                {"dayOfWeek", dayOfWeek},
+                {"timeSlot", timeSlot},
+                {"count", patterns.size()},
+                {"patterns", patternsJson}
+            };
+        } else if (req.has_param("road")) {
+            int roadId = std::stoi(req.get_param_value("road"));
+            auto patterns = pattern_storage_->getPatternsForRoad(roadId);
+
+            json patternsJson = json::array();
+            for (const auto& p : patterns) {
+                patternsJson.push_back({
+                    {"id", p.id},
+                    {"roadId", p.roadId},
+                    {"dayOfWeek", p.dayOfWeek},
+                    {"timeSlot", p.timeSlot},
+                    {"timeSlotString", data::TrafficPatternStorage::timeSlotToString(p.timeSlot)},
+                    {"avgVehicleCount", p.avgVehicleCount},
+                    {"avgQueueLength", p.avgQueueLength},
+                    {"avgSpeed", p.avgSpeed},
+                    {"avgFlowRate", p.avgFlowRate},
+                    {"sampleCount", p.sampleCount},
+                    {"lastUpdated", p.lastUpdated}
+                });
+            }
+
+            response = {
+                {"status", "ok"},
+                {"roadId", roadId},
+                {"count", patterns.size()},
+                {"patterns", patternsJson}
+            };
+        } else {
+            // Return all patterns
+            auto patterns = pattern_storage_->getAllPatterns();
+
+            json patternsJson = json::array();
+            for (const auto& p : patterns) {
+                patternsJson.push_back({
+                    {"id", p.id},
+                    {"roadId", p.roadId},
+                    {"dayOfWeek", p.dayOfWeek},
+                    {"timeSlot", p.timeSlot},
+                    {"timeSlotString", data::TrafficPatternStorage::timeSlotToString(p.timeSlot)},
+                    {"avgVehicleCount", p.avgVehicleCount},
+                    {"avgQueueLength", p.avgQueueLength},
+                    {"avgSpeed", p.avgSpeed},
+                    {"avgFlowRate", p.avgFlowRate},
+                    {"sampleCount", p.sampleCount},
+                    {"lastUpdated", p.lastUpdated}
+                });
+            }
+
+            auto [currentDay, currentSlot] = data::TrafficPatternStorage::getCurrentDayAndSlot();
+
+            response = {
+                {"status", "ok"},
+                {"count", patterns.size()},
+                {"currentDayOfWeek", currentDay},
+                {"currentTimeSlot", currentSlot},
+                {"currentTimeSlotString", data::TrafficPatternStorage::timeSlotToString(currentSlot)},
+                {"patterns", patternsJson}
+            };
+        }
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error retrieving patterns: ") + e.what());
+    }
+}
+
+void Server::handleGetSnapshots(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!pattern_storage_) {
+        sendError(res, 503, "Traffic pattern storage not initialized");
+        return;
+    }
+
+    try {
+        int hours = 24;  // Default: last 24 hours
+        if (req.has_param("hours")) {
+            hours = std::stoi(req.get_param_value("hours"));
+        }
+
+        // Get snapshots for the specified time range
+        int64_t now = std::time(nullptr);
+        int64_t cutoff = now - (hours * 3600);
+        auto snapshots = pattern_storage_->getSnapshotsRange(cutoff, now);
+
+        json snapshotsJson = json::array();
+        for (const auto& s : snapshots) {
+            json snapshotObj;
+            snapshotObj["timestamp"] = s.timestamp;
+            snapshotObj["roadId"] = s.roadId;
+            snapshotObj["vehicleCount"] = s.vehicleCount;
+            snapshotObj["queueLength"] = s.queueLength;
+            snapshotObj["avgSpeed"] = s.avgSpeed;
+            snapshotObj["flowRate"] = s.flowRate;
+            snapshotsJson.push_back(snapshotObj);
+        }
+
+        json response;
+        response["status"] = "ok";
+        response["hours"] = hours;
+        response["count"] = snapshots.size();
+        response["snapshots"] = snapshotsJson;
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error retrieving snapshots: ") + e.what());
+    }
+}
+
+void Server::handleAggregatePatterns(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!pattern_storage_) {
+        sendError(res, 503, "Traffic pattern storage not initialized");
+        return;
+    }
+
+    try {
+        bool success = pattern_storage_->aggregateSnapshots();
+
+        json response = {
+            {"status", success ? "ok" : "error"},
+            {"message", success ? "Patterns aggregated successfully" : "Aggregation failed"}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = success ? 200 : 500;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error aggregating patterns: ") + e.what());
+    }
+}
+
+void Server::handlePruneSnapshots(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!pattern_storage_) {
+        sendError(res, 503, "Traffic pattern storage not initialized");
+        return;
+    }
+
+    try {
+        int days = 7;  // Default: keep last 7 days
+        if (!req.body.empty()) {
+            json body = json::parse(req.body);
+            if (body.contains("days")) {
+                days = body["days"].get<int>();
+            }
+        }
+
+        int deleted = pattern_storage_->pruneOldSnapshots(days);
+
+        json response = {
+            {"status", "ok"},
+            {"daysRetained", days},
+            {"snapshotsDeleted", deleted}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error pruning snapshots: ") + e.what());
+    }
 }
 
 } // namespace api

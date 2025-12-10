@@ -50,6 +50,33 @@ bool DatabaseManager::runMigrations(const std::string& migrations_dir) {
         return false;
     }
 
+    // Run migration 003 (traffic profiles)
+    std::string migration_file_003 = migrations_dir + "/003_traffic_profiles.sql";
+    LOG_INFO(LogComponent::Database, "Running database migration: {}", migration_file_003);
+
+    if (!executeSQLFile(migration_file_003)) {
+        LOG_ERROR(LogComponent::Database, "Migration 003 failed: {}", last_error_);
+        return false;
+    }
+
+    // Run migration 004 (travel times)
+    std::string migration_file_004 = migrations_dir + "/004_travel_times.sql";
+    LOG_INFO(LogComponent::Database, "Running database migration: {}", migration_file_004);
+
+    if (!executeSQLFile(migration_file_004)) {
+        LOG_ERROR(LogComponent::Database, "Migration 004 failed: {}", last_error_);
+        return false;
+    }
+
+    // Run migration 005 (traffic patterns for prediction)
+    std::string migration_file_005 = migrations_dir + "/005_traffic_patterns.sql";
+    LOG_INFO(LogComponent::Database, "Running database migration: {}", migration_file_005);
+
+    if (!executeSQLFile(migration_file_005)) {
+        LOG_ERROR(LogComponent::Database, "Migration 005 failed: {}", last_error_);
+        return false;
+    }
+
     LOG_INFO(LogComponent::Database, "Database migrations completed successfully");
     return true;
 }
@@ -1022,6 +1049,377 @@ std::vector<DatabaseManager::ComparativeMetrics> DatabaseManager::getComparative
         results.push_back(comp);
     }
 
+    return results;
+}
+
+// Traffic snapshot operations
+bool DatabaseManager::insertTrafficSnapshot(const TrafficSnapshotRecord& record) {
+    std::string sql = "INSERT INTO traffic_snapshots "
+                     "(timestamp, road_id, vehicle_count, queue_length, avg_speed, flow_rate) "
+                     "VALUES (?, ?, ?, ?, ?, ?)";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        LOG_ERROR(LogComponent::Database, "Failed to prepare traffic snapshot insert: {}", last_error_);
+        return false;
+    }
+
+    sqlite3_bind_int64(stmt, 1, record.timestamp);
+    sqlite3_bind_int(stmt, 2, record.road_id);
+    sqlite3_bind_int(stmt, 3, record.vehicle_count);
+    sqlite3_bind_double(stmt, 4, record.queue_length);
+    sqlite3_bind_double(stmt, 5, record.avg_speed);
+    sqlite3_bind_double(stmt, 6, record.flow_rate);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    return (rc == SQLITE_DONE);
+}
+
+bool DatabaseManager::insertTrafficSnapshotsBatch(const std::vector<TrafficSnapshotRecord>& records) {
+    if (records.empty()) return true;
+
+    if (!executeSQL("BEGIN TRANSACTION")) {
+        return false;
+    }
+
+    for (const auto& record : records) {
+        if (!insertTrafficSnapshot(record)) {
+            executeSQL("ROLLBACK");
+            return false;
+        }
+    }
+
+    if (!executeSQL("COMMIT")) {
+        executeSQL("ROLLBACK");
+        return false;
+    }
+
+    LOG_DEBUG(LogComponent::Database, "Inserted {} traffic snapshots", records.size());
+    return true;
+}
+
+std::vector<DatabaseManager::TrafficSnapshotRecord> DatabaseManager::getTrafficSnapshots(int64_t since_timestamp) {
+    std::vector<TrafficSnapshotRecord> results;
+    std::string sql = "SELECT id, timestamp, road_id, vehicle_count, queue_length, avg_speed, flow_rate "
+                     "FROM traffic_snapshots WHERE timestamp >= ? ORDER BY timestamp ASC";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return results;
+    }
+
+    sqlite3_bind_int64(stmt, 1, since_timestamp);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        TrafficSnapshotRecord record;
+        record.id = sqlite3_column_int(stmt, 0);
+        record.timestamp = sqlite3_column_int64(stmt, 1);
+        record.road_id = sqlite3_column_int(stmt, 2);
+        record.vehicle_count = sqlite3_column_int(stmt, 3);
+        record.queue_length = sqlite3_column_double(stmt, 4);
+        record.avg_speed = sqlite3_column_double(stmt, 5);
+        record.flow_rate = sqlite3_column_double(stmt, 6);
+        results.push_back(record);
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+std::vector<DatabaseManager::TrafficSnapshotRecord> DatabaseManager::getTrafficSnapshotsForRoad(
+    int road_id, int64_t since_timestamp) {
+    std::vector<TrafficSnapshotRecord> results;
+    std::string sql = "SELECT id, timestamp, road_id, vehicle_count, queue_length, avg_speed, flow_rate "
+                     "FROM traffic_snapshots WHERE road_id = ? AND timestamp >= ? ORDER BY timestamp ASC";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return results;
+    }
+
+    sqlite3_bind_int(stmt, 1, road_id);
+    sqlite3_bind_int64(stmt, 2, since_timestamp);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        TrafficSnapshotRecord record;
+        record.id = sqlite3_column_int(stmt, 0);
+        record.timestamp = sqlite3_column_int64(stmt, 1);
+        record.road_id = sqlite3_column_int(stmt, 2);
+        record.vehicle_count = sqlite3_column_int(stmt, 3);
+        record.queue_length = sqlite3_column_double(stmt, 4);
+        record.avg_speed = sqlite3_column_double(stmt, 5);
+        record.flow_rate = sqlite3_column_double(stmt, 6);
+        results.push_back(record);
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+std::vector<DatabaseManager::TrafficSnapshotRecord> DatabaseManager::getTrafficSnapshotsRange(
+    int64_t start_time, int64_t end_time) {
+    std::vector<TrafficSnapshotRecord> results;
+    std::string sql = "SELECT id, timestamp, road_id, vehicle_count, queue_length, avg_speed, flow_rate "
+                     "FROM traffic_snapshots WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return results;
+    }
+
+    sqlite3_bind_int64(stmt, 1, start_time);
+    sqlite3_bind_int64(stmt, 2, end_time);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        TrafficSnapshotRecord record;
+        record.id = sqlite3_column_int(stmt, 0);
+        record.timestamp = sqlite3_column_int64(stmt, 1);
+        record.road_id = sqlite3_column_int(stmt, 2);
+        record.vehicle_count = sqlite3_column_int(stmt, 3);
+        record.queue_length = sqlite3_column_double(stmt, 4);
+        record.avg_speed = sqlite3_column_double(stmt, 5);
+        record.flow_rate = sqlite3_column_double(stmt, 6);
+        results.push_back(record);
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+int DatabaseManager::deleteTrafficSnapshotsBefore(int64_t timestamp) {
+    std::string sql = "DELETE FROM traffic_snapshots WHERE timestamp < ?";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return -1;
+    }
+
+    sqlite3_bind_int64(stmt, 1, timestamp);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    if (rc != SQLITE_DONE) {
+        last_error_ = sqlite3_errmsg(db_);
+        return -1;
+    }
+
+    int deleted = sqlite3_changes(db_);
+    LOG_INFO(LogComponent::Database, "Deleted {} traffic snapshots before timestamp {}", deleted, timestamp);
+    return deleted;
+}
+
+// Traffic pattern operations
+bool DatabaseManager::insertOrUpdateTrafficPattern(const TrafficPatternRecord& record) {
+    std::string sql = "INSERT OR REPLACE INTO traffic_patterns "
+                     "(road_id, day_of_week, time_slot, avg_vehicle_count, avg_queue_length, "
+                     "avg_speed, avg_flow_rate, min_vehicle_count, max_vehicle_count, "
+                     "stddev_vehicle_count, sample_count, last_updated) "
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        LOG_ERROR(LogComponent::Database, "Failed to prepare traffic pattern upsert: {}", last_error_);
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, record.road_id);
+    sqlite3_bind_int(stmt, 2, record.day_of_week);
+    sqlite3_bind_int(stmt, 3, record.time_slot);
+    sqlite3_bind_double(stmt, 4, record.avg_vehicle_count);
+    sqlite3_bind_double(stmt, 5, record.avg_queue_length);
+    sqlite3_bind_double(stmt, 6, record.avg_speed);
+    sqlite3_bind_double(stmt, 7, record.avg_flow_rate);
+    sqlite3_bind_double(stmt, 8, record.min_vehicle_count);
+    sqlite3_bind_double(stmt, 9, record.max_vehicle_count);
+    sqlite3_bind_double(stmt, 10, record.stddev_vehicle_count);
+    sqlite3_bind_int(stmt, 11, record.sample_count);
+    sqlite3_bind_int64(stmt, 12, record.last_updated);
+
+    rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    return (rc == SQLITE_DONE);
+}
+
+DatabaseManager::TrafficPatternRecord DatabaseManager::getTrafficPattern(
+    int road_id, int day_of_week, int time_slot) {
+    TrafficPatternRecord record = {};
+    record.road_id = road_id;
+    record.day_of_week = day_of_week;
+    record.time_slot = time_slot;
+
+    std::string sql = "SELECT id, road_id, day_of_week, time_slot, avg_vehicle_count, "
+                     "avg_queue_length, avg_speed, avg_flow_rate, min_vehicle_count, "
+                     "max_vehicle_count, stddev_vehicle_count, sample_count, last_updated "
+                     "FROM traffic_patterns WHERE road_id = ? AND day_of_week = ? AND time_slot = ?";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return record;
+    }
+
+    sqlite3_bind_int(stmt, 1, road_id);
+    sqlite3_bind_int(stmt, 2, day_of_week);
+    sqlite3_bind_int(stmt, 3, time_slot);
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        record.id = sqlite3_column_int(stmt, 0);
+        record.road_id = sqlite3_column_int(stmt, 1);
+        record.day_of_week = sqlite3_column_int(stmt, 2);
+        record.time_slot = sqlite3_column_int(stmt, 3);
+        record.avg_vehicle_count = sqlite3_column_double(stmt, 4);
+        record.avg_queue_length = sqlite3_column_double(stmt, 5);
+        record.avg_speed = sqlite3_column_double(stmt, 6);
+        record.avg_flow_rate = sqlite3_column_double(stmt, 7);
+        record.min_vehicle_count = sqlite3_column_double(stmt, 8);
+        record.max_vehicle_count = sqlite3_column_double(stmt, 9);
+        record.stddev_vehicle_count = sqlite3_column_double(stmt, 10);
+        record.sample_count = sqlite3_column_int(stmt, 11);
+        record.last_updated = sqlite3_column_int64(stmt, 12);
+    }
+
+    sqlite3_finalize(stmt);
+    return record;
+}
+
+std::vector<DatabaseManager::TrafficPatternRecord> DatabaseManager::getTrafficPatterns(
+    int day_of_week, int time_slot) {
+    std::vector<TrafficPatternRecord> results;
+    std::string sql = "SELECT id, road_id, day_of_week, time_slot, avg_vehicle_count, "
+                     "avg_queue_length, avg_speed, avg_flow_rate, min_vehicle_count, "
+                     "max_vehicle_count, stddev_vehicle_count, sample_count, last_updated "
+                     "FROM traffic_patterns WHERE day_of_week = ? AND time_slot = ?";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return results;
+    }
+
+    sqlite3_bind_int(stmt, 1, day_of_week);
+    sqlite3_bind_int(stmt, 2, time_slot);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        TrafficPatternRecord record;
+        record.id = sqlite3_column_int(stmt, 0);
+        record.road_id = sqlite3_column_int(stmt, 1);
+        record.day_of_week = sqlite3_column_int(stmt, 2);
+        record.time_slot = sqlite3_column_int(stmt, 3);
+        record.avg_vehicle_count = sqlite3_column_double(stmt, 4);
+        record.avg_queue_length = sqlite3_column_double(stmt, 5);
+        record.avg_speed = sqlite3_column_double(stmt, 6);
+        record.avg_flow_rate = sqlite3_column_double(stmt, 7);
+        record.min_vehicle_count = sqlite3_column_double(stmt, 8);
+        record.max_vehicle_count = sqlite3_column_double(stmt, 9);
+        record.stddev_vehicle_count = sqlite3_column_double(stmt, 10);
+        record.sample_count = sqlite3_column_int(stmt, 11);
+        record.last_updated = sqlite3_column_int64(stmt, 12);
+        results.push_back(record);
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+std::vector<DatabaseManager::TrafficPatternRecord> DatabaseManager::getTrafficPatternsForRoad(int road_id) {
+    std::vector<TrafficPatternRecord> results;
+    std::string sql = "SELECT id, road_id, day_of_week, time_slot, avg_vehicle_count, "
+                     "avg_queue_length, avg_speed, avg_flow_rate, min_vehicle_count, "
+                     "max_vehicle_count, stddev_vehicle_count, sample_count, last_updated "
+                     "FROM traffic_patterns WHERE road_id = ? ORDER BY day_of_week, time_slot";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return results;
+    }
+
+    sqlite3_bind_int(stmt, 1, road_id);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        TrafficPatternRecord record;
+        record.id = sqlite3_column_int(stmt, 0);
+        record.road_id = sqlite3_column_int(stmt, 1);
+        record.day_of_week = sqlite3_column_int(stmt, 2);
+        record.time_slot = sqlite3_column_int(stmt, 3);
+        record.avg_vehicle_count = sqlite3_column_double(stmt, 4);
+        record.avg_queue_length = sqlite3_column_double(stmt, 5);
+        record.avg_speed = sqlite3_column_double(stmt, 6);
+        record.avg_flow_rate = sqlite3_column_double(stmt, 7);
+        record.min_vehicle_count = sqlite3_column_double(stmt, 8);
+        record.max_vehicle_count = sqlite3_column_double(stmt, 9);
+        record.stddev_vehicle_count = sqlite3_column_double(stmt, 10);
+        record.sample_count = sqlite3_column_int(stmt, 11);
+        record.last_updated = sqlite3_column_int64(stmt, 12);
+        results.push_back(record);
+    }
+
+    sqlite3_finalize(stmt);
+    return results;
+}
+
+std::vector<DatabaseManager::TrafficPatternRecord> DatabaseManager::getAllTrafficPatterns() {
+    std::vector<TrafficPatternRecord> results;
+    std::string sql = "SELECT id, road_id, day_of_week, time_slot, avg_vehicle_count, "
+                     "avg_queue_length, avg_speed, avg_flow_rate, min_vehicle_count, "
+                     "max_vehicle_count, stddev_vehicle_count, sample_count, last_updated "
+                     "FROM traffic_patterns ORDER BY road_id, day_of_week, time_slot";
+
+    sqlite3_stmt* stmt;
+    int rc = sqlite3_prepare_v2(db_, sql.c_str(), -1, &stmt, nullptr);
+
+    if (rc != SQLITE_OK) {
+        last_error_ = sqlite3_errmsg(db_);
+        return results;
+    }
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        TrafficPatternRecord record;
+        record.id = sqlite3_column_int(stmt, 0);
+        record.road_id = sqlite3_column_int(stmt, 1);
+        record.day_of_week = sqlite3_column_int(stmt, 2);
+        record.time_slot = sqlite3_column_int(stmt, 3);
+        record.avg_vehicle_count = sqlite3_column_double(stmt, 4);
+        record.avg_queue_length = sqlite3_column_double(stmt, 5);
+        record.avg_speed = sqlite3_column_double(stmt, 6);
+        record.avg_flow_rate = sqlite3_column_double(stmt, 7);
+        record.min_vehicle_count = sqlite3_column_double(stmt, 8);
+        record.max_vehicle_count = sqlite3_column_double(stmt, 9);
+        record.stddev_vehicle_count = sqlite3_column_double(stmt, 10);
+        record.sample_count = sqlite3_column_int(stmt, 11);
+        record.last_updated = sqlite3_column_int64(stmt, 12);
+        results.push_back(record);
+    }
+
+    sqlite3_finalize(stmt);
     return results;
 }
 

@@ -30,6 +30,7 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 | 17 | Production Plan Stage 2 | Runtime traffic light timing modification API |
 | 18 | Production Plan Stage 3 | Dynamic vehicle spawning API with configurable rates |
 | 19 | Control Panel UI | Traffic light editor, spawn rate controls in MapView |
+| 20 | Traffic Pattern Storage | Time-of-day pattern storage, snapshot recording, aggregation |
 
 ## Current Features
 
@@ -41,6 +42,7 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 - Interactive map with vehicle tracking (speed & density modes)
 - Traffic light timing editor with live updates
 - Dynamic vehicle spawning with configurable rates
+- Traffic pattern storage with time-of-day aggregation
 - Analytics with percentile statistics (P25, P50, P75, P95)
 - Comprehensive E2E test coverage
 - Build system with dependency installation script
@@ -78,6 +80,10 @@ cd frontend && npm run test:e2e
 | POST | /api/traffic-lights | Bulk update traffic light timings |
 | GET | /api/spawn-rates | Get vehicle spawn rates per road |
 | POST | /api/spawn-rates | Set vehicle spawn rates per road |
+| GET | /api/patterns | Get traffic patterns by day/time slot |
+| GET | /api/snapshots | Get raw traffic snapshots |
+| POST | /api/patterns/aggregate | Aggregate snapshots into patterns |
+| POST | /api/patterns/prune | Prune old snapshots |
 
 ## File Structure
 
@@ -87,7 +93,7 @@ ratms/
 │   ├── core/           # Simulator, Road, Vehicle, TrafficLight
 │   ├── api/            # REST server, OptimizationController
 │   ├── optimization/   # GeneticAlgorithm, Metrics
-│   ├── data/storage/   # DatabaseManager
+│   ├── data/storage/   # DatabaseManager, TrafficPatternStorage
 │   ├── utils/          # Logger, Config
 │   └── tests/          # Test networks
 ├── frontend/src/
@@ -132,6 +138,17 @@ See [docs/PRODUCTION_PLAN.md](docs/PRODUCTION_PLAN.md) for full 8-stage plan.
 | 7 | Continuous background optimization | Pending |
 | 8 | Travel time metrics & dashboard | Pending |
 
+## Predictive Optimization Plan
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 1 | Traffic Pattern Storage | **Complete** |
+| 2 | Prediction Service | Pending |
+| 3 | Predictive Optimizer | Pending |
+| 4 | Validation & Rollout | Pending |
+| 5 | Statistics Dashboard | Pending |
+| 6 | Dashboard Enhancements | Pending |
+
 ## Logging
 
 Component-based logging with spdlog:
@@ -142,4 +159,4 @@ Component-based logging with spdlog:
 
 ---
 
-**Status:** Production-ready with 157 E2E tests. Implementing 8-stage production system plan (Stages 1-2 complete).
+**Status:** Production-ready with 157 E2E tests. Implementing predictive optimization plan (Phase 1 complete).

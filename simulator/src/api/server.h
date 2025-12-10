@@ -4,6 +4,7 @@
 #include "../external/httplib.h"
 #include "../core/simulator.h"
 #include "../data/storage/database_manager.h"
+#include "../data/storage/traffic_pattern_storage.h"
 #include <memory>
 #include <string>
 #include <atomic>
@@ -12,6 +13,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <chrono>
 
 namespace ratms {
 namespace api {
@@ -118,6 +120,12 @@ private:
     void handleGetSpawnRates(const httplib::Request& req, httplib::Response& res);
     void handleSetSpawnRates(const httplib::Request& req, httplib::Response& res);
 
+    // Traffic pattern handlers
+    void handleGetPatterns(const httplib::Request& req, httplib::Response& res);
+    void handleGetSnapshots(const httplib::Request& req, httplib::Response& res);
+    void handleAggregatePatterns(const httplib::Request& req, httplib::Response& res);
+    void handlePruneSnapshots(const httplib::Request& req, httplib::Response& res);
+
     // Middleware
     void corsMiddleware(const httplib::Request& req, httplib::Response& res);
     void loggingMiddleware(const httplib::Request& req, httplib::Response& res);
@@ -136,6 +144,11 @@ private:
     std::unique_ptr<OptimizationController> optimization_controller_;
     std::unique_ptr<TrafficDataController> traffic_data_controller_;
     std::unique_ptr<ContinuousOptimizationController> continuous_optimization_controller_;
+
+    // Traffic pattern storage
+    std::shared_ptr<data::TrafficPatternStorage> pattern_storage_;
+    std::chrono::steady_clock::time_point last_snapshot_time_;
+    int pattern_snapshot_interval_seconds_{60};  // Default: record every 60 seconds
 
     // Simulation thread management
     std::unique_ptr<std::thread> simulation_thread_;

@@ -98,6 +98,33 @@ public:
         long created_at;
     };
 
+    // Traffic pattern records
+    struct TrafficSnapshotRecord {
+        int id;
+        int64_t timestamp;
+        int road_id;
+        int vehicle_count;
+        double queue_length;
+        double avg_speed;
+        double flow_rate;
+    };
+
+    struct TrafficPatternRecord {
+        int id;
+        int road_id;
+        int day_of_week;
+        int time_slot;
+        double avg_vehicle_count;
+        double avg_queue_length;
+        double avg_speed;
+        double avg_flow_rate;
+        double min_vehicle_count;
+        double max_vehicle_count;
+        double stddev_vehicle_count;
+        int sample_count;
+        int64_t last_updated;
+    };
+
     DatabaseManager(const std::string& db_path = "ratms.db");
     ~DatabaseManager();
 
@@ -148,6 +175,21 @@ public:
     int insertOptimizationSolution(const OptimizationSolutionRecord& record);
     OptimizationSolutionRecord getBestOptimizationSolution(int run_id);
     std::vector<OptimizationSolutionRecord> getOptimizationSolutions(int run_id);
+
+    // Traffic snapshot operations
+    bool insertTrafficSnapshot(const TrafficSnapshotRecord& record);
+    bool insertTrafficSnapshotsBatch(const std::vector<TrafficSnapshotRecord>& records);
+    std::vector<TrafficSnapshotRecord> getTrafficSnapshots(int64_t since_timestamp);
+    std::vector<TrafficSnapshotRecord> getTrafficSnapshotsForRoad(int road_id, int64_t since_timestamp);
+    std::vector<TrafficSnapshotRecord> getTrafficSnapshotsRange(int64_t start_time, int64_t end_time);
+    int deleteTrafficSnapshotsBefore(int64_t timestamp);
+
+    // Traffic pattern operations
+    bool insertOrUpdateTrafficPattern(const TrafficPatternRecord& record);
+    TrafficPatternRecord getTrafficPattern(int road_id, int day_of_week, int time_slot);
+    std::vector<TrafficPatternRecord> getTrafficPatterns(int day_of_week, int time_slot);
+    std::vector<TrafficPatternRecord> getTrafficPatternsForRoad(int road_id);
+    std::vector<TrafficPatternRecord> getAllTrafficPatterns();
 
     // Analytics operations
     struct MetricStatistics {

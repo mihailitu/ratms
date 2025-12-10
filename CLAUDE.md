@@ -345,6 +345,8 @@ SQLite persistence layer with prepared statements.
 - `optimization_runs`: GA optimization results (002_optimization_runs.sql)
 - `optimization_generations`: Fitness per generation
 - `optimization_solutions`: Chromosome data
+- `traffic_snapshots`: Raw traffic metrics per road (005_traffic_patterns.sql)
+- `traffic_patterns`: Aggregated time-of-day patterns
 
 **Key Methods:**
 
@@ -374,6 +376,20 @@ OptimizationSolutionRecord getBestOptimizationSolution(int run_id);
 std::vector<OptimizationSolutionRecord> getOptimizationSolutions(int run_id);
 ```
 
+Traffic Pattern Operations:
+```cpp
+bool insertTrafficSnapshot(const TrafficSnapshotRecord& record);
+bool insertTrafficSnapshotsBatch(const std::vector<TrafficSnapshotRecord>& records);
+std::vector<TrafficSnapshotRecord> getTrafficSnapshots(int64_t since_timestamp);
+std::vector<TrafficSnapshotRecord> getTrafficSnapshotsRange(int64_t start_time, int64_t end_time);
+int deleteTrafficSnapshotsBefore(int64_t timestamp);
+
+bool insertOrUpdateTrafficPattern(const TrafficPatternRecord& record);
+TrafficPatternRecord getTrafficPattern(int road_id, int day_of_week, int time_slot);
+std::vector<TrafficPatternRecord> getTrafficPatterns(int day_of_week, int time_slot);
+std::vector<TrafficPatternRecord> getAllTrafficPatterns();
+```
+
 **Prepared Statement Pattern:**
 All queries use prepared statements to prevent SQL injection.
 
@@ -384,6 +400,65 @@ executeSQL("BEGIN TRANSACTION");
 // ... multiple inserts
 executeSQL("COMMIT");  // or ROLLBACK on error
 ```
+
+### 9. TrafficPatternStorage (`data/storage/traffic_pattern_storage.h/cpp`)
+
+Traffic pattern storage for time-of-day based analysis and prediction.
+
+**Key Structures:**
+```cpp
+struct RoadMetrics {
+    int roadId;
+    int vehicleCount;
+    double queueLength;
+    double avgSpeed;
+    double flowRate;
+};
+
+struct TrafficPattern {
+    int roadId;
+    int dayOfWeek;  // 0=Sunday, 6=Saturday
+    int timeSlot;   // 0-47 (30-minute slots)
+    double avgVehicleCount;
+    double avgQueueLength;
+    double avgSpeed;
+    double avgFlowRate;
+    int sampleCount;
+};
+```
+
+**Key Methods:**
+```cpp
+// Record raw traffic data
+bool recordSnapshot(const RoadMetrics& metrics);
+bool recordSnapshotBatch(const std::vector<RoadMetrics>& metrics);
+
+// Query snapshots
+std::vector<TrafficSnapshot> getSnapshots(int64_t sinceTimestamp);
+std::vector<TrafficSnapshot> getSnapshotsRange(int64_t startTime, int64_t endTime);
+
+// Query patterns
+std::vector<TrafficPattern> getPatterns(int dayOfWeek, int timeSlot);
+std::vector<TrafficPattern> getPatternsForRoad(int roadId);
+
+// Aggregation
+int aggregateSnapshots();  // Convert raw snapshots to patterns
+int pruneOldSnapshots(int daysOld);  // Cleanup old data
+
+// Time utilities
+static int getCurrentDayOfWeek();      // 0-6
+static int getCurrentTimeSlot();       // 0-47
+static int timestampToTimeSlot(int64_t timestamp);
+static std::string timeSlotToString(int slot);  // "08:00-08:30"
+```
+
+**Time Slot System:**
+- 48 slots per day (30-minute intervals)
+- Slot 0: 00:00-00:30, Slot 16: 08:00-08:30, etc.
+- Day of week: 0=Sunday through 6=Saturday
+
+**Snapshot Recording:**
+Called every 60 real seconds during simulation to capture road metrics.
 
 ## Frontend Architecture
 
