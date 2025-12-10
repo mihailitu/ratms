@@ -29,6 +29,10 @@ import type {
   ContinuousOptimizationStatus,
   ContinuousOptimizationConfig,
   SystemHealth,
+  PredictionResult,
+  PredictionConfig,
+  ValidationConfig,
+  RolloutState,
 } from '../types/api';
 
 class ApiClient {
@@ -261,6 +265,49 @@ class ApiClient {
 
   async applyOptimizationRun(runId: number): Promise<{ success: boolean; data: { message: string; runId: number; transitionDurationSeconds: number } }> {
     const response = await this.client.post(`/api/optimization/apply/${runId}`, {});
+    return response.data;
+  }
+
+  // Prediction API (Phase 5)
+  async getPredictionCurrent(): Promise<{ success: boolean; data: PredictionResult }> {
+    const response = await this.client.get('/api/prediction/current');
+    return response.data;
+  }
+
+  async getPredictionForecast(horizonMinutes: number): Promise<{ success: boolean; data: PredictionResult }> {
+    const response = await this.client.get(`/api/prediction/forecast?horizon=${horizonMinutes}`);
+    return response.data;
+  }
+
+  async getPredictionConfig(): Promise<{ success: boolean; data: PredictionConfig }> {
+    const response = await this.client.get('/api/prediction/config');
+    return response.data;
+  }
+
+  async setPredictionConfig(config: Partial<PredictionConfig>): Promise<{ success: boolean; data: { message: string } }> {
+    const response = await this.client.post('/api/prediction/config', config);
+    return response.data;
+  }
+
+  // Validation API (Phase 5)
+  async getValidationConfig(): Promise<{ success: boolean; data: ValidationConfig }> {
+    const response = await this.client.get('/api/optimization/validation/config');
+    return response.data;
+  }
+
+  async setValidationConfig(config: Partial<ValidationConfig>): Promise<{ success: boolean; data: { message: string } }> {
+    const response = await this.client.post('/api/optimization/validation/config', config);
+    return response.data;
+  }
+
+  // Rollout API (Phase 5)
+  async getRolloutStatus(): Promise<{ success: boolean; data: RolloutState }> {
+    const response = await this.client.get('/api/optimization/rollout/status');
+    return response.data;
+  }
+
+  async rollback(): Promise<{ success: boolean; data: { message: string; transitionDurationSeconds: number } }> {
+    const response = await this.client.post('/api/optimization/rollback', {});
     return response.data;
   }
 }

@@ -43,6 +43,9 @@ export default function Layout({ children }: LayoutProps) {
                 <Link to="/analytics" className={navLinkClass('/analytics')}>
                   Analytics
                 </Link>
+                <Link to="/statistics" className={navLinkClass('/statistics')}>
+                  Statistics
+                </Link>
                 <Link to="/map" className={navLinkClass('/map')}>
                   Map View
                 </Link>

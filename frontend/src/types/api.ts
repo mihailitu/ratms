@@ -413,3 +413,84 @@ export interface SystemHealth {
   };
   timestamp: number;
 }
+
+// Prediction Types (Phase 5)
+export interface PredictionConfig {
+  horizonMinutes: number;
+  minHorizonMinutes: number;
+  maxHorizonMinutes: number;
+  patternWeight: number;
+  currentWeight: number;
+  minSamplesForFullConfidence: number;
+  cacheDurationSeconds: number;
+}
+
+export interface PredictedMetrics {
+  roadId: number;
+  vehicleCount: number;
+  queueLength: number;
+  avgSpeed: number;
+  flowRate: number;
+  confidence: number;
+  historicalSampleCount: number;
+  hasCurrentData: boolean;
+  hasHistoricalPattern: boolean;
+}
+
+export interface PredictionResult {
+  predictionTimestamp: number;
+  targetTimestamp: number;
+  horizonMinutes: number;
+  targetDayOfWeek: number;
+  targetTimeSlot: number;
+  targetTimeSlotString: string;
+  averageConfidence: number;
+  roadPredictions: PredictedMetrics[];
+}
+
+// Validation Types (Phase 5)
+export interface ValidationConfig {
+  simulationSteps: number;
+  dt: number;
+  improvementThreshold: number;
+  regressionThreshold: number;
+  enabled: boolean;
+}
+
+// Rollout Types (Phase 5)
+export interface RolloutMetrics {
+  avgSpeed: number;
+  avgQueue: number;
+  fitness: number;
+}
+
+export interface RolloutState {
+  status: 'idle' | 'in_progress' | 'complete' | 'rolled_back';
+  startTime: number;
+  endTime: number;
+  preRollout: RolloutMetrics;
+  postRollout: RolloutMetrics;
+  regressionPercent: number;
+  updateCount: number;
+  hasCurrentChromosome: boolean;
+  hasPreviousChromosome: boolean;
+  config: {
+    enableRolloutMonitoring: boolean;
+    rolloutRegressionThreshold: number;
+    rolloutMonitoringDurationSeconds: number;
+  };
+}
+
+// Extended Continuous Optimization Status (Phase 5)
+export interface PredictionStatus {
+  enabled: boolean;
+  available: boolean;
+  horizonMinutes: number;
+  pipelineStatus?: string;
+  averageAccuracy?: number;
+}
+
+export interface ExtendedContinuousOptimizationStatus extends ContinuousOptimizationStatus {
+  mode: 'reactive' | 'predictive';
+  prediction: PredictionStatus;
+}
