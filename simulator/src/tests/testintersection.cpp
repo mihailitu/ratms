@@ -161,7 +161,8 @@ std::vector<Road> fourWayIntersectionTest()
  *   - Block spacing: 300m
  *   - Total area: 3km x 3km
  *   - 1000 vehicles with realistic distribution
- *   - Continuous circular routing for traffic flow
+ *   - Exit points at grid boundaries (vehicles leave the network)
+ *   - Geographic coordinates centered on Munich for map display
  */
 std::vector<Road> cityGridTestMap()
 {
@@ -172,6 +173,11 @@ std::vector<Road> cityGridTestMap()
     const int GRID_SIZE = 10;           // 10x10 grid
     const double BLOCK_LENGTH = 300.0;  // 300m per block
     const int TOTAL_VEHICLES = 1000;    // Target vehicle count
+
+    // Geographic coordinates (Munich center)
+    const double BASE_LAT = 48.135;
+    const double BASE_LON = 11.575;
+    const double CELL_SIZE = 0.003;     // ~300m in degrees at this latitude
 
     // Road configuration
     const unsigned ARTERIAL_LANES = 2;
@@ -211,6 +217,13 @@ std::vector<Road> cityGridTestMap()
                 double endY = row * BLOCK_LENGTH;
                 eastbound.setCardinalCoordinates({startX, startY}, {endX, endY});
 
+                // Set geographic coordinates for map display
+                double startLat = BASE_LAT + row * CELL_SIZE;
+                double startLon = BASE_LON + col * CELL_SIZE;
+                double endLat = BASE_LAT + row * CELL_SIZE;
+                double endLon = BASE_LON + (col + 1) * CELL_SIZE;
+                eastbound.setGeoCoordinates({startLon, startLat}, {endLon, endLat});
+
                 roadIdGrid[{row, col, 0}] = nextRoadId;  // 0 = East
                 cmap.push_back(eastbound);
                 nextRoadId++;
@@ -228,6 +241,13 @@ std::vector<Road> cityGridTestMap()
                 double endX = col * BLOCK_LENGTH;
                 double endY = row * BLOCK_LENGTH + 20;
                 westbound.setCardinalCoordinates({startX, startY}, {endX, endY});
+
+                // Set geographic coordinates for map display (slight offset for parallel road)
+                double startLat = BASE_LAT + row * CELL_SIZE + 0.0002;
+                double startLon = BASE_LON + (col + 1) * CELL_SIZE;
+                double endLat = BASE_LAT + row * CELL_SIZE + 0.0002;
+                double endLon = BASE_LON + col * CELL_SIZE;
+                westbound.setGeoCoordinates({startLon, startLat}, {endLon, endLat});
 
                 roadIdGrid[{row, col, 2}] = nextRoadId;  // 2 = West
                 cmap.push_back(westbound);
@@ -252,6 +272,13 @@ std::vector<Road> cityGridTestMap()
                 double endY = (row + 1) * BLOCK_LENGTH;
                 southbound.setCardinalCoordinates({startX, startY}, {endX, endY});
 
+                // Set geographic coordinates for map display
+                double startLat = BASE_LAT + row * CELL_SIZE;
+                double startLon = BASE_LON + col * CELL_SIZE;
+                double endLat = BASE_LAT + (row + 1) * CELL_SIZE;
+                double endLon = BASE_LON + col * CELL_SIZE;
+                southbound.setGeoCoordinates({startLon, startLat}, {endLon, endLat});
+
                 roadIdGrid[{row, col, 1}] = nextRoadId;  // 1 = South
                 cmap.push_back(southbound);
                 nextRoadId++;
@@ -270,6 +297,13 @@ std::vector<Road> cityGridTestMap()
                 double endY = row * BLOCK_LENGTH;
                 northbound.setCardinalCoordinates({startX, startY}, {endX, endY});
 
+                // Set geographic coordinates for map display (slight offset for parallel road)
+                double startLat = BASE_LAT + (row + 1) * CELL_SIZE;
+                double startLon = BASE_LON + col * CELL_SIZE + 0.0002;
+                double endLat = BASE_LAT + row * CELL_SIZE;
+                double endLon = BASE_LON + col * CELL_SIZE + 0.0002;
+                northbound.setGeoCoordinates({startLon, startLat}, {endLon, endLat});
+
                 roadIdGrid[{row, col, 3}] = nextRoadId;  // 3 = North
                 cmap.push_back(northbound);
                 nextRoadId++;
@@ -280,12 +314,14 @@ std::vector<Road> cityGridTestMap()
     LOG_INFO(LogComponent::Simulation, "Created {} road segments", nextRoadId);
 
     // PHASE 3: Set up probabilistic connections at each intersection
+    // Note: Roads at grid boundaries have NO connections (vehicles exit there)
     for (int row = 0; row < GRID_SIZE; row++) {
         for (int col = 0; col < GRID_SIZE; col++) {
             // For each road arriving at this intersection, connect to departing roads
 
             // Eastbound arriving roads can go: straight (East), left (North), right (South)
-            if (col > 0) {
+            // Skip connections for roads arriving at east boundary (col == GRID_SIZE - 1)
+            if (col > 0 && col < GRID_SIZE - 1) {
                 auto it = roadIdGrid.find({row, col-1, 0});
                 if (it != roadIdGrid.end()) {
                     unsigned arrivalRoad = it->second;
@@ -315,7 +351,8 @@ std::vector<Road> cityGridTestMap()
             }
 
             // Westbound arriving roads
-            if (col < GRID_SIZE - 1) {
+            // Skip connections for roads arriving at west boundary (col == 0)
+            if (col < GRID_SIZE - 1 && col > 0) {
                 auto it = roadIdGrid.find({row, col, 2});
                 if (it != roadIdGrid.end()) {
                     unsigned arrivalRoad = it->second;
@@ -345,7 +382,8 @@ std::vector<Road> cityGridTestMap()
             }
 
             // Southbound arriving roads
-            if (row > 0) {
+            // Skip connections for roads arriving at south boundary (row == GRID_SIZE - 1)
+            if (row > 0 && row < GRID_SIZE - 1) {
                 auto it = roadIdGrid.find({row-1, col, 1});
                 if (it != roadIdGrid.end()) {
                     unsigned arrivalRoad = it->second;
@@ -375,7 +413,8 @@ std::vector<Road> cityGridTestMap()
             }
 
             // Northbound arriving roads
-            if (row < GRID_SIZE - 1) {
+            // Skip connections for roads arriving at north boundary (row == 0)
+            if (row < GRID_SIZE - 1 && row > 0) {
                 auto it = roadIdGrid.find({row, col, 3});
                 if (it != roadIdGrid.end()) {
                     unsigned arrivalRoad = it->second;

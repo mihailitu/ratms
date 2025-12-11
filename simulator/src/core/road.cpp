@@ -23,7 +23,10 @@ Road::Road()
 }
 
 Road::Road(roadID /*rId*/, double rLength, unsigned lanes, unsigned maxSpeed_mps ) :
-    id (idSeed.fetch_add(1)), length(rLength), lanesNo(lanes), maxSpeed(maxSpeed_mps)
+    id (idSeed.fetch_add(1)), length(rLength),
+    startPosGeo({0.0, 0.0}), endPosGeo({0.0, 0.0}),
+    startPosCard({0, 0}), endPosCard({0, 0}),
+    lanesNo(lanes), maxSpeed(maxSpeed_mps)
 {
     LOG_DEBUG(LogComponent::Simulation, "New road added: id={}, length={:.2f}m, lanes={}, maxSpeed={}",
               id, length, lanesNo, maxSpeed);
@@ -315,10 +318,12 @@ bool Road::performRoadChange(const Vehicle &currentVehicle,
                              const std::map<roadID, Road> &cityMap,
                              std::vector<RoadTransition> &pendingTransitions)
 {
-    // No connections -> vehicle leaves simulation
+    // No connections -> vehicle exits the simulation
     if (connections[laneIndex].size() == 0) {
-        LOG_TRACE(LogComponent::Simulation, "Vehicle {} leaving simulation (no connections from road {}, lane {})",
+        LOG_TRACE(LogComponent::Simulation, "Vehicle {} exiting simulation (no connections from road {}, lane {})",
                  currentVehicle.getId(), id, laneIndex);
+        // Create transition with invalid road ID (max value) so server counts it as exited
+        pendingTransitions.push_back(std::make_tuple(currentVehicle, static_cast<roadID>(-1), 0));
         return true; // Remove vehicle
     }
 
@@ -336,8 +341,10 @@ bool Road::performRoadChange(const Vehicle &currentVehicle,
     // Check if next road exists in cityMap
     auto nextRoadIt = cityMap.find(nextRoadID);
     if (nextRoadIt == cityMap.end()) {
-        LOG_WARN(LogComponent::Simulation, "Vehicle {} cannot transition - destination road {} not in cityMap",
+        LOG_WARN(LogComponent::Simulation, "Vehicle {} exiting - destination road {} not in cityMap",
                  currentVehicle.getId(), nextRoadID);
+        // Create transition with invalid road ID (max value) so server counts it as exited
+        pendingTransitions.push_back(std::make_tuple(currentVehicle, static_cast<roadID>(-1), 0));
         return true; // Remove vehicle
     }
 
