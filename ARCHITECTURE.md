@@ -147,16 +147,8 @@ ratms/
 │   └── seeds/
 │       └── sample_data.sql
 │
-├── config/                           # Application configuration
-│   ├── default.yaml                  # Default config
-│   ├── development.yaml              # Dev overrides
-│   ├── production.yaml               # Prod overrides
-│   ├── networks/                     # Network definitions
-│   │   ├── test_network.json
-│   │   └── munich_downtown.json
-│   └── demand_profiles/              # Traffic demand profiles
-│       ├── weekday_morning.json
-│       └── weekend.json
+├── config/                           # Application configuration (planned)
+│   └── (future: YAML configs, network definitions)
 │
 ├── scripts/                          # Utility scripts
 │   ├── import_osm.py                 # Import OSM data
