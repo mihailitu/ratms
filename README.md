@@ -120,12 +120,51 @@ See [PROJECT_STATUS.md](PROJECT_STATUS.md) for complete endpoint list.
 
 ## Testing
 
-```bash
-# Backend unit tests
-cd simulator/build && make unit_tests && ./unit_tests
+### Backend Tests (C++)
 
-# Frontend E2E tests (157 tests)
-cd frontend && npm run test:e2e
+```bash
+cd simulator/build
+
+# Build all test executables
+cmake .. && make unit_tests integration_tests
+
+# Run unit tests (fast, no external dependencies)
+./unit_tests
+
+# Run integration tests (includes database tests)
+./integration_tests
+
+# Run all tests via CTest
+ctest --output-on-failure
+
+# Run specific test case
+./unit_tests --gtest_filter="SimulatorTest.*"
+
+# Run with verbose output
+./unit_tests --gtest_list_tests     # List all tests
+./unit_tests --gtest_filter="*Fitness*"  # Run tests matching pattern
+```
+
+**Test categories:**
+- `unit_tests`: Core components (Vehicle, Road, TrafficLight, Simulator, Metrics, GA)
+- `integration_tests`: Database operations, API endpoints
+
+### Frontend Tests
+
+```bash
+cd frontend
+
+# Unit tests
+npm test -- --run
+
+# E2E tests (Playwright)
+npm run test:e2e
+
+# Type checking
+npx tsc --noEmit
+
+# Lint
+npm run lint
 ```
 
 ## Performance
