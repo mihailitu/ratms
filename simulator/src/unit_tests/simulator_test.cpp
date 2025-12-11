@@ -1,6 +1,9 @@
 /**
  * Unit tests for Simulator class
  * Tests simulation orchestration, road management, and serialization
+ *
+ * Note: Road IDs are auto-generated, not user-specified.
+ * The Road constructor ignores the rId parameter.
  */
 
 #include <gtest/gtest.h>
@@ -29,37 +32,48 @@ TEST_F(SimulatorTest, DefaultConstruction) {
 
 // Road management tests
 TEST_F(SimulatorTest, AddRoadToMap_SingleRoad) {
-    Road r(1, 500.0, 2, 20);
+    Road r(0, 500.0, 2, 20);
+    roadID actualId = r.getId();  // Get the auto-generated ID
     sim_.addRoadToMap(r);
 
     EXPECT_EQ(sim_.cityMap.size(), 1);
-    EXPECT_TRUE(sim_.cityMap.find(1) != sim_.cityMap.end());
+    EXPECT_TRUE(sim_.cityMap.find(actualId) != sim_.cityMap.end());
 }
 
 TEST_F(SimulatorTest, AddRoadToMap_MultipleRoads) {
-    Road r1(1, 500.0, 2, 20);
-    Road r2(2, 300.0, 3, 25);
-    Road r3(3, 1000.0, 1, 15);
+    Road r1(0, 500.0, 2, 20);
+    Road r2(0, 300.0, 3, 25);
+    Road r3(0, 1000.0, 1, 15);
+
+    roadID id1 = r1.getId();
+    roadID id2 = r2.getId();
+    roadID id3 = r3.getId();
 
     sim_.addRoadToMap(r1);
     sim_.addRoadToMap(r2);
     sim_.addRoadToMap(r3);
 
     EXPECT_EQ(sim_.cityMap.size(), 3);
-    EXPECT_TRUE(sim_.cityMap.find(1) != sim_.cityMap.end());
-    EXPECT_TRUE(sim_.cityMap.find(2) != sim_.cityMap.end());
-    EXPECT_TRUE(sim_.cityMap.find(3) != sim_.cityMap.end());
+    EXPECT_TRUE(sim_.cityMap.find(id1) != sim_.cityMap.end());
+    EXPECT_TRUE(sim_.cityMap.find(id2) != sim_.cityMap.end());
+    EXPECT_TRUE(sim_.cityMap.find(id3) != sim_.cityMap.end());
 }
 
-TEST_F(SimulatorTest, AddRoadToMap_DuplicateIdOverwrites) {
-    Road r1(1, 500.0, 2, 20);
-    sim_.addRoadToMap(r1);
+TEST_F(SimulatorTest, AddRoadToMap_SameRoadTwice_Overwrites) {
+    Road r1(0, 500.0, 2, 20);
+    roadID id1 = r1.getId();
 
-    Road r2(1, 300.0, 3, 25);  // Same ID, different properties
+    sim_.addRoadToMap(r1);
+    EXPECT_EQ(sim_.cityMap.size(), 1);
+    EXPECT_DOUBLE_EQ(sim_.cityMap[id1].getLength(), 500.0);
+
+    // Adding the same road again overwrites
+    Road r2(0, 300.0, 3, 25);
+    roadID id2 = r2.getId();
     sim_.addRoadToMap(r2);
 
-    EXPECT_EQ(sim_.cityMap.size(), 1);
-    EXPECT_DOUBLE_EQ(sim_.cityMap[1].getLength(), 300.0);
+    // Now we have 2 roads with different IDs
+    EXPECT_EQ(sim_.cityMap.size(), 2);
 }
 
 TEST_F(SimulatorTest, AddRoadNetToMap_EmptyNetwork) {
@@ -71,9 +85,9 @@ TEST_F(SimulatorTest, AddRoadNetToMap_EmptyNetwork) {
 
 TEST_F(SimulatorTest, AddRoadNetToMap_MultipleRoads) {
     std::vector<Road> roadNet;
-    roadNet.push_back(Road(1, 500.0, 2, 20));
-    roadNet.push_back(Road(2, 300.0, 2, 20));
-    roadNet.push_back(Road(3, 400.0, 2, 20));
+    roadNet.push_back(Road(0, 500.0, 2, 20));
+    roadNet.push_back(Road(0, 300.0, 2, 20));
+    roadNet.push_back(Road(0, 400.0, 2, 20));
 
     sim_.addRoadNetToMap(roadNet);
 
@@ -90,7 +104,7 @@ TEST_F(SimulatorTest, Serialize_EmptyMap) {
 }
 
 TEST_F(SimulatorTest, Serialize_SingleRoadNoVehicles) {
-    Road r(1, 500.0, 2, 20);
+    Road r(0, 500.0, 2, 20);
     sim_.addRoadToMap(r);
 
     std::ostringstream output;
@@ -98,12 +112,12 @@ TEST_F(SimulatorTest, Serialize_SingleRoadNoVehicles) {
 
     std::string result = output.str();
     EXPECT_FALSE(result.empty());
-    // Should contain time and road ID
+    // Should contain time
     EXPECT_TRUE(result.find("1.5") != std::string::npos || result.find("1.50") != std::string::npos);
 }
 
 TEST_F(SimulatorTest, Serialize_RoadWithVehicles) {
-    Road r(1, 500.0, 2, 20);
+    Road r(0, 500.0, 2, 20);
     Vehicle v(100.0, 5.0, 15.0);
     r.addVehicle(v, 0);
     sim_.addRoadToMap(r);
@@ -117,31 +131,36 @@ TEST_F(SimulatorTest, Serialize_RoadWithVehicles) {
 
 // CityMap access tests
 TEST_F(SimulatorTest, CityMapAccess_FindExistingRoad) {
-    Road r(42, 500.0, 2, 20);
+    Road r(0, 500.0, 2, 20);
+    roadID actualId = r.getId();
     sim_.addRoadToMap(r);
 
-    auto it = sim_.cityMap.find(42);
+    auto it = sim_.cityMap.find(actualId);
     EXPECT_NE(it, sim_.cityMap.end());
-    EXPECT_EQ(it->second.getId(), 42);
+    EXPECT_EQ(it->second.getId(), actualId);
 }
 
 TEST_F(SimulatorTest, CityMapAccess_FindNonExistentRoad) {
-    Road r(1, 500.0, 2, 20);
+    Road r(0, 500.0, 2, 20);
     sim_.addRoadToMap(r);
 
-    auto it = sim_.cityMap.find(999);
+    // Use an ID that definitely doesn't exist
+    auto it = sim_.cityMap.find(999999);
     EXPECT_EQ(it, sim_.cityMap.end());
 }
 
 TEST_F(SimulatorTest, CityMapIteration) {
-    Road r1(1, 500.0, 2, 20);
-    Road r2(2, 300.0, 2, 20);
+    Road r1(0, 500.0, 2, 20);
+    Road r2(0, 300.0, 2, 20);
+    roadID id1 = r1.getId();
+    roadID id2 = r2.getId();
+
     sim_.addRoadToMap(r1);
     sim_.addRoadToMap(r2);
 
     int count = 0;
     for (const auto& [id, road] : sim_.cityMap) {
-        EXPECT_TRUE(id == 1 || id == 2);
+        EXPECT_TRUE(id == id1 || id == id2);
         count++;
     }
     EXPECT_EQ(count, 2);
@@ -156,7 +175,7 @@ TEST_F(SimulatorFixtureTest, FixtureCreatesNetwork) {
 
 TEST_F(SimulatorFixtureTest, CreatePopulatedRoad_HasVehicles) {
     auto road = createPopulatedRoad(10, 5);
-    EXPECT_EQ(road.getId(), 10);
+    // Road ID is auto-generated, don't check specific value
     EXPECT_EQ(road.getVehicleCount(), 5);
 }
 

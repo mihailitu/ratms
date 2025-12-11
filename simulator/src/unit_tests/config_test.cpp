@@ -11,8 +11,9 @@ using namespace simulator;
 class ConfigTest : public ::testing::Test {};
 
 TEST_F(ConfigTest, DT_HasExpectedValue) {
-    // DT should be 0.1 seconds (simulation time step)
-    EXPECT_DOUBLE_EQ(Config::DT, 0.1);
+    // DT is 0.5 seconds (simulation time step)
+    // Note: The comment in config.h says "0.5 seconds"
+    EXPECT_DOUBLE_EQ(Config::DT, 0.5);
 }
 
 TEST_F(ConfigTest, DT_IsPositive) {

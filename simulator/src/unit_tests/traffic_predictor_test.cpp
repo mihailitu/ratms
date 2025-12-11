@@ -125,8 +125,10 @@ TEST_F(PredictionConfigTest, WeightsSumToOne) {
 // PredictedMetrics tests
 class PredictedMetricsTest : public ::testing::Test {};
 
-TEST_F(PredictedMetricsTest, DefaultConstruction) {
-    PredictedMetrics metrics;
+TEST_F(PredictedMetricsTest, ValueInitialization) {
+    // Note: PredictedMetrics is a POD struct without default initializers.
+    // Use value initialization {} to ensure zero/default values.
+    PredictedMetrics metrics{};
 
     EXPECT_EQ(metrics.roadId, 0);
     EXPECT_DOUBLE_EQ(metrics.confidence, 0.0);
@@ -137,8 +139,10 @@ TEST_F(PredictedMetricsTest, DefaultConstruction) {
 // PredictionResult tests
 class PredictionResultTest : public ::testing::Test {};
 
-TEST_F(PredictionResultTest, DefaultConstruction) {
-    PredictionResult result;
+TEST_F(PredictionResultTest, ValueInitialization) {
+    // Note: PredictionResult is a POD struct without default initializers.
+    // Use value initialization {} to ensure zero/default values.
+    PredictionResult result{};
 
     EXPECT_TRUE(result.roadPredictions.empty());
     EXPECT_DOUBLE_EQ(result.averageConfidence, 0.0);
@@ -147,8 +151,10 @@ TEST_F(PredictionResultTest, DefaultConstruction) {
 // CurrentRoadState tests
 class CurrentRoadStateTest : public ::testing::Test {};
 
-TEST_F(CurrentRoadStateTest, DefaultConstruction) {
-    CurrentRoadState state;
+TEST_F(CurrentRoadStateTest, ValueInitialization) {
+    // Note: CurrentRoadState is a POD struct without default initializers.
+    // Use value initialization {} to ensure zero/default values.
+    CurrentRoadState state{};
 
     EXPECT_EQ(state.roadId, 0);
     EXPECT_EQ(state.vehicleCount, 0);

@@ -336,12 +336,15 @@ TEST_F(DatabaseManagerIntegrationTest, GetProfileByName) {
 }
 
 TEST_F(DatabaseManagerIntegrationTest, GetAllProfiles) {
+    // Note: 3 default profiles exist from migration (morning_rush, evening_rush, off_peak)
+    size_t initialCount = db_->getAllProfiles().size();
+
     db_->createProfile("Profile 1", "");
     db_->createProfile("Profile 2", "");
     db_->createProfile("Profile 3", "");
 
     auto profiles = db_->getAllProfiles();
-    EXPECT_EQ(profiles.size(), 3);
+    EXPECT_EQ(profiles.size(), initialCount + 3);
 }
 
 TEST_F(DatabaseManagerIntegrationTest, UpdateProfile) {
@@ -356,12 +359,15 @@ TEST_F(DatabaseManagerIntegrationTest, UpdateProfile) {
 }
 
 TEST_F(DatabaseManagerIntegrationTest, DeleteProfile) {
+    // Note: 3 default profiles exist from migration
+    size_t initialCount = db_->getAllProfiles().size();
+
     int id = db_->createProfile("To Delete", "");
-    EXPECT_EQ(db_->getAllProfiles().size(), 1);
+    EXPECT_EQ(db_->getAllProfiles().size(), initialCount + 1);
 
     bool result = db_->deleteProfile(id);
     EXPECT_TRUE(result);
-    EXPECT_TRUE(db_->getAllProfiles().empty());
+    EXPECT_EQ(db_->getAllProfiles().size(), initialCount);
 }
 
 TEST_F(DatabaseManagerIntegrationTest, SetActiveProfile) {

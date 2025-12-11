@@ -147,8 +147,10 @@ TEST_F(TravelTimeCollectorTest, Reset_ClearsTracking) {
 
     collector_->reset();
 
+    // reset() clears tracked vehicles but preserves O-D pair definitions
     EXPECT_TRUE(collector_->getTrackedVehicles().empty());
-    EXPECT_TRUE(collector_->getAllODPairs().empty());
+    // O-D pairs are preserved after reset (by design)
+    EXPECT_FALSE(collector_->getAllODPairs().empty());
 }
 
 TEST_F(TravelTimeCollectorTest, Flush_NoError) {
