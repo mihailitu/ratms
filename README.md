@@ -11,6 +11,51 @@ Production-ready traffic simulation with IDM physics, genetic algorithm optimiza
 - **Travel Time Tracking**: O-D pair metrics with percentile statistics
 - **Traffic Profiles**: JSON-based profiles for spawn rates and light timings
 
+## How It Works
+
+RATMS simulates traffic on a road network: vehicles spawn, drive following realistic physics, stop at red lights, and exit. The system continuously optimizes traffic light timings to minimize congestion.
+
+### Components
+
+| Component | What it does |
+|-----------|--------------|
+| **Simulator** | C++ engine that moves vehicles every 0.1 seconds using physics equations |
+| **Dashboard** | React web app showing live map, controls, and analytics |
+| **Optimizer** | Genetic algorithm that evolves better traffic light timings |
+| **Database** | SQLite storing simulation history and optimization results |
+
+### Data Flow
+
+```
+                         +------------------+
+                         |   Road Network   |
+                         | (roads, lights)  |
+                         +--------+---------+
+                                  |
+                                  v
++-------------+          +--------+---------+          +-------------+
+|   Traffic   |  spawn   |                  |  SSE     |  Dashboard  |
+|   Profiles  +--------->+    Simulator     +--------->+   (React)   |
+| (rates/day) |          |     (C++)        |  stream  |  Live Map   |
++-------------+          +--------+---------+          +-------------+
+                                  |
+                         measure  |  apply
+                         metrics  |  timings
+                                  v
+                         +--------+---------+
+                         |    Optimizer     |
+                         | Genetic Algorithm|
+                         +------------------+
+```
+
+### Key Concepts
+
+- **IDM Physics**: Each vehicle calculates acceleration based on speed, distance to car ahead, and desired following distance. This creates realistic traffic flow with natural slowdowns and bunching.
+
+- **Traffic Lights**: Each lane has independent signals. Timings (green/red duration) directly affect how many vehicles can pass per cycle.
+
+- **GA Optimization**: The optimizer "breeds" timing configurations. It runs simulations with different timings, keeps the best performers, and combines them to find optimal settings.
+
 ## Quick Start
 
 ### Prerequisites
