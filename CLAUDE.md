@@ -27,6 +27,16 @@ cd simulator/build && make ga_optimizer
 # Backend unit tests
 cd simulator/build && make unit_tests && ./unit_tests
 
+# Backend integration tests
+cd simulator/build && make integration_tests && ./integration_tests
+
+# Run all backend tests via CTest
+cd simulator/build && ctest --output-on-failure
+
+# Run specific test pattern
+./unit_tests --gtest_filter="SimulatorTest.*"
+./unit_tests --gtest_filter="*Fitness*"
+
 # Frontend unit tests
 cd frontend && npm test -- --run
 

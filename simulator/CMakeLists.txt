@@ -147,10 +147,15 @@ enable_testing()
 
 # Collect unit test source files
 file(GLOB UNIT_TEST_SOURCES "src/unit_tests/*.cpp")
+file(GLOB FIXTURE_SOURCES "src/unit_tests/fixtures/*.cpp")
+file(GLOB HELPER_SOURCES "src/unit_tests/helpers/*.cpp")
+file(GLOB INTEGRATION_TEST_SOURCES "src/unit_tests/integration/*.cpp")
 
-# Unit test executable
+# Unit test executable (fast tests - no API server)
 add_executable(unit_tests
     ${UNIT_TEST_SOURCES}
+    ${FIXTURE_SOURCES}
+    ${HELPER_SOURCES}
     ${SHARED_SOURCES}
 )
 
@@ -162,6 +167,46 @@ target_link_libraries(unit_tests
     SQLite::SQLite3
 )
 
+# Integration test executable (includes API tests)
+add_executable(integration_tests
+    ${INTEGRATION_TEST_SOURCES}
+    ${FIXTURE_SOURCES}
+    ${HELPER_SOURCES}
+    ${API_SOURCES}
+    ${SHARED_SOURCES}
+)
+
+target_link_libraries(integration_tests
+    GTest::gtest_main
+    GTest::gmock
+    spdlog::spdlog
+    Threads::Threads
+    SQLite::SQLite3
+)
+
 # Register tests with CTest
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
+gtest_discover_tests(integration_tests)
+
+# Custom targets for running tests
+add_custom_target(test_unit
+    COMMAND unit_tests
+    DEPENDS unit_tests
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Running unit tests"
+)
+
+add_custom_target(test_integration
+    COMMAND integration_tests
+    DEPENDS integration_tests
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Running integration tests"
+)
+
+add_custom_target(test_all
+    COMMAND unit_tests && integration_tests
+    DEPENDS unit_tests integration_tests
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Running all tests"
+)
