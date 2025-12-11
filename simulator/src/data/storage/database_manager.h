@@ -273,6 +273,7 @@ public:
     // Utility
     bool isConnected() const { return db_ != nullptr; }
     std::string getLastError() const { return last_error_; }
+    sqlite3* getConnection() const { return db_; }
     void close();
 
 private:

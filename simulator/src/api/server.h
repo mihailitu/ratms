@@ -5,7 +5,10 @@
 #include "../core/simulator.h"
 #include "../data/storage/database_manager.h"
 #include "../data/storage/traffic_pattern_storage.h"
+#include "../data/storage/traffic_feed_storage.h"
 #include "../metrics/travel_time_collector.h"
+#include "../feed/i_traffic_data_feed.h"
+#include "../feed/simulated_traffic_feed.h"
 #include <memory>
 #include <string>
 #include <atomic>
@@ -66,6 +69,17 @@ struct SpawnRate {
     simulator::roadID roadId;
     double vehiclesPerMinute;  // Spawn rate
     double accumulator;        // Partial vehicle accumulator
+};
+
+/**
+ * @brief DensityManagerConfig - Configuration for traffic density management
+ */
+struct DensityManagerConfig {
+    bool enabled = false;                   // Whether density management is active
+    double maxAdjustmentRate = 2.0;         // Max vehicles to add/remove per update
+    double tolerancePercent = 0.2;          // Tolerance band (±20% before adjusting)
+    bool saveFeedData = true;               // Save feed data to DB for ML training
+    int feedUpdateIntervalMs = 1000;        // How often the feed generates updates
 };
 
 /**
@@ -156,6 +170,13 @@ private:
     void handleGetTravelTimeSamples(const httplib::Request& req, httplib::Response& res);
     void handleGetTrackedVehicles(const httplib::Request& req, httplib::Response& res);
 
+    // Density management handlers
+    void handleGetDensityConfig(const httplib::Request& req, httplib::Response& res);
+    void handleSetDensityConfig(const httplib::Request& req, httplib::Response& res);
+    void handleGetDensityStatus(const httplib::Request& req, httplib::Response& res);
+    void handleGetFeedInfo(const httplib::Request& req, httplib::Response& res);
+    void handleExportFeedData(const httplib::Request& req, httplib::Response& res);
+
     // Middleware
     void corsMiddleware(const httplib::Request& req, httplib::Response& res);
     void loggingMiddleware(const httplib::Request& req, httplib::Response& res);
@@ -184,6 +205,13 @@ private:
 
     // Travel time collection
     std::shared_ptr<metrics::TravelTimeCollector> travel_time_collector_;
+
+    // Traffic density management
+    DensityManagerConfig density_config_;
+    std::unique_ptr<simulator::ITrafficDataFeed> traffic_feed_;
+    std::shared_ptr<data::TrafficFeedStorage> feed_storage_;
+    void initializeDensityManagement();
+    void onFeedUpdate(const simulator::TrafficFeedSnapshot& snapshot);
 
     // Simulation thread management
     std::unique_ptr<std::thread> simulation_thread_;

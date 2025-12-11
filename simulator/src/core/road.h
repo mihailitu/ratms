@@ -191,7 +191,12 @@ public:
     bool spawnVehicle(double velocity = 10.0, double length = 5.0);
     // Spawn vehicle on specific lane with given velocity and aggressivity
     bool spawnVehicle(unsigned lane, double velocity, double aggressivity);
+    // Spawn vehicle at specific position (for density injection)
+    bool spawnVehicleAtPosition(double position, unsigned lane, double velocity, double aggressivity = 0.5);
     int getVehicleCount() const;
+
+    // Vehicle removal (for density reduction) - removes trailing vehicle from a lane
+    bool removeVehicle();
 
     void update(double dt, const std::map<roadID, Road> &cityMap,
                std::vector<RoadTransition> &pendingTransitions);

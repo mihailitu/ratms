@@ -553,4 +553,94 @@ int Road::getVehicleCount() const
     return count;
 }
 
+/**
+ * @brief Road::spawnVehicleAtPosition - Spawn vehicle at specific position
+ * @param position Position along road (0 to length)
+ * @param lane Lane to spawn on
+ * @param velocity Initial velocity
+ * @param aggressivity Driver aggressivity (0.0-1.0)
+ * @return true if vehicle was spawned, false if no space available
+ *
+ * Used by density management to inject vehicles mid-road.
+ */
+bool Road::spawnVehicleAtPosition(double position, unsigned lane, double velocity, double aggressivity)
+{
+    if (lane >= lanesNo) {
+        LOG_TRACE(LogComponent::Simulation, "Cannot spawn vehicle on road {} - invalid lane {}", id, lane);
+        return false;
+    }
+
+    if (position < 0 || position > length) {
+        LOG_TRACE(LogComponent::Simulation, "Cannot spawn vehicle on road {} - invalid position {:.1f}", id, position);
+        return false;
+    }
+
+    double vehicleLength = 5.0;  // Default vehicle length
+    double requiredGap = vehicleLength + minChangeLaneDist;
+
+    // Check if there's space at the target position
+    // We need clear space both in front and behind the spawn point
+    for (const auto& v : vehicles[lane]) {
+        double vFront = v.getPos();
+        double vBack = v.getPos() - v.getLength();
+
+        double spawnFront = position;
+        double spawnBack = position - vehicleLength;
+
+        // Check if new vehicle would overlap with existing vehicle (including safety gap)
+        bool overlap = !(spawnFront + minChangeLaneDist < vBack || spawnBack - minChangeLaneDist > vFront);
+        if (overlap) {
+            LOG_TRACE(LogComponent::Simulation, "Cannot spawn vehicle on road {} lane {} at pos {:.1f} - collision with vehicle at {:.1f}",
+                     id, lane, position, v.getPos());
+            return false;
+        }
+    }
+
+    // Create and add vehicle at specified position
+    Vehicle newVehicle(position, vehicleLength, velocity);
+    newVehicle.setAggressivity(aggressivity);
+    addVehicle(newVehicle, lane);
+
+    LOG_TRACE(LogComponent::Simulation, "Spawned vehicle {} on road {} lane {} at pos {:.1f} (v={:.1f} m/s, aggr={:.2f})",
+              newVehicle.getId(), id, lane, position, velocity, aggressivity);
+
+    return true;
+}
+
+/**
+ * @brief Road::removeVehicle - Remove a vehicle from road (for density reduction)
+ * @return true if a vehicle was removed, false if no vehicles to remove
+ *
+ * Removes the trailing (last) vehicle from the lane with the most vehicles.
+ * This is the safest approach as trailing vehicles have the least impact on traffic flow.
+ */
+bool Road::removeVehicle()
+{
+    // Find lane with most vehicles
+    int bestLane = -1;
+    size_t maxVehicles = 0;
+
+    for (unsigned lane = 0; lane < lanesNo; ++lane) {
+        if (vehicles[lane].size() > maxVehicles) {
+            maxVehicles = vehicles[lane].size();
+            bestLane = static_cast<int>(lane);
+        }
+    }
+
+    if (bestLane < 0 || maxVehicles == 0) {
+        LOG_TRACE(LogComponent::Simulation, "Cannot remove vehicle from road {} - no vehicles", id);
+        return false;
+    }
+
+    // Remove the last (trailing) vehicle from the lane
+    auto& lane = vehicles[bestLane];
+    int vehicleId = lane.back().getId();
+    lane.pop_back();
+
+    LOG_TRACE(LogComponent::Simulation, "Removed vehicle {} from road {} lane {} (trailing)",
+              vehicleId, id, bestLane);
+
+    return true;
+}
+
 } // namespace simulator

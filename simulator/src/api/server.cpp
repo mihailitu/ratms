@@ -11,6 +11,7 @@
 #include <nlohmann/json.hpp>
 #include <chrono>
 #include <thread>
+#include <random>
 
 // OpenMP support with fallback for non-OpenMP builds
 #ifdef _OPENMP
@@ -50,7 +51,12 @@ Server::Server(int port) : port_(port), server_start_time_(std::chrono::steady_c
 }
 
 Server::~Server() {
-    // Stop simulation thread first
+    // Stop traffic feed first (if running)
+    if (traffic_feed_ && traffic_feed_->isRunning()) {
+        traffic_feed_->stop();
+    }
+
+    // Stop simulation thread
     if (simulation_running_) {
         simulation_should_stop_ = true;
         if (simulation_thread_ && simulation_thread_->joinable()) {
@@ -149,6 +155,9 @@ void Server::setDatabase(std::shared_ptr<data::DatabaseManager> db) {
         // Initialize travel time collector
         travel_time_collector_ = std::make_shared<metrics::TravelTimeCollector>(database_);
         LOG_INFO(LogComponent::API, "Travel time collector initialized");
+
+        // Initialize density management (requires database, simulator, and pattern_storage)
+        initializeDensityManagement();
     }
 }
 
@@ -363,6 +372,27 @@ void Server::setupRoutes() {
 
     http_server_.Get("/api/travel-time/tracked", [this](const httplib::Request& req, httplib::Response& res) {
         handleGetTrackedVehicles(req, res);
+    });
+
+    // Density management routes
+    http_server_.Get("/api/density-management/config", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetDensityConfig(req, res);
+    });
+
+    http_server_.Post("/api/density-management/config", [this](const httplib::Request& req, httplib::Response& res) {
+        handleSetDensityConfig(req, res);
+    });
+
+    http_server_.Get("/api/density-management/status", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetDensityStatus(req, res);
+    });
+
+    http_server_.Get("/api/density-management/feed-info", [this](const httplib::Request& req, httplib::Response& res) {
+        handleGetFeedInfo(req, res);
+    });
+
+    http_server_.Get("/api/feed-data/export", [this](const httplib::Request& req, httplib::Response& res) {
+        handleExportFeedData(req, res);
     });
 
     // Register optimization routes if controller is initialized
@@ -2765,6 +2795,316 @@ void Server::handleGetTrackedVehicles(const httplib::Request& req, httplib::Resp
 
     } catch (const std::exception& e) {
         sendError(res, 500, std::string("Error getting tracked vehicles: ") + e.what());
+    }
+}
+
+// ============================================================================
+// Density Management Implementation
+// ============================================================================
+
+void Server::initializeDensityManagement() {
+    if (!pattern_storage_) {
+        LOG_WARN(LogComponent::Simulation, "Cannot initialize density management: pattern storage not available");
+        return;
+    }
+
+    if (!simulator_) {
+        LOG_WARN(LogComponent::Simulation, "Cannot initialize density management: simulator not available");
+        return;
+    }
+
+    // Create feed storage
+    if (database_) {
+        feed_storage_ = std::make_shared<data::TrafficFeedStorage>(database_);
+        LOG_INFO(LogComponent::Simulation, "Traffic feed storage initialized");
+    }
+
+    // Create simulated traffic feed
+    traffic_feed_ = std::make_unique<simulator::SimulatedTrafficFeed>(
+        *pattern_storage_, simulator_->cityMap);
+
+    // Configure feed update interval
+    traffic_feed_->setUpdateIntervalMs(density_config_.feedUpdateIntervalMs);
+
+    // Subscribe to feed updates
+    traffic_feed_->subscribe([this](const simulator::TrafficFeedSnapshot& snapshot) {
+        onFeedUpdate(snapshot);
+    });
+
+    LOG_INFO(LogComponent::Simulation, "Density management initialized");
+}
+
+void Server::onFeedUpdate(const simulator::TrafficFeedSnapshot& snapshot) {
+    // Save feed data for ML training (always, even if density adjustment is disabled)
+    if (density_config_.saveFeedData && feed_storage_) {
+        feed_storage_->recordFeedSnapshot(snapshot);
+    }
+
+    // Skip density adjustment if disabled
+    if (!density_config_.enabled) {
+        return;
+    }
+
+    if (!simulator_) {
+        return;
+    }
+
+    // Random number generation for spawn positions
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+
+    // Adjust vehicle counts per road
+    std::lock_guard<std::mutex> lock(sim_mutex_);
+
+    for (const auto& entry : snapshot.entries) {
+        auto roadIt = simulator_->cityMap.find(entry.roadId);
+        if (roadIt == simulator_->cityMap.end()) continue;
+
+        auto& road = roadIt->second;
+        int current = road.getVehicleCount();
+        int expected = entry.expectedVehicleCount;
+        int diff = expected - current;
+        double tolerance = std::max(1.0, expected * density_config_.tolerancePercent);
+
+        if (diff > tolerance) {
+            // Under-populated: inject vehicles
+            int toAdd = std::min(static_cast<int>(diff - tolerance),
+                                 static_cast<int>(density_config_.maxAdjustmentRate));
+
+            for (int i = 0; i < toAdd; i++) {
+                // Random position along road (avoiding ends)
+                double roadLen = road.getLength();
+                std::uniform_real_distribution<double> posDist(10.0, roadLen - 10.0);
+                double pos = posDist(gen);
+
+                // Random lane
+                std::uniform_int_distribution<unsigned> laneDist(0, road.getLanesNo() - 1);
+                unsigned lane = laneDist(gen);
+
+                // Random aggressivity
+                std::uniform_real_distribution<double> aggrDist(0.3, 0.7);
+                double aggr = aggrDist(gen);
+
+                road.spawnVehicleAtPosition(pos, lane, road.getMaxSpeed() * 0.8, aggr);
+            }
+
+            LOG_TRACE(LogComponent::Simulation, "Density: Road {} injected {} vehicles (current={}, expected={})",
+                     entry.roadId, toAdd, current, expected);
+
+        } else if (diff < -tolerance) {
+            // Over-populated: remove vehicles
+            int toRemove = std::min(static_cast<int>(-diff - tolerance),
+                                    static_cast<int>(density_config_.maxAdjustmentRate));
+
+            for (int i = 0; i < toRemove; i++) {
+                road.removeVehicle();
+            }
+
+            LOG_TRACE(LogComponent::Simulation, "Density: Road {} removed {} vehicles (current={}, expected={})",
+                     entry.roadId, toRemove, current, expected);
+        }
+    }
+}
+
+void Server::handleGetDensityConfig(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    json response = {
+        {"enabled", density_config_.enabled},
+        {"maxAdjustmentRate", density_config_.maxAdjustmentRate},
+        {"tolerancePercent", density_config_.tolerancePercent},
+        {"saveFeedData", density_config_.saveFeedData},
+        {"feedUpdateIntervalMs", density_config_.feedUpdateIntervalMs},
+        {"feedRunning", traffic_feed_ ? traffic_feed_->isRunning() : false}
+    };
+
+    res.set_content(response.dump(2), "application/json");
+    res.status = 200;
+}
+
+void Server::handleSetDensityConfig(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    try {
+        json body = json::parse(req.body);
+
+        if (body.contains("enabled")) {
+            density_config_.enabled = body["enabled"].get<bool>();
+        }
+        if (body.contains("maxAdjustmentRate")) {
+            density_config_.maxAdjustmentRate = body["maxAdjustmentRate"].get<double>();
+        }
+        if (body.contains("tolerancePercent")) {
+            density_config_.tolerancePercent = body["tolerancePercent"].get<double>();
+        }
+        if (body.contains("saveFeedData")) {
+            density_config_.saveFeedData = body["saveFeedData"].get<bool>();
+        }
+        if (body.contains("feedUpdateIntervalMs")) {
+            density_config_.feedUpdateIntervalMs = body["feedUpdateIntervalMs"].get<int>();
+            if (traffic_feed_) {
+                traffic_feed_->setUpdateIntervalMs(density_config_.feedUpdateIntervalMs);
+            }
+        }
+
+        // Start or stop feed based on enabled state
+        if (traffic_feed_) {
+            if (density_config_.enabled && !traffic_feed_->isRunning()) {
+                traffic_feed_->start();
+                LOG_INFO(LogComponent::Simulation, "Traffic feed started");
+            } else if (!density_config_.enabled && traffic_feed_->isRunning()) {
+                traffic_feed_->stop();
+                LOG_INFO(LogComponent::Simulation, "Traffic feed stopped");
+            }
+        }
+
+        json response = {
+            {"success", true},
+            {"config", {
+                {"enabled", density_config_.enabled},
+                {"maxAdjustmentRate", density_config_.maxAdjustmentRate},
+                {"tolerancePercent", density_config_.tolerancePercent},
+                {"saveFeedData", density_config_.saveFeedData},
+                {"feedUpdateIntervalMs", density_config_.feedUpdateIntervalMs}
+            }}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 400, std::string("Invalid request: ") + e.what());
+    }
+}
+
+void Server::handleGetDensityStatus(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!traffic_feed_) {
+        sendError(res, 503, "Traffic feed not initialized");
+        return;
+    }
+
+    try {
+        auto snapshot = traffic_feed_->getLatestSnapshot();
+
+        json roadsJson = json::array();
+
+        std::lock_guard<std::mutex> lock(sim_mutex_);
+
+        for (const auto& entry : snapshot.entries) {
+            auto roadIt = simulator_->cityMap.find(entry.roadId);
+            if (roadIt == simulator_->cityMap.end()) continue;
+
+            int current = roadIt->second.getVehicleCount();
+            int expected = entry.expectedVehicleCount;
+            double tolerance = std::max(1.0, expected * density_config_.tolerancePercent);
+
+            std::string status = "ok";
+            if (current < expected - tolerance) {
+                status = "under";
+            } else if (current > expected + tolerance) {
+                status = "over";
+            }
+
+            roadsJson.push_back({
+                {"roadId", entry.roadId},
+                {"current", current},
+                {"expected", expected},
+                {"confidence", entry.confidence},
+                {"status", status}
+            });
+        }
+
+        json response = {
+            {"feedSource", traffic_feed_->getSourceName()},
+            {"feedHealthy", traffic_feed_->isHealthy()},
+            {"feedRunning", traffic_feed_->isRunning()},
+            {"densityEnabled", density_config_.enabled},
+            {"snapshotTimestamp", snapshot.timestamp},
+            {"roadCount", roadsJson.size()},
+            {"roads", roadsJson}
+        };
+
+        res.set_content(response.dump(2), "application/json");
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error getting density status: ") + e.what());
+    }
+}
+
+void Server::handleGetFeedInfo(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    json response;
+
+    if (traffic_feed_) {
+        response = {
+            {"source", traffic_feed_->getSourceName()},
+            {"running", traffic_feed_->isRunning()},
+            {"healthy", traffic_feed_->isHealthy()},
+            {"updateIntervalMs", traffic_feed_->getUpdateIntervalMs()}
+        };
+    } else {
+        response = {
+            {"source", "none"},
+            {"running", false},
+            {"healthy", false},
+            {"updateIntervalMs", 0}
+        };
+    }
+
+    if (feed_storage_) {
+        auto stats = feed_storage_->getStats();
+        response["storage"] = {
+            {"totalEntries", stats.totalEntries},
+            {"uniqueRoads", stats.uniqueRoads},
+            {"oldestTimestamp", stats.oldestTimestamp},
+            {"newestTimestamp", stats.newestTimestamp}
+        };
+    }
+
+    res.set_content(response.dump(2), "application/json");
+    res.status = 200;
+}
+
+void Server::handleExportFeedData(const httplib::Request& req, httplib::Response& res) {
+    REQUEST_SCOPE();
+
+    if (!feed_storage_) {
+        sendError(res, 503, "Feed storage not initialized");
+        return;
+    }
+
+    try {
+        // Parse query parameters
+        int64_t startTime = 0;
+        int64_t endTime = std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::system_clock::now().time_since_epoch()).count();
+
+        if (req.has_param("startTime")) {
+            startTime = std::stoll(req.get_param_value("startTime"));
+        }
+        if (req.has_param("endTime")) {
+            endTime = std::stoll(req.get_param_value("endTime"));
+        }
+
+        std::string format = req.has_param("format") ? req.get_param_value("format") : "json";
+
+        if (format == "csv") {
+            std::string csv = feed_storage_->exportToCSV(startTime, endTime);
+            res.set_content(csv, "text/csv");
+            res.set_header("Content-Disposition", "attachment; filename=feed_data.csv");
+        } else {
+            std::string jsonData = feed_storage_->exportToJSON(startTime, endTime);
+            res.set_content(jsonData, "application/json");
+        }
+
+        res.status = 200;
+
+    } catch (const std::exception& e) {
+        sendError(res, 500, std::string("Error exporting feed data: ") + e.what());
     }
 }
 
