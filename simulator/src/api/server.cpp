@@ -93,6 +93,27 @@ void Server::stop() {
     }
 
     running_ = false;
+
+    // Stop traffic feed
+    if (traffic_feed_ && traffic_feed_->isRunning()) {
+        traffic_feed_->stop();
+    }
+
+    // Stop simulation thread
+    if (simulation_running_) {
+        simulation_should_stop_ = true;
+        if (simulation_thread_ && simulation_thread_->joinable()) {
+            simulation_thread_->join();
+        }
+        simulation_running_ = false;
+    }
+
+    // Stop continuous optimization
+    if (continuous_optimization_controller_ && continuous_optimization_controller_->isRunning()) {
+        continuous_optimization_controller_->stop();
+    }
+
+    // Stop HTTP server
     http_server_.stop();
 
     if (server_thread_ && server_thread_->joinable()) {
