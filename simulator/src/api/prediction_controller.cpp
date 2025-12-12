@@ -45,7 +45,7 @@ void PredictionController::registerRoutes(httplib::Server& server) {
     LOG_INFO(LogComponent::API, "Prediction routes registered: /api/prediction/*");
 }
 
-void PredictionController::handleGetCurrent(const httplib::Request& req, httplib::Response& res) {
+void PredictionController::handleGetCurrent(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
 
     if (!predictor_) {
@@ -160,7 +160,7 @@ void PredictionController::handleGetRoadPrediction(const httplib::Request& req, 
     }
 }
 
-void PredictionController::handleGetConfig(const httplib::Request& req, httplib::Response& res) {
+void PredictionController::handleGetConfig(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
 
     if (!predictor_) {

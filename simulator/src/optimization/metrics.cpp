@@ -45,7 +45,7 @@ double SimulationMetrics::getFitness() const {
 // ============================================================================
 
 void MetricsCollector::collectMetrics(const Simulator::CityMap &cityMap,
-                                      double dt) {
+                                      double /*dt*/) {
   double currentQueueLength = 0.0;
   double totalSpeed = 0.0;
   int vehicleCount = 0;
@@ -113,7 +113,7 @@ FitnessEvaluator::countTrafficLights(const std::vector<Road> &roadNetwork) {
   return count;
 }
 
-void FitnessEvaluator::applyChromosome(const Chromosome &chromosome,
+void FitnessEvaluator::applyChromosome(const Chromosome & /*chromosome*/,
                                        Simulator::CityMap &cityMap) {
   size_t geneIdx = 0;
 
@@ -133,7 +133,7 @@ void FitnessEvaluator::applyChromosome(const Chromosome &chromosome,
   }
 }
 
-double FitnessEvaluator::evaluate(const Chromosome &chromosome,
+double FitnessEvaluator::evaluate(const Chromosome & /*chromosome*/,
                                   std::vector<Road> &roadNetwork) {
   // Create simulator and add roads
   Simulator sim;

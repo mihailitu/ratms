@@ -22,6 +22,7 @@ export default function MapView() {
   const [profilePanelOpen, setProfilePanelOpen] = useState(false);
   const [travelTimePanelOpen, setTravelTimePanelOpen] = useState(false);
   const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
+  const hasAutoFitRef = useRef(false);
 
   // Auto-connect to stream (always enabled in production mode)
   const { latestUpdate, isConnected, error: streamError } = useSimulationStream(true);
@@ -110,6 +111,18 @@ export default function MapView() {
       map.removeLayer(polyline);
     });
     roadPolylinesRef.current.clear();
+
+    // Auto-fit map to road bounds (only once when roads first load)
+    if (!hasAutoFitRef.current && roads.length > 0) {
+      const bounds = L.latLngBounds(
+        roads.flatMap(road => [
+          [road.startLat, road.startLon] as [number, number],
+          [road.endLat, road.endLon] as [number, number]
+        ])
+      );
+      map.fitBounds(bounds, { padding: [20, 20] });
+      hasAutoFitRef.current = true;
+    }
 
     // Add new polylines for each road
     roads.forEach((road) => {
@@ -229,9 +242,8 @@ export default function MapView() {
           lat += perpOffset;
         }
       } else {
-        // Fallback to grid placement if road not found
-        lat = 48.1351 + (vehicle.roadId * 0.001);
-        lng = 11.582 + (vehicle.position * 0.0001);
+        // Skip vehicle if road not found (can't determine position)
+        return;
       }
 
       let marker = vehicleMarkersRef.current.get(vehicle.id);

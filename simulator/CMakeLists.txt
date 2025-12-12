@@ -6,6 +6,7 @@ include(FetchContent)
 # Fetch spdlog for logging
 FetchContent_Declare(
   spdlog
+  SYSTEM
   GIT_REPOSITORY https://github.com/gabime/spdlog.git
   GIT_TAG        v1.12.0
 )

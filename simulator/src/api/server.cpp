@@ -4,6 +4,7 @@
 #include "continuous_optimization_controller.h"
 #include "prediction_controller.h"
 #include "traffic_profile_service.h"
+#include "time_based_profile_scheduler.h"
 #include "../prediction/traffic_predictor.h"
 #include "../utils/logger.h"
 #include "../optimization/metrics.h"
@@ -38,7 +39,7 @@ static void sendError(httplib::Response& res, int status, const std::string& mes
     res.set_content(error.dump(2), "application/json");
 }
 
-static void sendSuccess(httplib::Response& res, const json& data) {
+[[maybe_unused]] static void sendSuccess(httplib::Response& res, const json& data) {
     json response = {
         {"success", true},
         {"data", data}
@@ -134,6 +135,13 @@ void Server::stop() {
         continuous_optimization_controller_->stop();
     }
     LOG_INFO(LogComponent::API, "Shutdown: continuous optimization stopped");
+
+    // Stop profile scheduler
+    LOG_INFO(LogComponent::API, "Shutdown: stopping profile scheduler...");
+    if (profile_scheduler_ && profile_scheduler_->isRunning()) {
+        profile_scheduler_->stop();
+    }
+    LOG_INFO(LogComponent::API, "Shutdown: profile scheduler stopped");
 
     // Stop HTTP server
     LOG_INFO(LogComponent::API, "Shutdown: stopping HTTP server...");
@@ -468,7 +476,7 @@ void Server::setupRoutes() {
     LOG_INFO(LogComponent::API, "API routes configured");
 }
 
-void Server::handleHealth(const httplib::Request& req, httplib::Response& res) {
+void Server::handleHealth(const httplib::Request& /*req*/, httplib::Response& res) {
     // Calculate uptime
     auto now = std::chrono::steady_clock::now();
     auto uptime_seconds = std::chrono::duration_cast<std::chrono::seconds>(
@@ -553,7 +561,7 @@ void Server::handleHealth(const httplib::Request& req, httplib::Response& res) {
     res.status = 200;
 }
 
-void Server::handleSimulationStart(const httplib::Request& req, httplib::Response& res) {
+void Server::handleSimulationStart(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
     std::lock_guard<std::mutex> lock(sim_mutex_);
 
@@ -606,7 +614,7 @@ void Server::handleSimulationStart(const httplib::Request& req, httplib::Respons
     res.status = 200;
 }
 
-void Server::handleSimulationStartContinuous(const httplib::Request& req, httplib::Response& res) {
+void Server::handleSimulationStartContinuous(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
     std::lock_guard<std::mutex> lock(sim_mutex_);
 
@@ -665,7 +673,7 @@ void Server::handleSimulationStartContinuous(const httplib::Request& req, httpli
     res.status = 200;
 }
 
-void Server::handleSimulationStop(const httplib::Request& req, httplib::Response& res) {
+void Server::handleSimulationStop(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
     {
         std::lock_guard<std::mutex> lock(sim_mutex_);
@@ -715,7 +723,7 @@ void Server::handleSimulationStop(const httplib::Request& req, httplib::Response
     res.status = 200;
 }
 
-void Server::handleSimulationStatus(const httplib::Request& req, httplib::Response& res) {
+void Server::handleSimulationStatus(const httplib::Request& /*req*/, httplib::Response& res) {
     std::lock_guard<std::mutex> lock(sim_mutex_);
 
     json response = {
@@ -738,7 +746,7 @@ void Server::handleSimulationStatus(const httplib::Request& req, httplib::Respon
     res.status = 200;
 }
 
-void Server::handleGetRoads(const httplib::Request& req, httplib::Response& res) {
+void Server::handleGetRoads(const httplib::Request& /*req*/, httplib::Response& res) {
     std::lock_guard<std::mutex> lock(sim_mutex_);
 
     if (!simulator_) {
@@ -795,7 +803,7 @@ void Server::handleSimulationStream(const httplib::Request& req, httplib::Respon
 
     res.set_chunked_content_provider(
         "text/event-stream",
-        [this, viewport](size_t offset, httplib::DataSink &sink) {
+        [this, viewport](size_t /*offset*/, httplib::DataSink &sink) {
             // Check if simulation is running
             if (!simulation_running_) {
                 // Send a message that simulation is not running
@@ -920,7 +928,7 @@ void Server::handleSimulationStream(const httplib::Request& req, httplib::Respon
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             return true;  // Continue streaming
         },
-        [](bool success) {
+        [](bool /*success*/) {
             // Cleanup callback
         }
     );
@@ -929,7 +937,7 @@ void Server::handleSimulationStream(const httplib::Request& req, httplib::Respon
 }
 
 // Database query handlers
-void Server::handleGetSimulations(const httplib::Request& req, httplib::Response& res) {
+void Server::handleGetSimulations(const httplib::Request& /*req*/, httplib::Response& res) {
     if (!database_ || !database_->isConnected()) {
         json response = {
             {"error", "Database not available"},
@@ -1016,7 +1024,7 @@ void Server::handleGetMetrics(const httplib::Request& req, httplib::Response& re
     res.status = 200;
 }
 
-void Server::handleGetNetworks(const httplib::Request& req, httplib::Response& res) {
+void Server::handleGetNetworks(const httplib::Request& /*req*/, httplib::Response& res) {
     if (!database_ || !database_->isConnected()) {
         json response = {
             {"error", "Database not available"}
@@ -1065,6 +1073,8 @@ void Server::runSimulationLoop() {
     const int dbWriteInterval = 100;  // Write to DB every 100 steps
 
     simulator::MetricsCollector metricsCollector;
+    uint64_t lastLogSpawned = 0;
+    double lastLogExited = 0.0;
 
     // Build road pointer cache and pre-allocate transition vectors once at start
     {
@@ -1213,8 +1223,15 @@ void Server::runSimulationLoop() {
                 for (const auto& [_, road] : simulator_->cityMap) {
                     vehicleCount += road.getVehicleCount();
                 }
-                LOG_INFO(LogComponent::Simulation, "Step {}: {:.1f}s sim time, {} vehicles active, {:.0f} exited",
-                         currentStep, simulation_time_.load(), vehicleCount, metricsCollector.getMetrics().vehiclesExited);
+                uint64_t currentSpawned = vehicles_spawned_.load();
+                double currentExited = metricsCollector.getMetrics().vehiclesExited;
+                int deltaSpawned = static_cast<int>(currentSpawned - lastLogSpawned);
+                int deltaExited = static_cast<int>(currentExited - lastLogExited);
+                lastLogSpawned = currentSpawned;
+                lastLogExited = currentExited;
+
+                LOG_INFO(LogComponent::Simulation, "Step {}: {:.1f}s sim time, {} vehicles active (+{} -{})",
+                         currentStep, simulation_time_.load(), vehicleCount, deltaSpawned, deltaExited);
             }
 
             // PHASE 4.5: Record traffic pattern snapshots periodically (real-time interval)
@@ -1590,7 +1607,7 @@ void Server::handleExportMetrics(const httplib::Request& req, httplib::Response&
     }
 }
 
-void Server::handleGetMetricTypes(const httplib::Request& req, httplib::Response& res) {
+void Server::handleGetMetricTypes(const httplib::Request& /*req*/, httplib::Response& res) {
     // Return list of common metric types
     json response = {
         {"metric_types", {
@@ -1605,7 +1622,7 @@ void Server::handleGetMetricTypes(const httplib::Request& req, httplib::Response
     res.status = 200;
 }
 
-void Server::handleGetTrafficLights(const httplib::Request& req, httplib::Response& res) {
+void Server::handleGetTrafficLights(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
     std::lock_guard<std::mutex> lock(sim_mutex_);
 
@@ -1721,7 +1738,7 @@ void Server::handleSetTrafficLights(const httplib::Request& req, httplib::Respon
 // Spawn Rate Handlers
 // ============================================================================
 
-void Server::handleGetSpawnRates(const httplib::Request& req, httplib::Response& res) {
+void Server::handleGetSpawnRates(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
     std::lock_guard<std::mutex> lock(spawn_mutex_);
 
@@ -1836,6 +1853,7 @@ void Server::processVehicleSpawning(double dt) {
                 double initialVelocity = roadIt->second.getMaxSpeed() * 0.8;  // 80% of max speed
                 if (roadIt->second.spawnVehicle(initialVelocity)) {
                     rate.accumulator -= 1.0;
+                    vehicles_spawned_++;
                     LOG_DEBUG(LogComponent::Simulation, "Spawned vehicle on road {}", roadId);
                 } else {
                     // Road is full, stop trying to spawn more this step
@@ -1854,7 +1872,7 @@ void Server::processVehicleSpawning(double dt) {
 // Continuous Simulation Mode Handlers
 // ============================================================================
 
-void Server::handleSimulationPause(const httplib::Request& req, httplib::Response& res) {
+void Server::handleSimulationPause(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
 
     if (!simulation_running_) {
@@ -1881,7 +1899,7 @@ void Server::handleSimulationPause(const httplib::Request& req, httplib::Respons
     res.status = 200;
 }
 
-void Server::handleSimulationResume(const httplib::Request& req, httplib::Response& res) {
+void Server::handleSimulationResume(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
 
     if (!simulation_running_) {
@@ -1908,7 +1926,7 @@ void Server::handleSimulationResume(const httplib::Request& req, httplib::Respon
     res.status = 200;
 }
 
-void Server::handleGetSimulationConfig(const httplib::Request& req, httplib::Response& res) {
+void Server::handleGetSimulationConfig(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
 
     json response = {
@@ -2009,11 +2027,32 @@ void Server::initializeDefaultSpawnRates(double vehiclesPerMinute) {
 
         for (simulator::roadID roadId : entryRoads) {
             spawn_rates_[roadId] = SpawnRate{roadId, vehiclesPerMinute, 0.0};
+            base_spawn_rates_[roadId] = vehiclesPerMinute;  // Store base rate for profile multiplier
         }
     }
 
     LOG_INFO(LogComponent::Simulation, "Initialized spawn rates for {} entry roads at {} vehicles/minute each",
              entryRoads.size(), vehiclesPerMinute);
+}
+
+void Server::applyProfileMultiplier(double multiplier, const std::string& profileName) {
+    std::lock_guard<std::mutex> lock(spawn_mutex_);
+
+    int updated = 0;
+    for (auto& [roadId, rate] : spawn_rates_) {
+        // Get base rate (original rate before any multiplier)
+        double baseRate = base_spawn_rates_.count(roadId) > 0
+            ? base_spawn_rates_[roadId]
+            : rate.vehiclesPerMinute;
+
+        // Apply multiplier to base rate
+        double newRate = baseRate * multiplier;
+        rate.vehiclesPerMinute = newRate;
+        updated++;
+    }
+
+    LOG_INFO(LogComponent::API, "Applied profile '{}' with multiplier {:.2f} to {} roads",
+             profileName, multiplier, updated);
 }
 
 /**
@@ -2249,7 +2288,7 @@ void Server::handleGetSnapshots(const httplib::Request& req, httplib::Response& 
     }
 }
 
-void Server::handleAggregatePatterns(const httplib::Request& req, httplib::Response& res) {
+void Server::handleAggregatePatterns(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
 
     if (!pattern_storage_) {
@@ -2310,7 +2349,7 @@ void Server::handlePruneSnapshots(const httplib::Request& req, httplib::Response
 // Traffic Profile Handlers
 // ============================================================================
 
-void Server::handleGetProfiles(const httplib::Request& req, httplib::Response& res) {
+void Server::handleGetProfiles(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
 
     if (!profile_service_) {
@@ -2767,7 +2806,7 @@ void Server::handleImportProfile(const httplib::Request& req, httplib::Response&
 // Travel Time Handlers
 // ============================================================================
 
-void Server::handleGetODPairs(const httplib::Request& req, httplib::Response& res) {
+void Server::handleGetODPairs(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
 
     if (!travel_time_collector_) {
@@ -2873,7 +2912,7 @@ void Server::handleDeleteODPair(const httplib::Request& req, httplib::Response& 
     }
 }
 
-void Server::handleGetTravelTimeStats(const httplib::Request& req, httplib::Response& res) {
+void Server::handleGetTravelTimeStats(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
 
     if (!travel_time_collector_) {
@@ -3000,7 +3039,7 @@ void Server::handleGetTravelTimeSamples(const httplib::Request& req, httplib::Re
     }
 }
 
-void Server::handleGetTrackedVehicles(const httplib::Request& req, httplib::Response& res) {
+void Server::handleGetTrackedVehicles(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
 
     if (!travel_time_collector_) {
@@ -3147,7 +3186,7 @@ void Server::onFeedUpdate(const simulator::TrafficFeedSnapshot& snapshot) {
     }
 }
 
-void Server::handleGetDensityConfig(const httplib::Request& req, httplib::Response& res) {
+void Server::handleGetDensityConfig(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
 
     json response = {
@@ -3218,7 +3257,7 @@ void Server::handleSetDensityConfig(const httplib::Request& req, httplib::Respon
     }
 }
 
-void Server::handleGetDensityStatus(const httplib::Request& req, httplib::Response& res) {
+void Server::handleGetDensityStatus(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
 
     if (!traffic_feed_) {
@@ -3275,7 +3314,7 @@ void Server::handleGetDensityStatus(const httplib::Request& req, httplib::Respon
     }
 }
 
-void Server::handleGetFeedInfo(const httplib::Request& req, httplib::Response& res) {
+void Server::handleGetFeedInfo(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
 
     json response;
@@ -3399,6 +3438,26 @@ void Server::initializeProductionMode() {
     if (continuous_optimization_controller_) {
         continuous_optimization_controller_->start();
         LOG_INFO(LogComponent::Optimization, "Continuous optimization auto-started in production mode");
+    }
+
+    // Initialize and start time-based profile scheduler
+    profile_scheduler_ = std::make_unique<TimeBasedProfileScheduler>();
+
+    // Load profiles from JSON file
+    std::string profilesPath = "data/traffic_profiles/default_profiles.json";
+    if (profile_scheduler_->loadProfiles(profilesPath)) {
+        // Set callback to update spawn rates when profile changes
+        profile_scheduler_->setSpawnRateCallback(
+            [this](double rateMultiplier, const std::string& profileName) {
+                applyProfileMultiplier(rateMultiplier, profileName);
+            }
+        );
+
+        // Start scheduler (checks every 5 minutes)
+        profile_scheduler_->start(300);
+        LOG_INFO(LogComponent::API, "Time-based profile scheduler started");
+    } else {
+        LOG_WARN(LogComponent::API, "Failed to load traffic profiles from {}", profilesPath);
     }
 
     LOG_INFO(LogComponent::Simulation, "Production mode initialized - simulation running in continuous mode");

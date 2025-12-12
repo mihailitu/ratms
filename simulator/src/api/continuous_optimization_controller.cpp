@@ -187,7 +187,7 @@ void ContinuousOptimizationController::handleStart(const httplib::Request& req, 
     });
 }
 
-void ContinuousOptimizationController::handleStop(const httplib::Request& req, httplib::Response& res) {
+void ContinuousOptimizationController::handleStop(const httplib::Request& /*req*/, httplib::Response& res) {
     if (!running_) {
         sendError(res, 400, "Continuous optimization not running");
         return;
@@ -197,7 +197,7 @@ void ContinuousOptimizationController::handleStop(const httplib::Request& req, h
     sendSuccess(res, {{"message", "Continuous optimization stopped"}});
 }
 
-void ContinuousOptimizationController::handleStatus(const httplib::Request& req, httplib::Response& res) {
+void ContinuousOptimizationController::handleStatus(const httplib::Request& /*req*/, httplib::Response& res) {
     // Get active transitions
     std::vector<TimingTransition> transitions;
     {
@@ -285,7 +285,7 @@ void ContinuousOptimizationController::handleApply(const httplib::Request& req, 
     }
 }
 
-void ContinuousOptimizationController::handleConfig(const httplib::Request& req, httplib::Response& res) {
+void ContinuousOptimizationController::handleConfig(const httplib::Request& /*req*/, httplib::Response& res) {
     std::lock_guard<std::mutex> lock(configMutex_);
     sendSuccess(res, {
         {"optimizationIntervalSeconds", config_.optimizationIntervalSeconds},
@@ -862,7 +862,7 @@ void ContinuousOptimizationController::setValidationConfig(
 // ============================================================================
 
 void ContinuousOptimizationController::handleRollback(
-    const httplib::Request& req, httplib::Response& res) {
+    const httplib::Request& /*req*/, httplib::Response& res) {
 
     if (rollback()) {
         sendSuccess(res, {
@@ -875,7 +875,7 @@ void ContinuousOptimizationController::handleRollback(
 }
 
 void ContinuousOptimizationController::handleRolloutStatus(
-    const httplib::Request& req, httplib::Response& res) {
+    const httplib::Request& /*req*/, httplib::Response& res) {
 
     RolloutState state = getRolloutState();
 
@@ -908,7 +908,7 @@ void ContinuousOptimizationController::handleRolloutStatus(
 }
 
 void ContinuousOptimizationController::handleValidationConfig(
-    const httplib::Request& req, httplib::Response& res) {
+    const httplib::Request& /*req*/, httplib::Response& res) {
 
     sendSuccess(res, {
         {"simulationSteps", validationConfig_.simulationSteps},

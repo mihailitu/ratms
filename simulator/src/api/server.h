@@ -28,6 +28,7 @@ class TrafficDataController;
 class ContinuousOptimizationController;
 class PredictionController;
 class TrafficProfileService;
+class TimeBasedProfileScheduler;
 
 /**
  * @brief VehicleSnapshot - Real-time vehicle position data
@@ -219,6 +220,7 @@ private:
     std::unique_ptr<ContinuousOptimizationController> continuous_optimization_controller_;
     std::unique_ptr<PredictionController> prediction_controller_;
     std::unique_ptr<TrafficProfileService> profile_service_;
+    std::unique_ptr<TimeBasedProfileScheduler> profile_scheduler_;
 
     // Traffic pattern storage
     std::shared_ptr<data::TrafficPatternStorage> pattern_storage_;
@@ -240,6 +242,7 @@ private:
     std::atomic<bool> simulation_should_stop_{false};
     std::atomic<int> simulation_steps_{0};
     std::atomic<double> simulation_time_{0.0};
+    std::atomic<uint64_t> vehicles_spawned_{0};  // Total vehicles spawned (for delta tracking)
 
     // Continuous simulation mode
     std::atomic<bool> continuous_mode_{false};
@@ -271,8 +274,10 @@ private:
 
     // Vehicle spawning
     std::map<simulator::roadID, SpawnRate> spawn_rates_;  // roadId -> spawn rate config
+    std::map<simulator::roadID, double> base_spawn_rates_;  // Original rates before multiplier
     std::mutex spawn_mutex_;
     void processVehicleSpawning(double dt);
+    void applyProfileMultiplier(double multiplier, const std::string& profileName);
 
 public:
     // Entry road detection and auto-spawn initialization

@@ -258,7 +258,7 @@ void OptimizationController::handleGetResults(const httplib::Request& req, httpl
     }
 }
 
-void OptimizationController::handleGetHistory(const httplib::Request& req, httplib::Response& res) {
+void OptimizationController::handleGetHistory(const httplib::Request& /*req*/, httplib::Response& res) {
     REQUEST_SCOPE();
     try {
         std::lock_guard<std::mutex> lock(runsMutex_);
@@ -377,7 +377,7 @@ int OptimizationController::createOptimizationRun(const simulator::GeneticAlgori
     return dbRunId;
 }
 
-void OptimizationController::runOptimizationBackground(std::shared_ptr<OptimizationRun> run, int networkId) {
+void OptimizationController::runOptimizationBackground(std::shared_ptr<OptimizationRun> run, int /*networkId*/) {
     int dbRunId = run->id;
     TIMED_SCOPE(LogComponent::Optimization, "optimization_run");
     try {
