@@ -5,7 +5,6 @@ import { apiClient } from '../services/apiClient';
 import type { NetworkRecord, RoadGeometry, MapViewMode } from '../types/api';
 import { useSimulationStream } from '../hooks/useSimulationStream';
 import TrafficLightPanel from '../components/TrafficLightPanel';
-import SpawnRatePanel from '../components/SpawnRatePanel';
 import ProfilePanel from '../components/ProfilePanel';
 import TravelTimePanel from '../components/TravelTimePanel';
 
@@ -14,21 +13,25 @@ export default function MapView() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const [networks, setNetworks] = useState<NetworkRecord[]>([]);
   const [selectedNetwork, setSelectedNetwork] = useState<number | null>(null);
-  const [streamEnabled, setStreamEnabled] = useState(false);
   const [roads, setRoads] = useState<RoadGeometry[]>([]);
-  const [simulationRunning, setSimulationRunning] = useState(false);
-  const [simulationLoading, setSimulationLoading] = useState(false);
   const vehicleMarkersRef = useRef<Map<number, L.CircleMarker>>(new Map());
   const roadPolylinesRef = useRef<Map<number, L.Polyline>>(new Map());
   const trafficLightMarkersRef = useRef<Map<string, L.CircleMarker>>(new Map());
   const [viewMode, setViewMode] = useState<MapViewMode>('speed');
   const [trafficLightPanelOpen, setTrafficLightPanelOpen] = useState(false);
-  const [spawnRatePanelOpen, setSpawnRatePanelOpen] = useState(false);
   const [profilePanelOpen, setProfilePanelOpen] = useState(false);
   const [travelTimePanelOpen, setTravelTimePanelOpen] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
 
-  // Subscribe to simulation stream
-  const { latestUpdate, isConnected, error: streamError } = useSimulationStream(streamEnabled);
+  // Auto-connect to stream (always enabled in production mode)
+  const { latestUpdate, isConnected, error: streamError } = useSimulationStream(true);
+
+  // Update last update time when we receive data
+  useEffect(() => {
+    if (latestUpdate) {
+      setLastUpdateTime(new Date());
+    }
+  }, [latestUpdate]);
 
   // Calculate density per road (vehicles per km)
   const roadDensities = useMemo(() => {
@@ -92,22 +95,8 @@ export default function MapView() {
       }
     };
 
-    const fetchSimulationStatus = async () => {
-      try {
-        const status = await apiClient.getSimulationStatus();
-        setSimulationRunning(status.status === 'running');
-      } catch (err) {
-        console.error('Failed to fetch simulation status:', err);
-      }
-    };
-
     fetchNetworks();
     fetchRoads();
-    fetchSimulationStatus();
-
-    // Poll simulation status every 2 seconds
-    const statusInterval = setInterval(fetchSimulationStatus, 2000);
-    return () => clearInterval(statusInterval);
   }, []);
 
   // Render roads as polylines on map
@@ -197,12 +186,6 @@ export default function MapView() {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);
 
-    // Add a sample marker (replace with actual road network data)
-    L.marker([48.1351, 11.582])
-      .addTo(map)
-      .bindPopup('Test Intersection')
-      .openPopup();
-
     mapRef.current = map;
 
     return () => {
@@ -273,7 +256,7 @@ export default function MapView() {
             Lane: ${vehicle.lane}<br/>
             Position: ${vehicle.position.toFixed(1)}m<br/>
             Speed: ${vehicle.velocity.toFixed(1)} m/s<br/>
-            Accel: ${vehicle.acceleration.toFixed(2)} m/s²
+            Accel: ${vehicle.acceleration.toFixed(2)} m/s2
           </div>`;
         });
 
@@ -358,32 +341,13 @@ export default function MapView() {
 
   const selectedNetworkData = networks.find((n) => n.id === selectedNetwork);
 
-  const handleStartSimulation = async () => {
-    setSimulationLoading(true);
-    try {
-      await apiClient.startSimulation();
-      setSimulationRunning(true);
-      setStreamEnabled(true); // Auto-enable streaming when simulation starts
-    } catch (err) {
-      console.error('Failed to start simulation:', err);
-      alert('Failed to start simulation. Check console for details.');
-    } finally {
-      setSimulationLoading(false);
-    }
-  };
-
-  const handleStopSimulation = async () => {
-    setSimulationLoading(true);
-    try {
-      await apiClient.stopSimulation();
-      setSimulationRunning(false);
-      setStreamEnabled(false); // Auto-disable streaming when simulation stops
-    } catch (err) {
-      console.error('Failed to stop simulation:', err);
-      alert('Failed to stop simulation. Check console for details.');
-    } finally {
-      setSimulationLoading(false);
-    }
+  // Format time since last update
+  const getLastUpdateText = () => {
+    if (!lastUpdateTime) return 'Waiting for data...';
+    const seconds = Math.floor((new Date().getTime() - lastUpdateTime.getTime()) / 1000);
+    if (seconds < 2) return 'Just now';
+    if (seconds < 60) return `${seconds}s ago`;
+    return `${Math.floor(seconds / 60)}m ago`;
   };
 
   return (
@@ -392,70 +356,36 @@ export default function MapView() {
         <div className="mb-6">
           <div className="flex justify-between items-center mb-2">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">Network Map View</h1>
-              <p className="text-gray-600">Visualize road networks and traffic flow</p>
+              <h1 className="text-4xl font-bold text-gray-900">Traffic Map</h1>
+              <p className="text-gray-600">Real-time traffic visualization</p>
             </div>
             <div className="flex items-center gap-4">
-              {/* Simulation Status */}
-              <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${simulationRunning ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`} />
-                <span className="text-sm text-gray-600">
-                  Sim: {simulationRunning ? 'Running' : 'Stopped'}
+              {/* Live Status */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg shadow">
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                <span className="text-sm font-medium text-gray-700">
+                  {isConnected ? 'Live' : 'Disconnected'}
                 </span>
               </div>
-
-              {/* Stream Status */}
-              <div className="flex items-center gap-2">
-                <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <span className="text-sm text-gray-600">
-                  Stream: {isConnected ? 'Live' : 'Disconnected'}
-                </span>
-              </div>
-
-              {/* Simulation Control */}
-              <button
-                onClick={simulationRunning ? handleStopSimulation : handleStartSimulation}
-                disabled={simulationLoading}
-                className={`px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  simulationRunning
-                    ? 'bg-red-600 hover:bg-red-700 text-white'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white'
-                }`}
-              >
-                {simulationLoading ? 'Loading...' : simulationRunning ? 'Stop Simulation' : 'Start Simulation'}
-              </button>
-
-              {/* Stream Control */}
-              <button
-                onClick={() => setStreamEnabled(!streamEnabled)}
-                disabled={!simulationRunning}
-                className={`px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                  streamEnabled
-                    ? 'bg-orange-600 hover:bg-orange-700 text-white'
-                    : 'bg-green-600 hover:bg-green-700 text-white'
-                }`}
-              >
-                {streamEnabled ? 'Stop Streaming' : 'Start Streaming'}
-              </button>
 
               {/* View Mode Toggle */}
-              <div className="flex items-center gap-1 bg-gray-200 rounded-md p-1">
+              <div className="flex items-center gap-1 bg-white rounded-lg shadow p-1">
                 <button
                   onClick={() => setViewMode('speed')}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                     viewMode === 'speed'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   Speed
                 </button>
                 <button
                   onClick={() => setViewMode('density')}
-                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                     viewMode === 'density'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   Density
@@ -464,41 +394,31 @@ export default function MapView() {
 
               {/* Panel Toggle Buttons */}
               <button
-                onClick={() => setSpawnRatePanelOpen(!spawnRatePanelOpen)}
-                className={`px-3 py-2 rounded-md font-medium text-sm transition-colors ${
-                  spawnRatePanelOpen
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                Spawn Rates
-              </button>
-              <button
                 onClick={() => setTrafficLightPanelOpen(!trafficLightPanelOpen)}
-                className={`px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors shadow ${
                   trafficLightPanelOpen
                     ? 'bg-amber-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 Traffic Lights
               </button>
               <button
                 onClick={() => setProfilePanelOpen(!profilePanelOpen)}
-                className={`px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors shadow ${
                   profilePanelOpen
                     ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 Profiles
               </button>
               <button
                 onClick={() => setTravelTimePanelOpen(!travelTimePanelOpen)}
-                className={`px-3 py-2 rounded-md font-medium text-sm transition-colors ${
+                className={`px-3 py-2 rounded-lg font-medium text-sm transition-colors shadow ${
                   travelTimePanelOpen
                     ? 'bg-teal-600 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 Travel Times
@@ -508,16 +428,18 @@ export default function MapView() {
 
           {/* Stream Info */}
           {latestUpdate && (
-            <div className="mt-2 text-sm text-gray-600">
-              Step: {latestUpdate.step} | Time: {latestUpdate.time.toFixed(1)}s |
-              Vehicles: {latestUpdate.vehicles.length} |
-              Traffic Lights: {latestUpdate.trafficLights.length}
+            <div className="mt-2 flex items-center gap-4 text-sm text-gray-600">
+              <span>Last update: {getLastUpdateText()}</span>
+              <span>|</span>
+              <span>Vehicles: {latestUpdate.vehicles.length.toLocaleString()}</span>
+              <span>|</span>
+              <span>Traffic Lights: {latestUpdate.trafficLights.length.toLocaleString()}</span>
             </div>
           )}
 
           {streamError && (
             <div className="mt-2 text-sm text-red-600">
-              Stream error: {streamError}
+              Connection error: {streamError}
             </div>
           )}
         </div>
@@ -525,7 +447,7 @@ export default function MapView() {
         {/* Network Selector */}
         <div className="bg-white rounded-lg shadow p-4 mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select Network
+            Network
           </label>
           <select
             value={selectedNetwork || ''}
@@ -551,66 +473,61 @@ export default function MapView() {
           />
         </div>
 
-        <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="text-sm text-blue-800">
-            <strong>Map Legend ({viewMode === 'speed' ? 'Speed Mode' : 'Density Mode'}):</strong>
-            <div className="mt-2 grid grid-cols-2 gap-2">
+        {/* Legend */}
+        <div className="mt-4 bg-white border border-gray-200 rounded-lg p-4">
+          <div className="text-sm text-gray-800">
+            <strong>Legend ({viewMode === 'speed' ? 'Speed Mode' : 'Density Mode'}):</strong>
+            <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
               {viewMode === 'speed' ? (
                 <>
-                  {/* Speed-based legend for vehicles */}
-                  <div>
-                    <span className="inline-block w-3 h-3 rounded-full bg-green-500 mr-2"></span>
-                    Fast vehicles (&gt;70% max speed)
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+                    <span>Fast (&gt;70% speed)</span>
                   </div>
-                  <div>
-                    <span className="inline-block w-3 h-3 rounded-full bg-blue-500 mr-2"></span>
-                    Medium vehicles (30-70% max speed)
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-3 h-3 rounded-full bg-blue-500"></span>
+                    <span>Medium (30-70%)</span>
                   </div>
-                  <div>
-                    <span className="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span>
-                    Slow vehicles (&lt;30% max speed)
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                    <span>Slow (&lt;30%)</span>
                   </div>
                 </>
               ) : (
                 <>
-                  {/* Density-based legend for roads */}
-                  <div>
-                    <span className="inline-block w-6 h-3 rounded bg-green-500 mr-2"></span>
-                    Free flow (&lt;20 veh/km)
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-4 h-2 rounded bg-green-500"></span>
+                    <span>Free flow (&lt;20/km)</span>
                   </div>
-                  <div>
-                    <span className="inline-block w-6 h-3 rounded bg-yellow-500 mr-2"></span>
-                    Moderate (20-50 veh/km)
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-4 h-2 rounded bg-yellow-500"></span>
+                    <span>Moderate (20-50/km)</span>
                   </div>
-                  <div>
-                    <span className="inline-block w-6 h-3 rounded bg-orange-500 mr-2"></span>
-                    Heavy (50-100 veh/km)
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-4 h-2 rounded bg-orange-500"></span>
+                    <span>Heavy (50-100/km)</span>
                   </div>
-                  <div>
-                    <span className="inline-block w-6 h-3 rounded bg-red-500 mr-2"></span>
-                    Congestion (&gt;100 veh/km)
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-4 h-2 rounded bg-red-500"></span>
+                    <span>Congestion (&gt;100/km)</span>
                   </div>
                 </>
               )}
-              {/* Traffic lights always shown */}
-              <div>
-                <span className="inline-block w-3 h-3 rounded-full bg-green-500 border-2 border-black mr-2"></span>
-                Green
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full bg-green-500 border-2 border-black"></span>
+                <span>Green Light</span>
               </div>
-              <div>
-                <span className="inline-block w-3 h-3 rounded-full bg-yellow-500 border-2 border-black mr-2"></span>
-                Yellow
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full bg-yellow-500 border-2 border-black"></span>
+                <span>Yellow Light</span>
               </div>
-              <div>
-                <span className="inline-block w-3 h-3 rounded-full bg-red-500 border-2 border-black mr-2"></span>
-                Red
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-3 h-3 rounded-full bg-red-500 border-2 border-black"></span>
+                <span>Red Light</span>
               </div>
             </div>
-            <p className="mt-3">
-              {viewMode === 'speed'
-                ? 'Click on any vehicle or traffic light to see detailed information.'
-                : 'Roads are colored by traffic density. Click on any road, vehicle, or traffic light for details.'}
-            </p>
           </div>
         </div>
       </div>
@@ -619,11 +536,6 @@ export default function MapView() {
       <TrafficLightPanel
         isOpen={trafficLightPanelOpen}
         onToggle={() => setTrafficLightPanelOpen(!trafficLightPanelOpen)}
-      />
-      <SpawnRatePanel
-        isOpen={spawnRatePanelOpen}
-        onToggle={() => setSpawnRatePanelOpen(!spawnRatePanelOpen)}
-        roads={roads}
       />
       <ProfilePanel
         isOpen={profilePanelOpen}

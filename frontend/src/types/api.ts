@@ -448,6 +448,21 @@ export interface SystemHealth {
     stepLimit: number;
     simulationTime: number;
   };
+  traffic?: {
+    activeVehicles: number;
+    avgNetworkSpeed: number;
+    congestedRoads: number;
+    totalRoads: number;
+    trafficLights: number;
+  };
+  feed?: {
+    source: string;
+    healthy: boolean;
+    running: boolean;
+  };
+  optimization?: {
+    running: boolean;
+  };
   restartCount: number;
   uptime: number;
 }

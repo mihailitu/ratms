@@ -1,27 +1,23 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import Simulations from './pages/Simulations';
-import SimulationDetail from './pages/SimulationDetail';
-import MapView from './pages/MapView';
-import Optimization from './pages/Optimization';
-import Analytics from './pages/Analytics';
-import Statistics from './pages/Statistics';
 import ProductionDashboard from './pages/ProductionDashboard';
+import MapView from './pages/MapView';
+import Analytics from './pages/Analytics';
 
 function App() {
   return (
     <Router>
       <Layout>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/production" element={<ProductionDashboard />} />
-          <Route path="/simulations" element={<Simulations />} />
-          <Route path="/simulations/:id" element={<SimulationDetail />} />
+          <Route path="/" element={<ProductionDashboard />} />
           <Route path="/map" element={<MapView />} />
-          <Route path="/optimization" element={<Optimization />} />
           <Route path="/analytics" element={<Analytics />} />
-          <Route path="/statistics" element={<Statistics />} />
+          {/* Redirect old routes to home */}
+          <Route path="/production" element={<Navigate to="/" replace />} />
+          <Route path="/simulations" element={<Navigate to="/" replace />} />
+          <Route path="/simulations/:id" element={<Navigate to="/" replace />} />
+          <Route path="/optimization" element={<Navigate to="/" replace />} />
+          <Route path="/statistics" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
     </Router>

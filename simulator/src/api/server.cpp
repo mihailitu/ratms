@@ -428,10 +428,53 @@ void Server::handleHealth(const httplib::Request& req, httplib::Response& res) {
     auto uptime_seconds = std::chrono::duration_cast<std::chrono::seconds>(
         now - server_start_time_).count();
 
+    // Calculate traffic metrics
+    int activeVehicles = 0;
+    double totalSpeed = 0;
+    int speedSamples = 0;
+    int congestedRoads = 0;
+    int totalRoads = 0;
+    int trafficLightCount = 0;
+
+    {
+        std::lock_guard<std::mutex> lock(sim_mutex_);
+        if (simulator_) {
+            totalRoads = simulator_->cityMap.size();
+            for (const auto& [roadId, road] : simulator_->cityMap) {
+                int vehicleCount = road.getVehicleCount();
+                activeVehicles += vehicleCount;
+
+                // Calculate average speed for this road
+                // Congested if density > 50 vehicles/km
+                double roadLengthKm = road.getLength() / 1000.0;
+                double density = roadLengthKm > 0 ? vehicleCount / roadLengthKm : 0;
+                if (density > 50) {
+                    congestedRoads++;
+                }
+
+                // Sum speeds for average calculation
+                const auto& allVehicles = road.getVehicles();
+                for (const auto& laneVehicles : allVehicles) {
+                    for (const auto& v : laneVehicles) {
+                        totalSpeed += v.getVelocity() * 3.6; // Convert m/s to km/h
+                        speedSamples++;
+                    }
+                }
+                // Count traffic lights
+                trafficLightCount += road.getTrafficLights().size();
+            }
+        }
+    }
+
+    double avgNetworkSpeed = speedSamples > 0 ? totalSpeed / speedSamples : 0;
+
+    // Determine system status based on traffic conditions
+    std::string status = simulation_running_.load() ? "healthy" : "degraded";
+
     json response = {
-        {"status", "healthy"},
-        {"service", "RATMS API Server"},
-        {"version", "0.2.0"},
+        {"status", status},
+        {"service", "RATMS Traffic Management"},
+        {"version", "1.0.0"},
         {"timestamp", std::time(nullptr)},
         {"simulation", {
             {"running", simulation_running_.load()},
@@ -440,6 +483,21 @@ void Server::handleHealth(const httplib::Request& req, httplib::Response& res) {
             {"currentStep", simulation_steps_.load()},
             {"stepLimit", step_limit_},
             {"simulationTime", simulation_time_.load()}
+        }},
+        {"traffic", {
+            {"activeVehicles", activeVehicles},
+            {"avgNetworkSpeed", avgNetworkSpeed},
+            {"congestedRoads", congestedRoads},
+            {"totalRoads", totalRoads},
+            {"trafficLights", trafficLightCount}
+        }},
+        {"feed", {
+            {"source", traffic_feed_ ? "live" : "none"},
+            {"healthy", traffic_feed_ ? traffic_feed_->isHealthy() : false},
+            {"running", traffic_feed_ ? traffic_feed_->isRunning() : false}
+        }},
+        {"optimization", {
+            {"running", continuous_optimization_controller_ ? continuous_optimization_controller_->isRunning() : false}
         }},
         {"restartCount", restart_count_.load()},
         {"uptime", uptime_seconds}
@@ -3219,6 +3277,55 @@ void Server::handleExportFeedData(const httplib::Request& req, httplib::Response
     } catch (const std::exception& e) {
         sendError(res, 500, std::string("Error exporting feed data: ") + e.what());
     }
+}
+
+void Server::initializeProductionMode() {
+    LOG_INFO(LogComponent::API, "Initializing production mode...");
+
+    // Verify simulator is ready
+    if (!simulator_) {
+        LOG_ERROR(LogComponent::API, "Cannot initialize production mode: simulator not set");
+        return;
+    }
+
+    // Initialize density management (traffic feed)
+    initializeDensityManagement();
+
+    // Start the traffic feed
+    if (traffic_feed_) {
+        traffic_feed_->start();
+        LOG_INFO(LogComponent::Simulation, "Traffic feed started");
+    }
+
+    // Enable continuous mode (runs indefinitely)
+    continuous_mode_ = true;
+
+    // Create database record if database is available
+    if (database_ && database_->isConnected()) {
+        int sim_id = database_->createSimulation(
+            "Production Traffic Management",
+            "Auto-started production mode simulation",
+            1, // Default network ID
+            "{\"production\": true, \"continuous\": true}"
+        );
+        if (sim_id > 0) {
+            current_simulation_id_ = sim_id;
+            database_->updateSimulationStatus(sim_id, "running");
+            LOG_INFO(LogComponent::Database, "Production simulation record created with ID: {}", sim_id);
+        }
+    }
+
+    // Reset simulation state
+    simulation_should_stop_ = false;
+    simulation_paused_ = false;
+    simulation_steps_ = 0;
+    simulation_time_ = 0.0;
+    simulation_running_ = true;
+
+    // Start simulation in background thread
+    simulation_thread_ = std::make_unique<std::thread>(&Server::runSimulationLoop, this);
+
+    LOG_INFO(LogComponent::Simulation, "Production mode initialized - simulation running in continuous mode");
 }
 
 } // namespace api

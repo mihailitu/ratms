@@ -40,6 +40,7 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 | 27 | Traffic Profiles | JSON-based profile system with spawn rates and traffic light timings |
 | 28 | Travel Time Metrics | O-D pair tracking, travel time stats (avg/min/max/p50/p95) |
 | 29 | Full-City Scale | SSE viewport filtering, vehicle lat/lon, 150k+ roads support |
+| 30 | Production UI Redesign | Auto-start system, simplified navigation (3 pages), city traffic metrics |
 
 ## Current Features
 

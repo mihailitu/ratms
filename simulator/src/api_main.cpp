@@ -126,6 +126,9 @@ int main(int argc, char* argv[]) {
   // Simulates production data feeders - roads won't be empty at startup
   api_server.populateRoadsWithVehicles(0.5);
 
+  // Start in production mode - continuous simulation auto-starts
+  api_server.initializeProductionMode();
+
   LOG_INFO(LogComponent::API, "RATMS API Server running on http://localhost:{}", port);
   LOG_INFO(LogComponent::General, "Press Ctrl+C to stop");
 

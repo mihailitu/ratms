@@ -283,6 +283,9 @@ public:
     // Thread configuration for parallel simulation
     void setNumThreads(int n);  // Set thread count (0 = auto)
     int getNumThreads() const;
+
+    // Production mode - auto-start continuous simulation
+    void initializeProductionMode();
 };
 
 } // namespace api

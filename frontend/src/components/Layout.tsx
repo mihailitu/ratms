@@ -12,7 +12,7 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const navLinkClass = (path: string) =>
-    `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+    `px-4 py-2 rounded-md text-sm font-medium transition-colors ${
       isActive(path)
         ? 'bg-blue-700 text-white'
         : 'text-blue-100 hover:bg-blue-600 hover:text-white'
@@ -31,23 +31,11 @@ export default function Layout({ children }: LayoutProps) {
                 <Link to="/" className={navLinkClass('/')}>
                   Dashboard
                 </Link>
-                <Link to="/production" className={navLinkClass('/production')}>
-                  Production
-                </Link>
-                <Link to="/simulations" className={navLinkClass('/simulations')}>
-                  Simulations
-                </Link>
-                <Link to="/optimization" className={navLinkClass('/optimization')}>
-                  Optimization
+                <Link to="/map" className={navLinkClass('/map')}>
+                  Map
                 </Link>
                 <Link to="/analytics" className={navLinkClass('/analytics')}>
                   Analytics
-                </Link>
-                <Link to="/statistics" className={navLinkClass('/statistics')}>
-                  Statistics
-                </Link>
-                <Link to="/map" className={navLinkClass('/map')}>
-                  Map View
                 </Link>
               </div>
             </div>

@@ -3,54 +3,61 @@ import { apiClient } from '../services/apiClient';
 import type {
   SystemHealth,
   TrafficProfile,
-  SpawningStatus,
   ExtendedContinuousOptimizationStatus,
-  SimulationConfig,
 } from '../types/api';
+
+interface CityTrafficMetrics {
+  activeVehicles: number;
+  avgNetworkSpeed: number;
+  congestedRoads: number;
+  totalRoads: number;
+  trafficLights: number;
+}
 
 export default function ProductionDashboard() {
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [profiles, setProfiles] = useState<TrafficProfile[]>([]);
-  const [spawningStatus, setSpawningStatus] = useState<SpawningStatus | null>(null);
   const [contOptStatus, setContOptStatus] = useState<ExtendedContinuousOptimizationStatus | null>(null);
-  const [simConfig, setSimConfig] = useState<SimulationConfig | null>(null);
+  const [trafficMetrics, setTrafficMetrics] = useState<CityTrafficMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [usePrediction, setUsePrediction] = useState(false);
   const [predictionHorizon, setPredictionHorizon] = useState(30);
-  const [stepLimitInput, setStepLimitInput] = useState(10000);
 
   const fetchData = useCallback(async () => {
     try {
-      const [healthData, profilesData, spawningData, contOptData, configData] = await Promise.all([
+      const [healthData, profilesData, contOptData] = await Promise.all([
         apiClient.getSystemHealth(),
         apiClient.getTrafficProfiles().catch(() => ({ success: false, data: { profiles: [] } })),
-        apiClient.getSpawningStatus().catch(() => ({ success: false, data: null })),
         apiClient.getContinuousOptimizationStatus().catch(() => ({ success: false, data: null })),
-        apiClient.getSimulationConfig().catch(() => null),
       ]);
 
       setHealth(healthData);
+
+      // Extract traffic metrics from enhanced health endpoint
+      if (healthData?.traffic) {
+        setTrafficMetrics({
+          activeVehicles: healthData.traffic.activeVehicles,
+          avgNetworkSpeed: healthData.traffic.avgNetworkSpeed,
+          congestedRoads: healthData.traffic.congestedRoads,
+          totalRoads: healthData.traffic.totalRoads,
+          trafficLights: healthData.traffic.trafficLights,
+        });
+      }
+
       if (profilesData.success && profilesData.data?.profiles) {
         setProfiles(profilesData.data.profiles);
       }
-      if (spawningData.success && spawningData.data) {
-        setSpawningStatus(spawningData.data);
-      }
       if (contOptData.success && contOptData.data) {
-        setContOptStatus(contOptData.data as ExtendedContinuousOptimizationStatus);
-        // Sync prediction state from server
-        if (contOptData.data.prediction) {
-          setUsePrediction(contOptData.data.prediction.enabled);
-          if (contOptData.data.prediction.horizonMinutes) {
-            setPredictionHorizon(contOptData.data.prediction.horizonMinutes);
+        const extStatus = contOptData.data as ExtendedContinuousOptimizationStatus;
+        setContOptStatus(extStatus);
+        if (extStatus.prediction) {
+          setUsePrediction(extStatus.prediction.enabled);
+          if (extStatus.prediction.horizonMinutes) {
+            setPredictionHorizon(extStatus.prediction.horizonMinutes);
           }
         }
-      }
-      if (configData) {
-        setSimConfig(configData);
-        setStepLimitInput(configData.stepLimit);
       }
       setError(null);
     } catch (err) {
@@ -62,105 +69,9 @@ export default function ProductionDashboard() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 5000); // Refresh every 5 seconds
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, [fetchData]);
-
-  const handleStartContinuous = async () => {
-    setActionLoading('startSim');
-    try {
-      await apiClient.startContinuousSimulation();
-      await fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start simulation');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleStopSimulation = async () => {
-    setActionLoading('stopSim');
-    try {
-      await apiClient.stopSimulation();
-      await fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to stop simulation');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handlePauseSimulation = async () => {
-    setActionLoading('pauseSim');
-    try {
-      await apiClient.pauseSimulation();
-      await fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to pause simulation');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleResumeSimulation = async () => {
-    setActionLoading('resumeSim');
-    try {
-      await apiClient.resumeSimulation();
-      await fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resume simulation');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleToggleContinuousMode = async () => {
-    setActionLoading('toggleCont');
-    try {
-      await apiClient.setSimulationConfig({ continuousMode: !simConfig?.continuousMode });
-      await fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to toggle continuous mode');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleUpdateStepLimit = async () => {
-    setActionLoading('updateLimit');
-    try {
-      await apiClient.setSimulationConfig({ stepLimit: stepLimitInput });
-      await fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update step limit');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleStartSpawning = async () => {
-    setActionLoading('startSpawn');
-    try {
-      await apiClient.startSpawning();
-      await fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start spawning');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleStopSpawning = async () => {
-    setActionLoading('stopSpawn');
-    try {
-      await apiClient.stopSpawning();
-      await fetchData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to stop spawning');
-    } finally {
-      setActionLoading(null);
-    }
-  };
 
   const handleStartContOpt = async () => {
     setActionLoading('startContOpt');
@@ -171,7 +82,7 @@ export default function ProductionDashboard() {
       });
       await fetchData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start continuous optimization');
+      setError(err instanceof Error ? err.message : 'Failed to start optimization');
     } finally {
       setActionLoading(null);
     }
@@ -183,7 +94,7 @@ export default function ProductionDashboard() {
       await apiClient.stopContinuousOptimization();
       await fetchData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to stop continuous optimization');
+      setError(err instanceof Error ? err.message : 'Failed to stop optimization');
     } finally {
       setActionLoading(null);
     }
@@ -218,12 +129,14 @@ export default function ProductionDashboard() {
     );
   }
 
+  const isSystemHealthy = health?.status === 'healthy' && health?.simulation?.running;
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-4xl font-bold text-gray-900">Production Dashboard</h1>
-          <p className="text-gray-600">Monitor and control the production traffic management system</p>
+          <h1 className="text-4xl font-bold text-gray-900">City Traffic Dashboard</h1>
+          <p className="text-gray-600">Real-time traffic monitoring and management</p>
         </div>
 
         {error && (
@@ -232,191 +145,72 @@ export default function ProductionDashboard() {
           </div>
         )}
 
-        {/* System Health Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className={`bg-white rounded-lg shadow p-4 border-l-4 ${health?.status === 'healthy' ? 'border-green-500' : 'border-red-500'}`}>
+        {/* City Status Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+          <div className={`bg-white rounded-lg shadow p-4 border-l-4 ${isSystemHealthy ? 'border-green-500' : 'border-red-500'}`}>
             <div className="text-sm text-gray-500">System Status</div>
-            <div className={`text-2xl font-bold ${health?.status === 'healthy' ? 'text-green-600' : 'text-red-600'}`}>
-              {health?.status?.toUpperCase() || 'UNKNOWN'}
+            <div className={`text-2xl font-bold ${isSystemHealthy ? 'text-green-600' : 'text-red-600'}`}>
+              {isSystemHealthy ? 'ONLINE' : 'OFFLINE'}
             </div>
             <div className="text-xs text-gray-400 mt-1">
               Uptime: {health ? formatUptime(health.uptime) : '-'}
             </div>
           </div>
 
-          <div className={`bg-white rounded-lg shadow p-4 border-l-4 ${
-            health?.simulation.paused ? 'border-yellow-500' :
-            health?.simulation.running ? 'border-blue-500' : 'border-gray-300'
-          }`}>
-            <div className="text-sm text-gray-500">Simulation</div>
-            <div className={`text-2xl font-bold ${
-              health?.simulation.paused ? 'text-yellow-600' :
-              health?.simulation.running ? 'text-blue-600' : 'text-gray-400'
-            }`}>
-              {health?.simulation.paused ? 'PAUSED' :
-               health?.simulation.running ? 'RUNNING' : 'STOPPED'}
+          <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+            <div className="text-sm text-gray-500">Active Vehicles</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {trafficMetrics?.activeVehicles?.toLocaleString() || '-'}
             </div>
             <div className="text-xs text-gray-400 mt-1">
-              {health?.simulation.continuousMode ? 'Continuous Mode' : `Step Limit: ${health?.simulation.stepLimit?.toLocaleString() || 10000}`}
-              {health?.restartCount ? ` | Restarts: ${health.restartCount}` : ''}
+              In network
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow p-4 border-l-4 border-purple-500">
-            <div className="text-sm text-gray-500">Simulation Progress</div>
+            <div className="text-sm text-gray-500">Avg Speed</div>
             <div className="text-2xl font-bold text-purple-600">
-              {health?.simulation.currentStep?.toLocaleString() || 0}
+              {trafficMetrics?.avgNetworkSpeed?.toFixed(1) || '-'} km/h
             </div>
             <div className="text-xs text-gray-400 mt-1">
-              Time: {health?.simulation.simulationTime?.toFixed(1) || 0}s
+              Network average
+            </div>
+          </div>
+
+          <div className={`bg-white rounded-lg shadow p-4 border-l-4 ${
+            (trafficMetrics?.congestedRoads || 0) > 50 ? 'border-red-500' :
+            (trafficMetrics?.congestedRoads || 0) > 20 ? 'border-yellow-500' : 'border-green-500'
+          }`}>
+            <div className="text-sm text-gray-500">Congested Roads</div>
+            <div className={`text-2xl font-bold ${
+              (trafficMetrics?.congestedRoads || 0) > 50 ? 'text-red-600' :
+              (trafficMetrics?.congestedRoads || 0) > 20 ? 'text-yellow-600' : 'text-green-600'
+            }`}>
+              {trafficMetrics?.congestedRoads || 0}
+            </div>
+            <div className="text-xs text-gray-400 mt-1">
+              {trafficMetrics?.totalRoads ? `${((trafficMetrics.congestedRoads / trafficMetrics.totalRoads) * 100).toFixed(1)}% of network` : '-'}
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow p-4 border-l-4 border-indigo-500">
-            <div className="text-sm text-gray-500">Server Version</div>
+            <div className="text-sm text-gray-500">Traffic Lights</div>
             <div className="text-2xl font-bold text-indigo-600">
-              {health?.version || '-'}
+              {trafficMetrics?.trafficLights?.toLocaleString() || '-'}
             </div>
             <div className="text-xs text-gray-400 mt-1">
-              {health?.service || 'RATMS API Server'}
+              Managed signals
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Simulation Control */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Simulation Control</h2>
-
-            <div className="space-y-4">
-              {/* Start/Stop Controls */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-medium">Simulation Engine</div>
-                  <div className="text-sm text-gray-500">
-                    {health?.simulation.continuousMode ? 'Continuous mode - runs indefinitely' : 'Limited mode - stops at step limit'}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  {health?.simulation.running && !health?.simulation.paused && (
-                    <button
-                      onClick={handlePauseSimulation}
-                      disabled={actionLoading !== null}
-                      className="px-3 py-2 rounded-md font-medium transition-colors disabled:opacity-50 bg-yellow-600 hover:bg-yellow-700 text-white"
-                    >
-                      {actionLoading === 'pauseSim' ? '...' : 'Pause'}
-                    </button>
-                  )}
-                  {health?.simulation.paused && (
-                    <button
-                      onClick={handleResumeSimulation}
-                      disabled={actionLoading !== null}
-                      className="px-3 py-2 rounded-md font-medium transition-colors disabled:opacity-50 bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      {actionLoading === 'resumeSim' ? '...' : 'Resume'}
-                    </button>
-                  )}
-                  <button
-                    onClick={health?.simulation.running ? handleStopSimulation : handleStartContinuous}
-                    disabled={actionLoading !== null}
-                    className={`px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50 ${
-                      health?.simulation.running
-                        ? 'bg-red-600 hover:bg-red-700 text-white'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
-                    }`}
-                  >
-                    {actionLoading === 'startSim' || actionLoading === 'stopSim'
-                      ? 'Loading...'
-                      : health?.simulation.running
-                      ? 'Stop'
-                      : 'Start'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Continuous Mode Toggle */}
-              <div className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium text-sm">Continuous Mode</div>
-                    <div className="text-xs text-gray-500">Run indefinitely (ignores step limit)</div>
-                  </div>
-                  <button
-                    onClick={handleToggleContinuousMode}
-                    disabled={actionLoading !== null || health?.simulation.running}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${
-                      simConfig?.continuousMode ? 'bg-blue-600' : 'bg-gray-300'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        simConfig?.continuousMode ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
-
-                {/* Step Limit Configuration */}
-                {!simConfig?.continuousMode && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <label className="text-xs text-gray-600 block mb-1">Step Limit</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={100}
-                        step={1000}
-                        value={stepLimitInput}
-                        onChange={(e) => setStepLimitInput(parseInt(e.target.value) || 10000)}
-                        disabled={health?.simulation.running}
-                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
-                      />
-                      <button
-                        onClick={handleUpdateStepLimit}
-                        disabled={actionLoading !== null || health?.simulation.running || stepLimitInput === simConfig?.stepLimit}
-                        className="px-3 py-1 bg-blue-600 text-white rounded text-sm font-medium disabled:opacity-50 hover:bg-blue-700"
-                      >
-                        {actionLoading === 'updateLimit' ? '...' : 'Apply'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Simulation Stats */}
-              {health?.simulation.running && (
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="text-gray-500">Simulation Time:</span>{' '}
-                      <span className="font-medium">{health.simulation.simulationTime.toFixed(1)}s</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Steps:</span>{' '}
-                      <span className="font-medium">{health.simulation.currentStep.toLocaleString()}</span>
-                    </div>
-                    {!health.simulation.continuousMode && (
-                      <div className="col-span-2">
-                        <span className="text-gray-500">Progress:</span>{' '}
-                        <span className="font-medium">
-                          {((health.simulation.currentStep / health.simulation.stepLimit) * 100).toFixed(1)}%
-                        </span>
-                        <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
-                          <div
-                            className="bg-blue-600 h-1 rounded-full transition-all"
-                            style={{ width: `${Math.min((health.simulation.currentStep / health.simulation.stepLimit) * 100, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* Traffic Profiles */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Traffic Profiles</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Select a traffic profile to apply network-wide timing patterns
+            </p>
 
             <div className="space-y-3">
               {profiles.map((profile) => (
@@ -443,42 +237,59 @@ export default function ProductionDashboard() {
                   </button>
                 </div>
               ))}
+              {profiles.length === 0 && (
+                <div className="text-gray-500 text-center py-4">
+                  No traffic profiles configured
+                </div>
+              )}
             </div>
+          </div>
 
-            {/* Spawning Control */}
-            <div className="mt-4 pt-4 border-t">
-              <div className="flex items-center justify-between">
+          {/* Live Data Feed */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Live Data Feed</h2>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div>
-                  <div className="font-medium">Vehicle Spawning</div>
-                  <div className="text-sm text-gray-500">
-                    {spawningStatus?.active
-                      ? `Active with ${spawningStatus.flowRateCount} flow rates`
-                      : 'Not active'}
+                  <div className="font-medium">Feed Status</div>
+                  <div className="text-sm text-gray-500">Real-time traffic data source</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${health?.feed?.running ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+                  <span className={`font-medium ${health?.feed?.running ? 'text-green-600' : 'text-gray-500'}`}>
+                    {health?.feed?.running ? 'Connected' : 'Disconnected'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-xs text-gray-500">Source</div>
+                  <div className="font-medium capitalize">{health?.feed?.source || 'None'}</div>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-xs text-gray-500">Update Rate</div>
+                  <div className="font-medium">1s interval</div>
+                </div>
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-xs text-gray-500">Data Quality</div>
+                  <div className={`font-medium ${health?.feed?.healthy ? 'text-green-600' : 'text-yellow-600'}`}>
+                    {health?.feed?.healthy ? 'High' : 'Low'}
                   </div>
                 </div>
-                <button
-                  onClick={spawningStatus?.active ? handleStopSpawning : handleStartSpawning}
-                  disabled={actionLoading !== null}
-                  className={`px-4 py-2 rounded-md font-medium transition-colors disabled:opacity-50 ${
-                    spawningStatus?.active
-                      ? 'bg-orange-600 hover:bg-orange-700 text-white'
-                      : 'bg-green-600 hover:bg-green-700 text-white'
-                  }`}
-                >
-                  {actionLoading === 'startSpawn' || actionLoading === 'stopSpawn'
-                    ? 'Loading...'
-                    : spawningStatus?.active
-                    ? 'Stop Spawning'
-                    : 'Start Spawning'}
-                </button>
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-xs text-gray-500">Last Update</div>
+                  <div className="font-medium">{new Date().toLocaleTimeString()}</div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Continuous Optimization */}
+          {/* Optimization Engine */}
           <div className="bg-white rounded-lg shadow p-6 lg:col-span-2">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Continuous Optimization</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Traffic Optimization</h2>
               {contOptStatus?.running && (
                 <span className={`px-2 py-1 rounded text-xs font-medium ${
                   contOptStatus.mode === 'predictive'
@@ -494,9 +305,9 @@ export default function ProductionDashboard() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-medium">Background GA Optimization</div>
+                    <div className="font-medium">Background Optimization</div>
                     <div className="text-sm text-gray-500">
-                      Runs every {contOptStatus?.config.optimizationIntervalSeconds || 900}s with gradual application
+                      Continuously optimizes traffic light timings
                     </div>
                   </div>
                   <button
@@ -579,31 +390,6 @@ export default function ProductionDashboard() {
                         <span className="font-medium">{Math.floor(contOptStatus.nextOptimizationIn / 60)}m {contOptStatus.nextOptimizationIn % 60}s</span>
                       </div>
                     </div>
-
-                    {/* Prediction Status */}
-                    {contOptStatus.prediction?.enabled && (
-                      <div className="mt-3 pt-3 border-t border-gray-200">
-                        <div className="text-xs text-gray-500 mb-1">Prediction Status</div>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div>
-                            <span className="text-gray-500">Horizon:</span>{' '}
-                            <span className="font-medium">{contOptStatus.prediction.horizonMinutes} min</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Available:</span>{' '}
-                            <span className={`font-medium ${contOptStatus.prediction.available ? 'text-green-600' : 'text-yellow-600'}`}>
-                              {contOptStatus.prediction.available ? 'Yes' : 'No'}
-                            </span>
-                          </div>
-                          {contOptStatus.prediction.averageAccuracy !== undefined && (
-                            <div className="col-span-2">
-                              <span className="text-gray-500">Avg Accuracy:</span>{' '}
-                              <span className="font-medium">{(contOptStatus.prediction.averageAccuracy * 100).toFixed(1)}%</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
