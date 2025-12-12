@@ -137,15 +137,6 @@ export default function MapView() {
 
       roadPolylinesRef.current.set(road.id, polyline);
     });
-
-    // Fit map to show all roads
-    if (roads.length > 0) {
-      const bounds = L.latLngBounds(
-        roads.map(r => [r.startLat, r.startLon] as [number, number])
-      );
-      roads.forEach(r => bounds.extend([r.endLat, r.endLon]));
-      map.fitBounds(bounds, { padding: [50, 50] });
-    }
   }, [roads]);
 
   // Update road colors based on view mode and density
