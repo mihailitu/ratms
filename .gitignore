@@ -61,3 +61,6 @@ simulator/logs/
 # OSM data (large files, download on demand)
 data/osm/*.osm
 data/osm/*.pbf
+
+# Generated map files (use scripts/download_osm.sh to create)
+data/maps/*.json

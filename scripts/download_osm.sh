@@ -14,10 +14,35 @@
 #
 # Examples:
 #   ./scripts/download_osm.sh                                    # Default: Munich Schwabing
-#   ./scripts/download_osm.sh munich_city 11.54,48.12,11.60,48.16
-#   ./scripts/download_osm.sh berlin 13.36,52.50,13.42,52.54
+#   ./scripts/download_osm.sh munich_center 11.54,48.12,11.60,48.16
+#   ./scripts/download_osm.sh bucharest_victoriei 26.08,44.44,26.12,44.46
 #
 # Bounding box format: min_lon,min_lat,max_lon,max_lat
+#
+# Preset areas (copy and use as arguments):
+#
+# --- Neighborhoods (small, ~2x2 km, fast to process) ---
+# munich_schwabing      11.56,48.15,11.60,48.17
+# bucharest_victoriei   26.08,44.44,26.12,44.46
+# bucharest_dristor     26.12,44.40,26.16,44.43
+# bucharest_obor        26.12,44.44,26.16,44.47
+# paris_marais          2.34,48.85,2.37,48.86
+# london_soho           -0.14,51.51,-0.12,51.52
+# frankfurt_sachsenhausen 8.67,50.09,8.71,50.11
+#
+# --- City centers (medium, ~5x5 km) ---
+# munich_center         11.54,48.12,11.60,48.16
+# bucharest_center      26.06,44.42,26.14,44.46
+# paris_center          2.32,48.84,2.38,48.88
+# london_center         -0.15,51.49,-0.08,51.53
+# frankfurt_center      8.65,50.10,8.72,50.14
+#
+# --- Whole cities (large, may be slow to download/process) ---
+# munich_full           11.36,48.06,11.72,48.25
+# bucharest_full        25.95,44.35,26.25,44.55
+# paris_full            2.22,48.80,2.47,48.92
+# london_full           -0.25,51.45,0.05,51.58
+# frankfurt_full        8.55,50.05,8.80,50.20
 
 set -e
 
