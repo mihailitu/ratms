@@ -939,6 +939,19 @@ void Server::handleGetNetworks(const httplib::Request& req, httplib::Response& r
     res.status = 200;
 }
 
+void Server::rebuildRoadCache() {
+    // Must be called with sim_mutex_ held
+    cached_road_ptrs_.clear();
+    if (simulator_) {
+        cached_road_ptrs_.reserve(simulator_->cityMap.size());
+        for (auto& [id, road] : simulator_->cityMap) {
+            cached_road_ptrs_.push_back(&road);
+        }
+    }
+    road_cache_valid_ = true;
+    LOG_DEBUG(LogComponent::Simulation, "Road cache rebuilt: {} roads", cached_road_ptrs_.size());
+}
+
 void Server::runSimulationLoop() {
     LOG_INFO(LogComponent::Simulation, "Simulation loop started (continuous_mode={}, step_limit={})",
              continuous_mode_.load(), step_limit_);
@@ -948,6 +961,24 @@ void Server::runSimulationLoop() {
     const int dbWriteInterval = 100;  // Write to DB every 100 steps
 
     simulator::MetricsCollector metricsCollector;
+
+    // Build road pointer cache and pre-allocate transition vectors once at start
+    {
+        std::lock_guard<std::mutex> lock(sim_mutex_);
+        rebuildRoadCache();
+
+        // Pre-allocate thread-local transition vectors
+        const int numThreads = omp_get_max_threads();
+        thread_transitions_.resize(numThreads);
+        const size_t roadsPerThread = cached_road_ptrs_.size() / numThreads + 1;
+        for (auto& tv : thread_transitions_) {
+            tv.reserve(roadsPerThread);
+        }
+        pending_transitions_.reserve(cached_road_ptrs_.size() / 10);  // Rough estimate
+
+        LOG_INFO(LogComponent::Simulation, "Simulation initialized: {} roads, {} threads",
+                 cached_road_ptrs_.size(), numThreads);
+    }
 
     try {
         // Loop condition: stop if requested OR (not continuous mode AND reached step limit)
@@ -960,7 +991,6 @@ void Server::runSimulationLoop() {
             int currentStep = simulation_steps_;
 
             // PHASE 1: Parallel road updates with per-thread transition vectors
-            std::vector<simulator::RoadTransition> pendingTransitions;
             {
                 std::lock_guard<std::mutex> lock(sim_mutex_);
                 if (!simulator_) {
@@ -968,37 +998,27 @@ void Server::runSimulationLoop() {
                     break;
                 }
 
-                // Convert map to vector for parallel iteration (map iterators not random-access)
-                std::vector<simulator::Road*> roadPtrs;
-                roadPtrs.reserve(simulator_->cityMap.size());
-                for (auto& [id, road] : simulator_->cityMap) {
-                    roadPtrs.push_back(&road);
+                // Use cached road pointers (rebuilt once at start, not every step)
+                if (!road_cache_valid_) {
+                    rebuildRoadCache();
                 }
 
-                // Thread-local transition storage to avoid contention
-                const int numThreads = omp_get_max_threads();
-                std::vector<std::vector<simulator::RoadTransition>> threadTransitions(numThreads);
-
-                // Pre-reserve to reduce allocations during parallel execution
-                for (auto& tv : threadTransitions) {
-                    tv.reserve(roadPtrs.size() / numThreads + 1);
+                // Clear pre-allocated thread transition vectors (keeps capacity)
+                for (auto& tv : thread_transitions_) {
+                    tv.clear();
                 }
 
                 // Parallel road updates - each thread writes to its own transition vector
                 #pragma omp parallel for schedule(dynamic, 50)
-                for (size_t i = 0; i < roadPtrs.size(); ++i) {
+                for (size_t i = 0; i < cached_road_ptrs_.size(); ++i) {
                     int tid = omp_get_thread_num();
-                    roadPtrs[i]->update(dt, simulator_->cityMap, threadTransitions[tid]);
+                    cached_road_ptrs_[i]->update(dt, simulator_->cityMap, thread_transitions_[tid]);
                 }
 
-                // Merge thread-local transitions into single vector
-                size_t totalTransitions = 0;
-                for (const auto& tv : threadTransitions) {
-                    totalTransitions += tv.size();
-                }
-                pendingTransitions.reserve(totalTransitions);
-                for (const auto& tv : threadTransitions) {
-                    pendingTransitions.insert(pendingTransitions.end(), tv.begin(), tv.end());
+                // Merge thread-local transitions into pre-allocated pending vector
+                pending_transitions_.clear();
+                for (const auto& tv : thread_transitions_) {
+                    pending_transitions_.insert(pending_transitions_.end(), tv.begin(), tv.end());
                 }
             }
 
@@ -1007,7 +1027,7 @@ void Server::runSimulationLoop() {
                 std::lock_guard<std::mutex> lock(sim_mutex_);
                 if (!simulator_) break;
 
-                for (const auto& transition : pendingTransitions) {
+                for (const auto& transition : pending_transitions_) {
                     simulator::Vehicle transitioningVehicle = std::get<0>(transition);
                     simulator::roadID destRoadID = std::get<1>(transition);
                     unsigned destLane = std::get<2>(transition);

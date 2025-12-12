@@ -251,6 +251,15 @@ private:
     // Parallel simulation configuration
     int num_threads_{0};  // 0 = auto (use hardware concurrency)
 
+    // Cached road pointers for efficient iteration (avoid map-to-vector each step)
+    std::vector<simulator::Road*> cached_road_ptrs_;
+    bool road_cache_valid_{false};
+    void rebuildRoadCache();
+
+    // Pre-allocated transition vectors (reused each step to avoid allocations)
+    std::vector<std::vector<simulator::RoadTransition>> thread_transitions_;
+    std::vector<simulator::RoadTransition> pending_transitions_;
+
     // Real-time streaming
     SimulationSnapshot latest_snapshot_;
     std::mutex snapshot_mutex_;
