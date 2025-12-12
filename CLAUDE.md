@@ -182,3 +182,4 @@ Use `std::thread` with proper lifecycle (join in destructor, atomic flags for st
 - Reserve vector capacity when size is known
 - Test both backend and frontend after changes
 - Update PROJECT_STATUS.md for significant changes
+- this is not a simulator anymore. Is a production system

@@ -18,6 +18,7 @@ simulator/ga_optimizer
 *.dat
 *.csv
 *.txt
+!CMakeLists.txt
 
 # Python cache
 __pycache__/
