@@ -128,6 +128,15 @@ Core endpoints:
 - `GET/POST /api/profiles/*` - Traffic profiles
 - `GET/POST /api/travel-time/*` - O-D pair tracking
 
+### SSE Stream Parameters
+
+`GET /api/simulation/stream` supports viewport filtering for large networks:
+- `minLat`, `maxLat`, `minLon`, `maxLon` - Geographic bounds
+- `maxVehicles` - Max vehicles to send (default: 10000)
+- `maxTrafficLights` - Max traffic lights to send (default: 5000)
+
+Example: `/api/simulation/stream?minLat=44.43&maxLat=44.45&minLon=26.08&maxLon=26.12&maxVehicles=5000`
+
 ## Database
 
 SQLite with migrations in `database/migrations/`. Key tables:

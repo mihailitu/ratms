@@ -677,11 +677,21 @@ void Server::handleSimulationStream(const httplib::Request& req, httplib::Respon
     res.set_header("Connection", "keep-alive");
     // CORS header already set by middleware
 
-    LOG_INFO(LogComponent::SSE, "Client connected to simulation stream");
+    // Parse viewport parameters from query string
+    Viewport viewport;
+    if (req.has_param("minLat")) viewport.minLat = std::stod(req.get_param_value("minLat"));
+    if (req.has_param("maxLat")) viewport.maxLat = std::stod(req.get_param_value("maxLat"));
+    if (req.has_param("minLon")) viewport.minLon = std::stod(req.get_param_value("minLon"));
+    if (req.has_param("maxLon")) viewport.maxLon = std::stod(req.get_param_value("maxLon"));
+    if (req.has_param("maxVehicles")) viewport.maxVehicles = std::stoi(req.get_param_value("maxVehicles"));
+    if (req.has_param("maxTrafficLights")) viewport.maxTrafficLights = std::stoi(req.get_param_value("maxTrafficLights"));
+
+    LOG_INFO(LogComponent::SSE, "Client connected to simulation stream (viewport: [{:.4f},{:.4f}]-[{:.4f},{:.4f}], maxVehicles={})",
+             viewport.minLat, viewport.minLon, viewport.maxLat, viewport.maxLon, viewport.maxVehicles);
 
     res.set_chunked_content_provider(
         "text/event-stream",
-        [this](size_t offset, httplib::DataSink &sink) {
+        [this, viewport](size_t offset, httplib::DataSink &sink) {
             // Check if simulation is running
             if (!simulation_running_) {
                 // Send a message that simulation is not running
@@ -699,26 +709,86 @@ void Server::handleSimulationStream(const httplib::Request& req, httplib::Respon
                     has_new_snapshot_ = false;
                 }
 
-                // Convert snapshot to JSON
+                // Convert snapshot to JSON with viewport filtering
                 json data = {
                     {"step", snapshot.step},
                     {"time", snapshot.time},
                     {"vehicles", json::array()},
-                    {"trafficLights", json::array()}
+                    {"trafficLights", json::array()},
+                    {"totalVehicles", snapshot.vehicles.size()},
+                    {"totalTrafficLights", snapshot.trafficLights.size()}
                 };
 
+                // Filter and limit vehicles
+                int vehicleCount = 0;
+                int skipInterval = 1;
+
+                // If viewport is default and we have many vehicles, sample them
+                if (viewport.isDefault() && static_cast<int>(snapshot.vehicles.size()) > viewport.maxVehicles) {
+                    skipInterval = static_cast<int>(snapshot.vehicles.size()) / viewport.maxVehicles + 1;
+                }
+
+                int idx = 0;
                 for (const auto& v : snapshot.vehicles) {
+                    // Apply viewport filter
+                    if (!viewport.isDefault() && !viewport.contains(v.lat, v.lon)) {
+                        ++idx;
+                        continue;
+                    }
+
+                    // Apply sampling for large datasets
+                    if (idx % skipInterval != 0) {
+                        ++idx;
+                        continue;
+                    }
+
+                    // Check vehicle limit
+                    if (vehicleCount >= viewport.maxVehicles) {
+                        break;
+                    }
+
                     data["vehicles"].push_back({
                         {"id", v.id},
                         {"roadId", v.roadId},
                         {"lane", v.lane},
                         {"position", v.position},
                         {"velocity", v.velocity},
-                        {"acceleration", v.acceleration}
+                        {"acceleration", v.acceleration},
+                        {"lat", v.lat},
+                        {"lon", v.lon}
                     });
+                    ++vehicleCount;
+                    ++idx;
                 }
 
+                // Filter and limit traffic lights
+                int tlCount = 0;
+                int tlSkipInterval = 1;
+
+                // If viewport is default and we have many traffic lights, sample them
+                if (viewport.isDefault() && static_cast<int>(snapshot.trafficLights.size()) > viewport.maxTrafficLights) {
+                    tlSkipInterval = static_cast<int>(snapshot.trafficLights.size()) / viewport.maxTrafficLights + 1;
+                }
+
+                int tlIdx = 0;
                 for (const auto& tl : snapshot.trafficLights) {
+                    // Apply viewport filter
+                    if (!viewport.isDefault() && !viewport.contains(tl.lat, tl.lon)) {
+                        ++tlIdx;
+                        continue;
+                    }
+
+                    // Apply sampling for large datasets
+                    if (tlIdx % tlSkipInterval != 0) {
+                        ++tlIdx;
+                        continue;
+                    }
+
+                    // Check traffic light limit
+                    if (tlCount >= viewport.maxTrafficLights) {
+                        break;
+                    }
+
                     data["trafficLights"].push_back({
                         {"roadId", tl.roadId},
                         {"lane", tl.lane},
@@ -726,7 +796,13 @@ void Server::handleSimulationStream(const httplib::Request& req, httplib::Respon
                         {"lat", tl.lat},
                         {"lon", tl.lon}
                     });
+                    ++tlCount;
+                    ++tlIdx;
                 }
+
+                // Add filtered counts
+                data["filteredVehicles"] = vehicleCount;
+                data["filteredTrafficLights"] = data["trafficLights"].size();
 
                 // Send as SSE
                 std::string msg = "event: update\ndata: " + data.dump() + "\n\n";
@@ -1113,6 +1189,11 @@ void Server::captureSimulationSnapshot() {
             const auto& road = roadPair.second;
             int roadId = road.getId();
 
+            // Get road geometry for lat/lon interpolation
+            auto startGeo = road.getStartPosGeo();
+            auto endGeo = road.getEndPosGeo();
+            double roadLength = road.getLength();
+
             // Capture vehicles
             unsigned laneIdx = 0;
             for (const auto& lane : road.getVehicles()) {
@@ -1124,6 +1205,18 @@ void Server::captureSimulationSnapshot() {
                     vSnap.position = vehicle.getPos();
                     vSnap.velocity = vehicle.getVelocity();
                     vSnap.acceleration = vehicle.getAcceleration();
+
+                    // Interpolate lat/lon along road
+                    double t = (roadLength > 0) ? (vehicle.getPos() / roadLength) : 0.0;
+                    t = std::min(1.0, std::max(0.0, t));  // Clamp to [0,1]
+                    vSnap.lon = startGeo.first + t * (endGeo.first - startGeo.first);
+                    vSnap.lat = startGeo.second + t * (endGeo.second - startGeo.second);
+
+                    // Apply lane offset perpendicular to road (approx)
+                    if (laneIdx > 0) {
+                        vSnap.lat += 0.00001 * laneIdx;
+                    }
+
                     snapshot.vehicles.push_back(vSnap);
                 }
                 ++laneIdx;

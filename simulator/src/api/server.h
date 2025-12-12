@@ -39,6 +39,28 @@ struct VehicleSnapshot {
     double position;
     double velocity;
     double acceleration;
+    double lat;  // Geographic latitude
+    double lon;  // Geographic longitude
+};
+
+/**
+ * @brief Viewport - Geographic bounding box for filtering
+ */
+struct Viewport {
+    double minLat = -90.0;
+    double maxLat = 90.0;
+    double minLon = -180.0;
+    double maxLon = 180.0;
+    int maxVehicles = 10000;       // Max vehicles to send (for performance)
+    int maxTrafficLights = 5000;   // Max traffic lights to send
+
+    bool contains(double lat, double lon) const {
+        return lat >= minLat && lat <= maxLat && lon >= minLon && lon <= maxLon;
+    }
+
+    bool isDefault() const {
+        return minLat == -90.0 && maxLat == 90.0 && minLon == -180.0 && maxLon == 180.0;
+    }
 };
 
 /**

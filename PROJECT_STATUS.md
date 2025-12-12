@@ -39,6 +39,7 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 | 26 | Continuous Simulation Mode | Pause/resume, continuous mode toggle, configurable step limit |
 | 27 | Traffic Profiles | JSON-based profile system with spawn rates and traffic light timings |
 | 28 | Travel Time Metrics | O-D pair tracking, travel time stats (avg/min/max/p50/p95) |
+| 29 | Full-City Scale | SSE viewport filtering, vehicle lat/lon, 150k+ roads support |
 
 ## Current Features
 
@@ -70,6 +71,8 @@ Real-time Adaptive Traffic Management System (RATMS) - A production-ready traffi
 - Analytics with percentile statistics (P25, P50, P75, P95)
 - Comprehensive E2E test coverage
 - Build system with dependency installation script
+- Full-city network support (150k+ roads, 350k+ vehicles)
+- SSE viewport filtering with lat/lon bounds and vehicle limits
 
 ## Quick Start
 
