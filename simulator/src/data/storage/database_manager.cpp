@@ -86,6 +86,15 @@ bool DatabaseManager::runMigrations(const std::string& migrations_dir) {
         return false;
     }
 
+    // Run migration 007 (traffic feed entries)
+    std::string migration_file_007 = migrations_dir + "/007_traffic_feed_entries.sql";
+    LOG_INFO(LogComponent::Database, "Running database migration: {}", migration_file_007);
+
+    if (!executeSQLFile(migration_file_007)) {
+        LOG_ERROR(LogComponent::Database, "Migration 007 failed: {}", last_error_);
+        return false;
+    }
+
     LOG_INFO(LogComponent::Database, "Database migrations completed successfully");
     return true;
 }
