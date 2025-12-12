@@ -3325,6 +3325,12 @@ void Server::initializeProductionMode() {
     // Start simulation in background thread
     simulation_thread_ = std::make_unique<std::thread>(&Server::runSimulationLoop, this);
 
+    // Start continuous optimization (the core purpose of RATMS)
+    if (continuous_optimization_controller_) {
+        continuous_optimization_controller_->start();
+        LOG_INFO(LogComponent::Optimization, "Continuous optimization auto-started in production mode");
+    }
+
     LOG_INFO(LogComponent::Simulation, "Production mode initialized - simulation running in continuous mode");
 }
 
