@@ -12,6 +12,7 @@
 #include <memory>
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 #include <atomic>
 #include <map>
 #include <chrono>
@@ -218,6 +219,10 @@ private:
 
     std::atomic<bool> running_{false};
     std::unique_ptr<std::thread> optimizationThread_;
+
+    // Shutdown signaling
+    std::mutex shutdownMutex_;
+    std::condition_variable shutdownCv_;
 
     // Active transitions being applied
     std::vector<TimingTransition> activeTransitions_;

@@ -6,6 +6,7 @@
 #include "../data/storage/traffic_pattern_storage.h"
 
 #include <atomic>
+#include <condition_variable>
 #include <map>
 #include <mutex>
 #include <thread>
@@ -61,13 +62,17 @@ private:
 
     std::atomic<bool> running_{false};
     std::thread feedThread_;
-    std::atomic<int> updateIntervalMs_{1000};  // Default 1 second
+    std::atomic<int> updateIntervalMs_{30000};  // Default 30 seconds (realistic for real-world sensors)
 
     mutable std::mutex snapshotMutex_;
     TrafficFeedSnapshot latestSnapshot_;
 
     mutable std::mutex subscribersMutex_;
     std::vector<FeedCallback> subscribers_;
+
+    // Shutdown signaling
+    std::mutex shutdownMutex_;
+    std::condition_variable shutdownCv_;
 
     /**
      * @brief Main feed loop running in background thread

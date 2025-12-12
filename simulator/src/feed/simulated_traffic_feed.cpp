@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <random>
+#include <unordered_map>
 
 using namespace ratms;
 
@@ -43,8 +44,14 @@ void SimulatedTrafficFeed::stop()
         return;
     }
 
-    running_.store(false);
+    // Signal shutdown and wake up sleeping thread
+    {
+        std::lock_guard<std::mutex> lock(shutdownMutex_);
+        running_.store(false);
+    }
+    shutdownCv_.notify_all();
 
+    // Wait for thread to finish
     if (feedThread_.joinable()) {
         feedThread_.join();
     }
@@ -83,6 +90,11 @@ void SimulatedTrafficFeed::feedLoop()
     while (running_.load()) {
         auto snapshot = generateSnapshot();
 
+        // Check if we should stop (generateSnapshot may take time for large maps)
+        if (!running_.load()) {
+            break;
+        }
+
         // Update latest snapshot
         {
             std::lock_guard<std::mutex> lock(snapshotMutex_);
@@ -92,8 +104,10 @@ void SimulatedTrafficFeed::feedLoop()
         // Notify subscribers
         notifySubscribers(snapshot);
 
-        // Sleep for configured interval
-        std::this_thread::sleep_for(std::chrono::milliseconds(updateIntervalMs_.load()));
+        // Wait for configured interval or shutdown signal
+        std::unique_lock<std::mutex> lock(shutdownMutex_);
+        shutdownCv_.wait_for(lock, std::chrono::milliseconds(updateIntervalMs_.load()),
+                             [this] { return !running_.load(); });
     }
 
     LOG_DEBUG(LogComponent::Simulation, "Feed loop ended");
@@ -116,14 +130,37 @@ TrafficFeedSnapshot SimulatedTrafficFeed::generateSnapshot()
     static std::random_device rd;
     static std::mt19937 gen(rd());
 
+    // Batch load all patterns for current time slot (much faster than per-road queries)
+    auto allPatterns = patternStorage_.getPatterns(dayOfWeek, timeSlot);
+    std::unordered_map<int, ratms::data::TrafficPattern> patternMap;
+    patternMap.reserve(allPatterns.size());
+    for (auto& p : allPatterns) {
+        patternMap[p.roadId] = std::move(p);
+    }
+
     for (const auto& [roadId, road] : cityMap_) {
+        // Early exit if stopping (snapshot will be discarded anyway)
+        if (!running_.load(std::memory_order_relaxed)) {
+            break;
+        }
+
+        // Only process roads with traffic lights (the ones being optimized)
+        // This dramatically reduces iterations for large maps (150K -> few thousand)
+        if (road.getTrafficLights().empty()) {
+            continue;
+        }
+
         TrafficFeedEntry entry;
         entry.timestamp = timestamp;
         entry.roadId = roadId;
         entry.confidence = 1.0;
 
-        // Try to get historical pattern
-        auto pattern = patternStorage_.getPattern(static_cast<int>(roadId), dayOfWeek, timeSlot);
+        // Look up pattern from pre-loaded map
+        auto it = patternMap.find(static_cast<int>(roadId));
+        ratms::data::TrafficPattern pattern;
+        if (it != patternMap.end()) {
+            pattern = it->second;
+        }
 
         if (pattern.sampleCount > 0) {
             // Use historical pattern with some variation

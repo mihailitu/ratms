@@ -51,20 +51,14 @@ Server::Server(int port) : port_(port), server_start_time_(std::chrono::steady_c
 }
 
 Server::~Server() {
-    // Stop traffic feed first (if running)
-    if (traffic_feed_ && traffic_feed_->isRunning()) {
-        traffic_feed_->stop();
-    }
-
-    // Stop simulation thread
-    if (simulation_running_) {
-        simulation_should_stop_ = true;
-        if (simulation_thread_ && simulation_thread_->joinable()) {
-            simulation_thread_->join();
-        }
-    }
-
+    // Call stop() which handles all cleanup
     stop();
+
+    // Ensure any remaining threads are properly handled
+    if (simulation_thread_ && simulation_thread_->joinable()) {
+        simulation_should_stop_ = true;
+        simulation_thread_->join();
+    }
 }
 
 void Server::start() {
@@ -92,30 +86,61 @@ void Server::stop() {
         return;
     }
 
+    LOG_INFO(LogComponent::API, "Server::stop() called - beginning shutdown sequence");
+
     running_ = false;
 
-    // Stop traffic feed
+    // Signal simulation to stop immediately
+    simulation_should_stop_ = true;
+    LOG_INFO(LogComponent::API, "Shutdown: simulation_should_stop_ set to true");
+
+    // Stop traffic feed (non-blocking)
+    LOG_INFO(LogComponent::API, "Shutdown: stopping traffic feed...");
     if (traffic_feed_ && traffic_feed_->isRunning()) {
         traffic_feed_->stop();
     }
+    LOG_INFO(LogComponent::API, "Shutdown: traffic feed stopped");
 
-    // Stop simulation thread
-    if (simulation_running_) {
-        simulation_should_stop_ = true;
-        if (simulation_thread_ && simulation_thread_->joinable()) {
-            simulation_thread_->join();
+    // Wait for simulation thread with timeout
+    LOG_INFO(LogComponent::API, "Shutdown: waiting for simulation thread (running={}, joinable={})...",
+             simulation_running_.load(), simulation_thread_ ? simulation_thread_->joinable() : false);
+    if (simulation_running_ && simulation_thread_ && simulation_thread_->joinable()) {
+        // Try to join with a reasonable timeout
+        auto start = std::chrono::steady_clock::now();
+        while (simulation_running_) {
+            auto elapsed = std::chrono::steady_clock::now() - start;
+            if (elapsed > std::chrono::seconds(5)) {
+                LOG_WARN(LogComponent::Simulation, "Simulation thread taking too long to stop, continuing shutdown");
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-        simulation_running_ = false;
+        if (simulation_thread_->joinable()) {
+            // Detach if still running to avoid blocking
+            if (simulation_running_) {
+                LOG_INFO(LogComponent::API, "Shutdown: detaching simulation thread (still running)");
+                simulation_thread_->detach();
+            } else {
+                LOG_INFO(LogComponent::API, "Shutdown: joining simulation thread");
+                simulation_thread_->join();
+            }
+        }
     }
+    LOG_INFO(LogComponent::API, "Shutdown: simulation thread handled");
 
     // Stop continuous optimization
+    LOG_INFO(LogComponent::API, "Shutdown: stopping continuous optimization...");
     if (continuous_optimization_controller_ && continuous_optimization_controller_->isRunning()) {
         continuous_optimization_controller_->stop();
     }
+    LOG_INFO(LogComponent::API, "Shutdown: continuous optimization stopped");
 
     // Stop HTTP server
+    LOG_INFO(LogComponent::API, "Shutdown: stopping HTTP server...");
     http_server_.stop();
+    LOG_INFO(LogComponent::API, "Shutdown: HTTP server stopped");
 
+    LOG_INFO(LogComponent::API, "Shutdown: joining server thread...");
     if (server_thread_ && server_thread_->joinable()) {
         server_thread_->join();
     }
@@ -1069,37 +1094,53 @@ void Server::runSimulationLoop() {
             if (simulation_should_stop_) break;
             int currentStep = simulation_steps_;
 
+            // Check for shutdown before heavy work
+            if (simulation_should_stop_) break;
+
             // PHASE 1: Parallel road updates with per-thread transition vectors
+            bool phase1_abort = false;
             {
                 std::lock_guard<std::mutex> lock(sim_mutex_);
                 if (!simulator_) {
                     LOG_ERROR(LogComponent::Simulation, "Simulator became null during simulation");
-                    break;
-                }
+                    phase1_abort = true;
+                } else {
+                    // Use cached road pointers (rebuilt once at start, not every step)
+                    if (!road_cache_valid_) {
+                        rebuildRoadCache();
+                    }
 
-                // Use cached road pointers (rebuilt once at start, not every step)
-                if (!road_cache_valid_) {
-                    rebuildRoadCache();
-                }
+                    // Clear pre-allocated thread transition vectors (keeps capacity)
+                    for (auto& tv : thread_transitions_) {
+                        tv.clear();
+                    }
 
-                // Clear pre-allocated thread transition vectors (keeps capacity)
-                for (auto& tv : thread_transitions_) {
-                    tv.clear();
-                }
+                    // Parallel road updates - each thread writes to its own transition vector
+                    // Use volatile flag for immediate visibility across threads
+                    volatile bool early_exit = false;
+                    #pragma omp parallel for schedule(dynamic, 100)
+                    for (size_t i = 0; i < cached_road_ptrs_.size(); ++i) {
+                        // Check shutdown flag frequently - every iteration
+                        if (early_exit || simulation_should_stop_.load(std::memory_order_relaxed)) {
+                            early_exit = true;
+                            continue;
+                        }
+                        int tid = omp_get_thread_num();
+                        cached_road_ptrs_[i]->update(dt, simulator_->cityMap, thread_transitions_[tid]);
+                    }
 
-                // Parallel road updates - each thread writes to its own transition vector
-                #pragma omp parallel for schedule(dynamic, 50)
-                for (size_t i = 0; i < cached_road_ptrs_.size(); ++i) {
-                    int tid = omp_get_thread_num();
-                    cached_road_ptrs_[i]->update(dt, simulator_->cityMap, thread_transitions_[tid]);
-                }
-
-                // Merge thread-local transitions into pre-allocated pending vector
-                pending_transitions_.clear();
-                for (const auto& tv : thread_transitions_) {
-                    pending_transitions_.insert(pending_transitions_.end(), tv.begin(), tv.end());
+                    if (early_exit || simulation_should_stop_) {
+                        phase1_abort = true;
+                    } else {
+                        // Merge thread-local transitions into pre-allocated pending vector
+                        pending_transitions_.clear();
+                        for (const auto& tv : thread_transitions_) {
+                            pending_transitions_.insert(pending_transitions_.end(), tv.begin(), tv.end());
+                        }
+                    }
                 }
             }
+            if (phase1_abort) break;
 
             // PHASE 2: Execute road transitions
             {
@@ -1269,6 +1310,9 @@ void Server::runSimulationLoop() {
         restart_count_++;
         LOG_WARN(LogComponent::Simulation, "Restart count incremented to {}", restart_count_.load());
     }
+
+    // Mark simulation as no longer running so stop() can complete
+    simulation_running_ = false;
 
     LOG_INFO(LogComponent::Simulation, "Simulation loop ended: steps={}, time={:.2f}, continuous_mode={}",
              simulation_steps_.load(), simulation_time_.load(), continuous_mode_.load());
@@ -3003,6 +3047,11 @@ void Server::initializeDensityManagement() {
     if (!simulator_) {
         LOG_WARN(LogComponent::Simulation, "Cannot initialize density management: simulator not available");
         return;
+    }
+
+    // Stop existing feed before creating new one (prevents orphaned threads)
+    if (traffic_feed_ && traffic_feed_->isRunning()) {
+        traffic_feed_->stop();
     }
 
     // Create feed storage

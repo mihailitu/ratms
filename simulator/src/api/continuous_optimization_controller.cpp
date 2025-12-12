@@ -377,7 +377,16 @@ void ContinuousOptimizationController::start() {
 }
 
 void ContinuousOptimizationController::stop() {
-    running_ = false;
+    if (!running_) return;
+
+    // Signal shutdown and wake up sleeping thread
+    {
+        std::lock_guard<std::mutex> lock(shutdownMutex_);
+        running_ = false;
+    }
+    shutdownCv_.notify_all();
+
+    // Wait for thread to finish
     if (optimizationThread_ && optimizationThread_->joinable()) {
         optimizationThread_->join();
     }
@@ -428,12 +437,19 @@ void ContinuousOptimizationController::optimizationLoop() {
     LOG_INFO(LogComponent::Optimization, "Continuous optimization loop started");
 
     while (running_) {
-        // Wait for next optimization interval
-        for (int i = 0; i < config_.optimizationIntervalSeconds && running_; ++i) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
+        // Wait for next optimization interval, waking every second to update transitions
+        int secondsRemaining = config_.optimizationIntervalSeconds;
+        while (secondsRemaining > 0 && running_) {
+            // Wait for 1 second or shutdown signal
+            std::unique_lock<std::mutex> lock(shutdownMutex_);
+            shutdownCv_.wait_for(lock, std::chrono::seconds(1),
+                                 [this] { return !running_.load(); });
+
+            if (!running_) break;
 
             // Update transitions every second
             updateTransitions();
+            secondsRemaining--;
         }
 
         if (!running_) break;
