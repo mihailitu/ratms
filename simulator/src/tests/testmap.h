@@ -1,8 +1,8 @@
 #ifndef TESTMAP_H
 #define TESTMAP_H
 
-#include "../road.h"
-#include "../vehicle.h"
+#include "../core/road.h"
+#include "../core/vehicle.h"
 
 #include <vector>
 

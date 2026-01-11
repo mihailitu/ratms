@@ -1,0 +1,18 @@
+{
+  "name": "night",
+  "description": "Night time (10pm-6am) - Low traffic with longer cycle times",
+  "spawnRates": [
+    {"roadId": 0, "lane": 0, "vehiclesPerMinute": 5},
+    {"roadId": 0, "lane": 1, "vehiclesPerMinute": 5}
+  ],
+  "trafficLights": [
+    {"roadId": 0, "lane": 0, "greenTime": 40, "yellowTime": 3, "redTime": 40},
+    {"roadId": 0, "lane": 1, "greenTime": 40, "yellowTime": 3, "redTime": 40},
+    {"roadId": 1, "lane": 0, "greenTime": 40, "yellowTime": 3, "redTime": 40},
+    {"roadId": 1, "lane": 1, "greenTime": 40, "yellowTime": 3, "redTime": 40},
+    {"roadId": 2, "lane": 0, "greenTime": 40, "yellowTime": 3, "redTime": 40},
+    {"roadId": 2, "lane": 1, "greenTime": 40, "yellowTime": 3, "redTime": 40},
+    {"roadId": 3, "lane": 0, "greenTime": 40, "yellowTime": 3, "redTime": 40},
+    {"roadId": 3, "lane": 1, "greenTime": 40, "yellowTime": 3, "redTime": 40}
+  ]
+}

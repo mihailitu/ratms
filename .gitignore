@@ -1,0 +1,68 @@
+# Build directories
+simulator/build/
+simulator/bin/
+**/CMakeFiles/
+**/cmake_install.cmake
+**/CMakeCache.txt
+
+# Compiled binaries
+simulator/simulator
+simulator/ga_optimizer
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+
+# Output files
+*.dat
+*.csv
+*.txt
+!CMakeLists.txt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+simulator/pytest/cache/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+
+# Frontend
+node_modules/
+dist/
+.env
+.env.local
+frontend/.vite/
+frontend/test-results/
+
+# Logs
+simulator/logs/
+
+# Database
+*.db
+*.db-journal
+
+# OSM data (large files, download on demand)
+data/osm/*.osm
+data/osm/*.pbf
+
+# Generated map files (use scripts/download_osm.sh to create)
+data/maps/*.json
+frontend/playwright-report/

@@ -1,8 +1,11 @@
 #include "testmap.h"
-#include "../config.h"
-#include "../logger.h"
+#include "../utils/config.h"
+#include "../utils/logger.h"
 
 #include <random>
+
+using namespace ratms;
+
 namespace simulator
 {
 
@@ -193,7 +196,7 @@ std::vector<Road> manyRandomVehicleTestMap(int numVehicles)
 
     Road r(0, 2000, 3, 20);
     r.setCardinalCoordinates({10, 100}, {2010, 100});
-    log_info("Random test - vehicles: %d", numVehicles);
+    LOG_INFO(LogComponent::Simulation, "Random vehicle test: {} vehicles", numVehicles);
     for(int i = 0; i < numVehicles; ++i) {
 
         int pos = posRnd(rng);
